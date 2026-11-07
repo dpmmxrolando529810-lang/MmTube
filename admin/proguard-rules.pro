@@ -1,0 +1,2 @@
+-keep class com.google.firebase.** { *; }
+-keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <external-files-path name="mmtube_movies" path="Movies/MMTube/" />
+    <external-files-path name="mmtube_updates" path="Download/updates/" />
+    <external-files-path name="mmtube_root" path="." />
+    <external-path name="public_movies" path="Movies/MMTube/" />
+    <external-path name="public_music" path="Music/MMTube/" />
+    <cache-path name="mmtube_cache" path="." />
+    <files-path name="mmtube_files" path="." />
+</paths>

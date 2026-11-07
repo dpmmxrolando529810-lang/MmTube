@@ -1,0 +1,60 @@
+rules_version = '2';
+
+/**
+ * MMTube Firestore security rules.
+ *
+ * Collections:
+ *   users/{uid}   — public profile + plan (read: owner or admin, create: owner as free, update: admin only, delete: owner)
+ *   usage/{uid}   — per-user download counters (read: owner or admin, write: owner with restricted keys or admin, delete: owner or admin)
+ *   admins/{uid}  — allow-list of admin uids (read: that admin only; writes: console only)
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    match /admins/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create, update, delete: if false; // Manage admins in the Firebase console only.
+    }
+
+    match /users/{uid} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+
+      allow create: if isSignedIn()
+        && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly([
+            'uid', 'email', 'displayName', 'photoUrl', 'userCode',
+            'plan', 'planExpiresAt', 'dailyLimit', 'disabled',
+            'createdAt', 'updatedAt'
+          ])
+        && request.resource.data.uid == uid
+        && request.resource.data.plan == 'free'
+        && request.resource.data.dailyLimit == 1
+        && request.resource.data.disabled == false;
+
+      allow update: if isAdmin();
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+    }
+
+    match /usage/{uid} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+
+      allow create, update: if isAdmin()
+        || (isSignedIn()
+            && request.auth.uid == uid
+            && request.resource.data.keys().hasOnly([
+                'lastDownloadAt', 'nextAllowedAt', 'totalDownloads', 'quotaResetAt', 'updatedAt'
+              ]));
+
+      allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+    }
+  }
+}

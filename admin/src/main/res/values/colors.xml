@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="mmtube_splash_bg">#05070D</color>
+    <color name="mmtube_window_bg">#05070D</color>
+    <color name="mmtube_primary">#FFB84D</color>
+</resources>
