@@ -94,7 +94,7 @@ fun MmtubeTheme(
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val activity = view.findActivity() as? ComponentActivity ?: return@SideEffect
+            val activity = view.context.findActivity() as? ComponentActivity ?: return@SideEffect
             val controller = WindowCompat.getInsetsController(activity.window, view)
             controller.isAppearanceLightStatusBars = !darkTheme
             controller.isAppearanceLightNavigationBars = !darkTheme

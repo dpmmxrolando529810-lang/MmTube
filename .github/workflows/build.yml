@@ -40,6 +40,9 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x gradlew
 
+      - name: Fetch FFmpeg 9.0.2 bundle (Termux)
+        run: bash tools/ffmpeg/fetch-termux-ffmpeg.sh
+
       - name: Build main app (MMTube)
         run: ./gradlew :app:assembleRelease --stacktrace -PversionName="${{ steps.version.outputs.name }}" -PversionCode="${{ steps.version.outputs.code }}"
         env:

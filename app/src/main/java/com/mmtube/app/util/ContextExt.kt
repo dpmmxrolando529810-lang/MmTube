@@ -41,11 +41,12 @@ fun Context.openUrl(url: String): Boolean {
 
 fun Context.openFile(uri: Uri, mimeType: String): Boolean {
     return runCatching {
-        val intent = Intent(Intent.ACTION_VIEW)
-            .setDataAndType(uri, mimeType)
-            .setClipData(ClipData.newRawUri("file", uri))
-            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val intent = Intent(Intent.ACTION_VIEW).apply {
+            setDataAndType(uri, mimeType)
+            clipData = ClipData.newRawUri("file", uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
         startActivity(intent)
         true
     }.getOrElse {

@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.ContentCopy
@@ -91,7 +92,7 @@ fun SettingsScreen(
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
                 Icon(
-                    androidx.compose.material.icons.Icons.Rounded.ArrowBack,
+                    Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = context.getString(R.string.action_back),
                     tint = MaterialTheme.colorScheme.onBackground
                 )

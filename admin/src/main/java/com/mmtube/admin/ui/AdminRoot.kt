@@ -84,6 +84,8 @@ private val Muted = Color(0xFF8B97B5)
 @Composable
 fun AdminRoot(viewModel: AdminViewModel) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val activity = context.findActivity()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(ui.message) {
@@ -108,7 +110,6 @@ fun AdminRoot(viewModel: AdminViewModel) {
                 AdminAuthState.SignedOut -> SignInScreen(
                     busy = ui.busy,
                     onSignIn = {
-                        val activity = LocalContext.current.findActivity()
                         activity?.let { viewModel.signIn(it) }
                     }
                 )

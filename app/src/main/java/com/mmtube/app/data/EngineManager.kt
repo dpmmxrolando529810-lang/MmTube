@@ -14,6 +14,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.util.concurrent.TimeUnit
 
 class EngineManager(private val context: Context) {
@@ -32,6 +33,9 @@ class EngineManager(private val context: Context) {
             if (_state.value is EngineState.Ready) return@withLock true
             _state.value = EngineState.Initializing
             try {
+                // If the pinned yt-dlp just changed (app update), drop the previously
+                // extracted binary so init() re-extracts the new one from res/raw.
+                refreshPinnedEngineIfNeeded()
                 withContext(Dispatchers.IO) {
                     YoutubeDL.getInstance().init(context)
                     FFmpeg.getInstance().init(context)
@@ -61,7 +65,8 @@ class EngineManager(private val context: Context) {
         return mutex.withLock {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    YoutubeDL.getInstance().updateYoutubeDL(context, YoutubeDL.UpdateChannel.NIGHTLY)
+                    // Latest stable from GitHub (currently 2026.10.26).
+                    YoutubeDL.getInstance().updateYoutubeDL(context, YoutubeDL.UpdateChannel.STABLE)
                 }
                 val version = readVersion() ?: "updated"
                 _state.value = EngineState.Ready(version)
@@ -86,6 +91,21 @@ class EngineManager(private val context: Context) {
 
     fun currentVersion(): String? = (state.value as? EngineState.Ready)?.version
 
+    private fun refreshPinnedEngineIfNeeded() {
+        val prefs = context.getSharedPreferences(ENGINE_PREFS, Context.MODE_PRIVATE)
+        if (prefs.getString(KEY_YTDLP_PINNED, null) == PINNED_YTDLP) return
+        runCatching {
+            val ytdlpDir = File(context.noBackupFilesDir, "youtubedl-android/yt-dlp")
+            if (ytdlpDir.exists()) {
+                Log.i(TAG, "Pinned yt-dlp changed to $PINNED_YTDLP; re-extracting")
+                ytdlpDir.deleteRecursively()
+            }
+            prefs.edit().putString(KEY_YTDLP_PINNED, PINNED_YTDLP).apply()
+        }.onFailure {
+            Log.w(TAG, "Could not refresh pinned yt-dlp", it)
+        }
+    }
+
     private fun readVersion(): String? {
         return runCatching {
             YoutubeDL.versionName(context) ?: YoutubeDL.version(context)
@@ -94,5 +114,11 @@ class EngineManager(private val context: Context) {
 
     companion object {
         private const val TAG = "EngineManager"
+
+        // yt-dlp 2026.10.26 bundled in the APK; bump together with res/raw/ytdlp.
+        const val PINNED_YTDLP = "2026.10.26"
+
+        private const val ENGINE_PREFS = "mmtube_engine"
+        private const val KEY_YTDLP_PINNED = "mmtube_ytdlp_pinned"
     }
 }

@@ -25,7 +25,7 @@ import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.Logout
+import androidx.compose.material.icons.automirrored.rounded.Logout
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Verified
@@ -482,7 +482,7 @@ private fun AccountActions(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(context.getString(R.string.account_sign_out), style = MmtubeType.TitleMedium, color = MaterialTheme.colorScheme.onSurface)
-                Icon(Icons.Rounded.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         TextButton(onClick = onDelete, modifier = Modifier.padding(top = 4.dp).fillMaxWidth()) {

@@ -23,7 +23,16 @@ Both apps ship from the same codebase and are built together in CI.
 - **Link auto-detection** — paste or share a YouTube / Facebook / TikTok link, MMTube recognizes the platform instantly.
 - **Maximum quality** — probes the source with yt-dlp, selects the best video + best audio, and merges them with FFmpeg. Options: MAX, 1080p, 720p, MP3 (best audio).
 - **TikTok without watermark** — requests the clean stream TikTok serves. (If TikTok only offers the watermarked version, that is what gets downloaded — the app cannot invent one that does not exist.)
-- **On-device engine** — Python + yt-dlp + FFmpeg + aria2c run inside the app via [youtubedl-android](https://github.com/yausername/youtubedl-android). No Termux, no PC, no backend. Engine auto-updates from GitHub nightly builds.
+- **On-device engine** — Python + yt-dlp + FFmpeg + aria2c run inside the app. No Termux, no PC, no backend. Engine auto-updates from GitHub (latest stable) every 3 days.
+
+### Bundled engine versions
+
+| Component | Version | Source |
+|-----------|---------|--------|
+| yt-dlp | **2026.10.26** | `app/src/main/res/raw/ytdlp` (bundled; auto-updates to latest stable from GitHub) |
+| FFmpeg | **9.0.2 "Lei"** | Termux build, repacked into `jniLibs` by `tools/ffmpeg/fetch-termux-ffmpeg.sh` |
+| youtubedl-android | 0.18.1 | bundles Python + aria2c; latest release on Maven Central |
+| aria2c | bundled with youtubedl-android 0.18.1 | turbo downloads |
 - **True free tier** — guests: 1 local download per 24h. Signed-in free users: 1 download per 24h, synced through Firestore usage counters.
 - **Unlimited plans** — 1 / 3 / 6 / 12 months, activated by the admin. Plans stack from the current expiry date.
 - **In-app auto-update** — checks GitHub Releases for a newer APK on launch (configurable), downloads and hands off to the Android package installer. Same-key signing required (see "Signing" below).
@@ -34,9 +43,9 @@ Both apps ship from the same codebase and are built together in CI.
 
 ## System requirements
 
-- **Android 7.0 (API 24) or newer.** The download engine (Python + native libs from youtubedl-android) requires API 24+; older versions are not supported.
+- **Android 7.0 (API 24) or newer.** The download engine (Python + native libs from youtubedl-android and the FFmpeg bundle) requires API 24+; older versions are not supported.
 - 3–4 GB free RAM recommended on first launch while the engine unpacks.
-- The universal APK contains `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` native libraries, so it is large (~150–250 MB).
+- The universal APK contains `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` native libraries and FFmpeg 9.0.2, so it is large (~400 MB).
 - **Target SDK 35**, compiled against the Android 15 toolchain.
 
 ---
@@ -146,7 +155,12 @@ Tapping **Download update** fetches the APK to app storage, then **Install** lau
 
 ## Local build (optional, needs Android SDK)
 
+Requires `bash`, `curl`, `dpkg-deb` and `python3` — the FFmpeg 9.0.2 bundle is
+fetched from the Termux repository and repacked on your machine, **it is not
+committed to git** (it would add ~330 MB):
+
 ```bash
+bash tools/ffmpeg/fetch-termux-ffmpeg.sh   # downloads Termux debs, repacks into app/src/main/jniLibs
 export ANDROID_HOME=$HOME/android-sdk   # + platform-tools, platform-35, build-tools
 export FIREBASE_API_KEY=... FIREBASE_APP_ID=... FIREBASE_PROJECT_ID=...
 export FIREBASE_ADMIN_APP_ID=... FIREBASE_SENDER_ID=... GOOGLE_WEB_CLIENT_ID=...
@@ -155,6 +169,7 @@ export UPDATE_REPO=<owner>/<repo>
 ```
 
 APKs land in `app/build/outputs/apk/release/` and `admin/build/outputs/apk/release/`.
+CI (`.github/workflows/build.yml`) runs the FFmpeg fetch automatically before building.
 
 ---
 
@@ -170,7 +185,7 @@ youtubedl-android, yt-dlp, FFmpeg and aria2c are **GPL-3.0** components; consequ
 |---------|-----|
 | First launch stuck on "Preparing the download engine" | Wait 30–60s (Python/FFmpeg unpack). Keep the app in the foreground. |
 | "The engine could not start" | Settings → Download engine → Update engine; restart the app. |
-| Analysis fails for a site that worked before | The extractor changed. Settings → Update engine (nightly yt-dlp), then retry. |
+| Analysis fails for a site that worked before | The extractor changed. Settings → Update engine (latest stable yt-dlp), then retry. |
 | "Update available" but Install does nothing | Allow installs from unknown sources for MMTube in Android Settings, then Install again. |
 | Paid plan active but app still limits | Account → Refresh plan. Check internet + Firestore rules published. |
 | Admin reset didn't lift the cooldown | Ask the user to force-stop and reopen MMTube; the app honors `quotaResetAt` on next read. |

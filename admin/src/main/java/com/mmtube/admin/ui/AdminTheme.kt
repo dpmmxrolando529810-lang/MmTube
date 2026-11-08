@@ -40,7 +40,7 @@ fun AdminTheme(content: @Composable () -> Unit) {
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
-            val activity = view.findActivity() ?: return@SideEffect
+            val activity = view.context.findActivity() ?: return@SideEffect
             val controller = WindowCompat.getInsetsController(activity.window, view)
             controller.isAppearanceLightStatusBars = false
             controller.isAppearanceLightNavigationBars = false

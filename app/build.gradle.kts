@@ -139,6 +139,12 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
+    // Jackson is only a runtime dep of youtubedl-android; needed on the compile classpath.
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
+
+    // For Unix symlink entries in the FFmpeg bundle (mirrors upstream ZipUtils)
+    implementation("org.apache.commons:commons-compress:1.27.1")
+
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
@@ -150,9 +156,9 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
 
-    // yt-dlp + Python + FFmpeg + aria2c, running fully on-device.
+    // yt-dlp + Python + aria2c (youtubedl-android). FFmpeg 9.0.2 (Termux build)
+    // is fetched and repacked by tools/ffmpeg/fetch-termux-ffmpeg.sh into jniLibs.
     implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
-    implementation("io.github.junkfood02.youtubedl-android:ffmpeg:0.18.1")
     implementation("io.github.junkfood02.youtubedl-android:aria2c:0.18.1")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
