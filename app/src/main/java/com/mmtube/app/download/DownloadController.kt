@@ -234,22 +234,28 @@ class DownloadController(
             addOption("--retries", "10")
             addOption("--fragment-retries", "10")
             addOption("--extractor-retries", "3")
-            addOption("--concurrent-fragments", "16")
+            addOption("--concurrent-fragments", "24")
             addOption("--embed-metadata")
             addOption("-o", output)
             when (request.mode) {
                 DownloadMode.MAX -> {
                     addOption("-f", "bestvideo+bestaudio/best")
+                    // True maximum quality: highest resolution, then highest
+                    // bitrate — not codec preference. Picks the 18.5 Mbps VP9
+                    // 2160p stream instead of the smaller AV1 one.
+                    addOption("-S", "res:desc,fps:desc,tbr:desc")
                     addOption("--merge-output-format", "mp4")
                 }
 
                 DownloadMode.P1080 -> {
                     addOption("-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best")
+                    addOption("-S", "res:desc,fps:desc,tbr:desc")
                     addOption("--merge-output-format", "mp4")
                 }
 
                 DownloadMode.P720 -> {
                     addOption("-f", "bestvideo[height<=720]+bestaudio/best[height<=720]/best")
+                    addOption("-S", "res:desc,fps:desc,tbr:desc")
                     addOption("--merge-output-format", "mp4")
                 }
 

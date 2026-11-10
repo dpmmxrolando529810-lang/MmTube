@@ -84,7 +84,7 @@
     <string name="media_audio_only">အသံသာ</string>
     <string name="quality_title">အရည်အသွေး</string>
     <string name="quality_max">အမြင့်ဆုံး</string>
-    <string name="quality_max_desc">အကောင်းဆုံး ဗီဒီယို + အကောင်းဆုံး အသံ</string>
+    <string name="quality_max_desc">Bitrate အမြင့်ဆုံး · အမှန်တကယ် 4K</string>
     <string name="quality_1080">1080p</string>
     <string name="quality_720">720p</string>
     <string name="quality_mp3">MP3</string>

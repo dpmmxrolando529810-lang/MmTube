@@ -559,9 +559,7 @@ private fun QualitySelector(
             Modifier.padding(top = 8.dp).fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            QualityOption(DownloadMode.MAX, context.getString(R.string.quality_max), context.getString(R.string.quality_max_desc), selected, audioOnly, onSelect, Modifier.weight(1f))
-            QualityOption(DownloadMode.P1080, "1080p", null, selected, audioOnly, onSelect, Modifier.weight(1f))
-            QualityOption(DownloadMode.P720, "720p", null, selected, audioOnly, onSelect, Modifier.weight(1f))
+            QualityOption(DownloadMode.MAX, context.getString(R.string.quality_max), context.getString(R.string.quality_max_desc), selected, audioOnly, onSelect, Modifier.weight(2f))
             QualityOption(DownloadMode.MP3, context.getString(R.string.quality_mp3), context.getString(R.string.quality_mp3_desc), selected, audioOnly, onSelect, Modifier.weight(1f))
         }
     }
