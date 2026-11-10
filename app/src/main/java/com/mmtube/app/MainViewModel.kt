@@ -58,7 +58,8 @@ data class MainUiState(
     val update: UpdateUi = UpdateUi(),
     val engineUpdating: Boolean = false,
     val accountBusy: Boolean = false,
-    val sha1: String = ""
+    val sha1: String = "",
+    val engineDiagnostics: String? = null
 ) {
     val termsAccepted: Boolean get() = settings.acceptedTerms
 }
@@ -391,8 +392,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     container.settings.setLastEngineUpdate(System.currentTimeMillis())
                     event(UiEvent.Message(context.getString(R.string.settings_engine_updated)))
                 }
-                .onFailure {
-                    event(UiEvent.Message(context.getString(R.string.settings_engine_failed)))
+                .onFailure { error ->
+                    val detail = (error.cause?.message ?: error.message).orEmpty()
+                    val base = context.getString(R.string.settings_engine_failed)
+                    event(UiEvent.Message(if (detail.isBlank()) base else "$base: ${detail.take(180)}"))
                 }
             _ui.update { it.copy(engineUpdating = false) }
         }
@@ -402,6 +405,62 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             container.engine.retry()
         }
+    }
+
+    fun runEngineDiagnostics() {
+        if (_ui.value.engineUpdating) return
+        _ui.update { it.copy(engineDiagnostics = null, engineUpdating = true) }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            val sb = StringBuilder()
+            val nativeDir = java.io.File(context.applicationInfo.nativeLibraryDir)
+            sb.appendLine("nativeLibraryDir: $nativeDir")
+            sb.appendLine("dir exists: ${nativeDir.exists()} canRead: ${nativeDir.canRead()}")
+            for (name in listOf("libffmpeg.so", "libffprobe.so", "libffmpeg.zip.so")) {
+                val file = java.io.File(nativeDir, name)
+                sb.appendLine("$name: exists=${file.exists()} size=${file.length()} exec=${file.canExecute()}")
+            }
+
+            // Same layout the youtubedl-android library expects for its
+            // LD_LIBRARY_PATH: <noBackup>/youtubedl-android/packages/<pkg>/usr/lib
+            val baseDir = java.io.File(context.noBackupFilesDir, "youtubedl-android")
+            val packagesDir = java.io.File(baseDir, "packages")
+            sb.appendLine("packages dir: $packagesDir exists=${packagesDir.exists()}")
+            sb.appendLine("packages children: ${packagesDir.list()?.joinToString() ?: "-"}")
+            val ffmpegLibDir = java.io.File(packagesDir, "ffmpeg/usr/lib")
+            val libs = ffmpegLibDir.listFiles()
+            sb.appendLine("ffmpeg libs: $ffmpegLibDir exists=${ffmpegLibDir.exists()} count=${libs?.size ?: 0}")
+            sb.appendLine("sample: ${libs?.take(6)?.joinToString { it.name } ?: "-"}")
+
+            val ldPath = listOf("python", "ffmpeg", "aria2c")
+                .joinToString(":") { java.io.File(packagesDir, "$it/usr/lib").absolutePath }
+
+            sb.appendLine("python liblzma.so: ${java.io.File(packagesDir, "python/usr/lib/liblzma.so").exists()}")
+            sb.appendLine("python libz.so: ${java.io.File(packagesDir, "python/usr/lib/libz.so").exists()}")
+
+            for (name in listOf("libffmpeg.so", "libffprobe.so")) {
+                val exe = java.io.File(nativeDir, name)
+                for ((label, path) in listOf("library" to ldPath, "ffmpeg-only" to ffmpegLibDir.absolutePath)) {
+                    sb.appendLine("---- $name -version ($label LD_LIBRARY_PATH) ----")
+                    runCatching {
+                        val builder = ProcessBuilder(exe.absolutePath, "-version")
+                            .redirectErrorStream(true)
+                        builder.environment()["LD_LIBRARY_PATH"] = path
+                        val process = builder.start()
+                        val output = process.inputStream.bufferedReader().readText().trim()
+                        val exit = process.waitFor()
+                        sb.appendLine("exit code: $exit")
+                        sb.appendLine(output.lineSequence().take(3).joinToString("\n").take(400))
+                    }.onFailure { error ->
+                        sb.appendLine("FAILED to start: ${error.message}")
+                    }
+                }
+            }
+            _ui.update { it.copy(engineUpdating = false, engineDiagnostics = sb.toString()) }
+        }
+    }
+
+    fun clearEngineDiagnostics() {
+        _ui.update { it.copy(engineDiagnostics = null) }
     }
 
     // ---------- Updates ----------

@@ -46,6 +46,7 @@ import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -397,7 +398,7 @@ private fun PreviewSection(
     val context = LocalContext.current
     when (val probe = ui.probe) {
         ProbeUi.Idle -> Unit
-        is ProbeUi.Loading -> LoadingPreviewCard()
+        is ProbeUi.Loading -> LoadingPreviewCard(probe)
         is ProbeUi.Error -> ErrorPreviewCard(vm.errorText(probe.kind), vm::analyze)
         is ProbeUi.Success -> {
             val result = probe.result
@@ -691,7 +692,20 @@ private fun DownloadAction(
 }
 
 @Composable
-private fun LoadingPreviewCard() {
+private fun LoadingPreviewCard(loading: ProbeUi.Loading) {
+    val context = LocalContext.current
+    var elapsed by remember { mutableStateOf(0) }
+    LaunchedEffect(loading.startedAt) {
+        while (true) {
+            elapsed = ((System.currentTimeMillis() - loading.startedAt) / 1000L).toInt()
+            kotlinx.coroutines.delay(500)
+        }
+    }
+    val stage = when {
+        elapsed < 3 -> context.getString(R.string.analyze_stage_connecting)
+        elapsed < 10 -> context.getString(R.string.analyze_stage_formats)
+        else -> context.getString(R.string.analyze_stage_slow)
+    }
     val transition = rememberInfiniteTransition(label = "shimmer")
     val alpha by transition.animateFloat(
         initialValue = 0.25f,
@@ -723,6 +737,22 @@ private fun LoadingPreviewCard() {
                 .clip(RoundedCornerShape(8.dp))
                 .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = alpha))
         )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(top = 14.dp)
+        ) {
+            CircularProgressIndicator(
+                modifier = Modifier.size(16.dp),
+                strokeWidth = 2.dp,
+                color = MmtubePalette.Aqua
+            )
+            Text(
+                text = "$stage  ${elapsed}s",
+                style = MmtubeType.LabelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
@@ -792,6 +822,16 @@ private fun DownloadSection(ui: MainUiState, vm: MainViewModel) {
                             style = MmtubeType.BodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        state.detail?.takeIf { it.isNotBlank() }?.let { detail ->
+                            androidx.compose.foundation.text.selection.SelectionContainer {
+                                Text(
+                                    text = detail.take(600),
+                                    style = MmtubeType.LabelSmall.copy(fontSize = 10.sp),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                                    modifier = Modifier.padding(top = 6.dp)
+                                )
+                            }
+                        }
                     }
                     TextButton(onClick = { vm.retryDownload() }) {
                         Text(context.getString(R.string.action_retry), color = MmtubePalette.Aqua)

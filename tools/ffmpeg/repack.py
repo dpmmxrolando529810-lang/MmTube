@@ -15,7 +15,14 @@ import sys
 import zipfile
 
 ABIS = {"aarch64": "arm64-v8a", "arm": "armeabi-v7a", "i686": "x86", "x86_64": "x86_64"}
-EXCLUDE = {"libc.so", "libm.so", "libdl.so", "libandroid.so", "liblog.so"}
+# Termux ships shims for system libraries that route through its own linker
+# namespace helper (libtermux-platform-ns.so). That helper needs system
+# libhwui.so, which fails to link inside a normal app process, so both are
+# dropped and libavcodec resolves the real system libmediandk.so instead.
+EXCLUDE = {
+    "libc.so", "libm.so", "libdl.so", "libandroid.so", "liblog.so",
+    "libmediandk.so", "libtermux-platform-ns.so",
+}
 
 
 def elf_needed(path):
@@ -67,6 +74,57 @@ def elf_needed(path):
                 end = data.index(b"\0", str_off + val)
                 needed.append(data[str_off + val:end].decode())
     return needed
+
+
+def elf_soname(path):
+    """Return the DT_SONAME of an ELF file, or None."""
+    data = open(path, "rb").read()
+    if data[:4] != b"\x7fELF":
+        return None
+    is64 = data[4] == 2
+    if is64:
+        e_phoff = struct.unpack_from("<Q", data, 0x20)[0]
+        e_phentsize = struct.unpack_from("<H", data, 0x36)[0]
+        e_phnum = struct.unpack_from("<H", data, 0x38)[0]
+        fmt, fmt2, dyn_size = "<IIQQQQQQ", "<qQ", 16
+    else:
+        e_phoff = struct.unpack_from("<I", data, 0x1c)[0]
+        e_phentsize = struct.unpack_from("<H", data, 0x2a)[0]
+        e_phnum = struct.unpack_from("<H", data, 0x2c)[0]
+        fmt, fmt2, dyn_size = "<IIIIIIII", "<iI", 8
+    for i in range(e_phnum):
+        ph = struct.unpack_from(fmt, data, e_phoff + i * e_phentsize)
+        if ph[0] != 2:
+            continue
+        dyn_off = ph[2] if is64 else ph[1]
+        entries = []
+        j = dyn_off
+        while True:
+            tag, val = struct.unpack_from(fmt2, data, j)
+            if tag == 0:
+                break
+            entries.append((tag, val))
+            j += dyn_size
+        strtab = next((v for t, v in entries if t == 5), 0)
+        str_off = None
+        for k in range(e_phnum):
+            ph2 = struct.unpack_from(fmt, data, e_phoff + k * e_phentsize)
+            if ph2[0] != 1:
+                continue
+            if is64:
+                vaddr, offset, filesz = ph2[2], ph2[3], ph2[5]
+            else:
+                vaddr, offset, filesz = ph2[2], ph2[1], ph2[4]
+            if vaddr <= strtab < vaddr + filesz:
+                str_off = offset + (strtab - vaddr)
+                break
+        if str_off is None:
+            return None
+        for tag, val in entries:
+            if tag == 14:
+                end = data.index(b"\0", str_off + val)
+                return data[str_off + val:end].decode()
+    return None
 
 
 def build(root, arch):
@@ -127,12 +185,11 @@ def write_zip(usr, included, out_path):
             base = os.path.basename(real)
             aliases = set(info["aliases"])
             aliases.add(base)
+            soname = elf_soname(real)
+            if soname:
+                aliases.add(soname)
             with open(real, "rb") as fh:
                 data = fh.read()
-            for name in os.listdir(libdir):
-                p = os.path.join(libdir, name)
-                if os.path.islink(p) and os.path.realpath(p) == real:
-                    aliases.add(name)
             for name in sorted(aliases):
                 if name == base:
                     zi = zipfile.ZipInfo("usr/lib/" + base)

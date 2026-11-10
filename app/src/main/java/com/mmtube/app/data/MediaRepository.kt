@@ -1,5 +1,6 @@
 package com.mmtube.app.data
 
+import android.content.Context
 import android.util.Log
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
@@ -8,29 +9,71 @@ import com.yausername.youtubedl_android.mapper.VideoInfo
 import com.mmtube.app.util.UrlUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 
-class MediaRepository(private val engine: EngineManager) {
+class MediaRepository(context: Context, private val engine: EngineManager) {
+
+    private val fastProbe = FastProbe(context)
+    @Volatile private var fastProbeDisabled = false
+    private val cacheLock = Any()
+    private val cache = LinkedHashMap<String, CacheEntry>()
 
     suspend fun probe(rawUrl: String): Result<ProbeResult> {
         return runCatching {
             val url = UrlUtils.normalize(rawUrl)
                 ?: throw MmtubeException(ErrorKind.INVALID_LINK, "Invalid URL")
+            cached(url)?.let { return@runCatching it }
             if (!engine.ensureReady()) {
                 throw MmtubeException(ErrorKind.ENGINE, "Engine not ready")
             }
-            val request = YoutubeDLRequest(url).apply {
-                addOption("--dump-json")
-                addOption("--no-playlist")
-                addOption("--no-warnings")
-                addOption("--no-check-formats")
-                addOption("--ignore-config")
-                addOption("--socket-timeout", "25")
-                addOption("--retries", "3")
-                addOption("--extractor-retries", "3")
-                addOption("--geo-bypass")
+            // Fast path: yt-dlp without the JavaScript runtime. Falls back to the
+            // wrapper probe (QuickJS enabled) when the fast run fails or times
+            // out; after a timeout the fast path is parked for this session so a
+            // bad run can never make every analysis wait twice.
+            val json = if (fastProbeDisabled) {
+                probeWithLibrary(url)
+            } else {
+                when (val run = fastProbe.run(url)) {
+                    is FastProbe.Result.Ok -> run.json
+                    FastProbe.Result.TimedOut -> {
+                        fastProbeDisabled = true
+                        probeWithLibrary(url)
+                    }
+                    FastProbe.Result.Failed -> probeWithLibrary(url)
+                }
             }
-            val processId = "probe-${System.nanoTime()}"
-            val response = try {
+            val info = parse(json)
+            val result = buildResult(url, info)
+            remember(url, result)
+            result
+        }.recoverCatching { error ->
+            throw normalizeProbeError(error)
+        }
+    }
+
+    private fun parse(json: String): VideoInfo {
+        return runCatching {
+            YoutubeDL.objectMapper.readValue(json, VideoInfo::class.java)
+        }.getOrElse {
+            throw MmtubeException(ErrorKind.GENERIC, "Could not parse media information", it)
+        }
+    }
+
+    private suspend fun probeWithLibrary(url: String): String {
+        val request = YoutubeDLRequest(url).apply {
+            addOption("--dump-json")
+            addOption("--no-playlist")
+            addOption("--no-warnings")
+            addOption("--no-update")
+            addOption("--no-check-formats")
+            addOption("--ignore-config")
+            addOption("--socket-timeout", "20")
+            addOption("--retries", "2")
+            addOption("--extractor-retries", "2")
+        }
+        val processId = "probe-${System.nanoTime()}"
+        val response = try {
+            withTimeoutOrNull(LIBRARY_PROBE_TIMEOUT_MS) {
                 withContext(Dispatchers.IO) {
                     YoutubeDL.getInstance().execute(
                         request,
@@ -39,24 +82,37 @@ class MediaRepository(private val engine: EngineManager) {
                         callback = null
                     )
                 }
-            } catch (error: Throwable) {
-                YoutubeDL.getInstance().destroyProcessById(processId)
-                throw error
-            }
-            val json = response.out.lineSequence()
-                .firstOrNull { it.trimStart().startsWith("{") }
-                ?: throw MmtubeException(
-                    ErrorKind.UNSUPPORTED,
-                    response.err.takeIf { it.isNotBlank() } ?: "No media information returned"
-                )
-            val info = runCatching {
-                YoutubeDL.objectMapper.readValue(json, VideoInfo::class.java)
-            }.getOrElse {
-                throw MmtubeException(ErrorKind.GENERIC, "Could not parse media information", it)
-            }
-            buildResult(url, info)
-        }.recoverCatching { error ->
-            throw normalizeProbeError(error)
+            } ?: throw MmtubeException(
+                ErrorKind.NETWORK,
+                "Analysis timed out. Check your connection and retry."
+            )
+        } catch (error: Throwable) {
+            YoutubeDL.getInstance().destroyProcessById(processId)
+            throw error
+        }
+        return response.out.lineSequence()
+            .firstOrNull { it.trimStart().startsWith("{") }
+            ?: throw MmtubeException(
+                ErrorKind.UNSUPPORTED,
+                response.err.takeIf { it.isNotBlank() } ?: "No media information returned"
+            )
+    }
+
+    private fun cached(url: String): ProbeResult? = synchronized(cacheLock) {
+        val entry = cache[url] ?: return null
+        if (System.currentTimeMillis() - entry.at > CACHE_TTL_MS) {
+            cache.remove(url)
+            null
+        } else {
+            entry.result
+        }
+    }
+
+    private fun remember(url: String, result: ProbeResult) = synchronized(cacheLock) {
+        cache[url] = CacheEntry(System.currentTimeMillis(), result)
+        while (cache.size > CACHE_ENTRIES) {
+            val oldest = cache.keys.firstOrNull() ?: break
+            cache.remove(oldest)
         }
     }
 
@@ -129,5 +185,13 @@ class MediaRepository(private val engine: EngineManager) {
         }
         Log.w("MediaRepository", "Probe failed: ${message.take(400)}")
         return MmtubeException(kind, message, error)
+    }
+
+    private data class CacheEntry(val at: Long, val result: ProbeResult)
+
+    private companion object {
+        const val CACHE_TTL_MS = 15 * 60 * 1000L
+        const val CACHE_ENTRIES = 20
+        const val LIBRARY_PROBE_TIMEOUT_MS = 120_000L
     }
 }

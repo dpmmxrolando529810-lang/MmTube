@@ -61,6 +61,9 @@
     <string name="link_clear">ရှင်းလင်း</string>
     <string name="link_analyze">လင့်ခ် စစ်ဆေး</string>
     <string name="link_analyzing">စစ်ဆေးနေသည်…</string>
+    <string name="analyze_stage_connecting">ဆာဗာနှင့် ချိတ်ဆက်နေသည်…</string>
+    <string name="analyze_stage_formats">အရည်အသွေး ရွေးချယ်စရာများ ဖတ်နေသည်…</string>
+    <string name="analyze_stage_slow">ကွန်ရက်နှေးနေသည်၊ ဆက်စစ်ဆေးနေသည်…</string>
     <string name="detected_youtube">YouTube တွေ့ပါပြီ</string>
     <string name="detected_facebook">Facebook တွေ့ပါပြီ</string>
     <string name="detected_tiktok">TikTok တွေ့ပါပြီ</string>
@@ -221,6 +224,12 @@
     <string name="settings_engine_updating">အင်ဂျင် အပ်ဒိတ်လုပ်နေသည်…</string>
     <string name="settings_engine_updated">အင်ဂျင် အပ်ဒိတ်ပြီး</string>
     <string name="settings_engine_failed">အင်ဂျင် အပ်ဒိတ် မအောင်မြင်ပါ</string>
+    <string name="settings_diagnostics">အင်ဂျင် ရောဂါရှာဖွေရေး</string>
+    <string name="settings_diagnostics_desc">ထည့်သွင်းထားတဲ့ FFmpeg သည် ဒီစက်ပေါ်မှာ တကယ် run မလား စစ်ဆေးပါ။</string>
+    <string name="settings_diagnostics_run">FFmpeg စမ်းသပ်</string>
+    <string name="settings_diagnostics_running">စမ်းသပ်နေသည်…</string>
+    <string name="settings_diagnostics_title">အင်ဂျင် ရောဂါရှာဖွေရေး</string>
+    <string name="settings_diagnostics_copy">အစီရင်ခံစာ ကူးယူ</string>
     <string name="settings_auto_engine">အင်ဂျင် အလိုအလျောက် အပ်ဒိတ်</string>
     <string name="settings_auto_engine_desc">၃ ရက်တစ်ကြိမ် yt-dlp အသစ်ကို စစ်ပါတယ်။</string>
     <string name="settings_updates">အက်ပ် အပ်ဒိတ်များ</string>

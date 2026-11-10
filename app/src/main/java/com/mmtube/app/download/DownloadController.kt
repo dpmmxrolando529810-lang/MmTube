@@ -225,6 +225,7 @@ class DownloadController(
         return YoutubeDLRequest(request.url).apply {
             addOption("--no-playlist")
             addOption("--no-warnings")
+            addOption("--no-update")
             addOption("--newline")
             addOption("--no-mtime")
             addOption("--force-overwrites")
@@ -234,7 +235,6 @@ class DownloadController(
             addOption("--fragment-retries", "10")
             addOption("--extractor-retries", "3")
             addOption("--concurrent-fragments", "16")
-            addOption("--geo-bypass")
             addOption("--embed-metadata")
             addOption("-o", output)
             when (request.mode) {
@@ -262,7 +262,7 @@ class DownloadController(
             }
             if (turbo) {
                 addOption("--downloader", "libaria2c.so")
-                addOption("--external-downloader-args", "aria2c:-x16 -s16 -k1M")
+                addOption("--external-downloader-args", "aria2c:-x24 -s24 -k1M")
             }
         }
     }

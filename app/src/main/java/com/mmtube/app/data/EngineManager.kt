@@ -81,6 +81,13 @@ class EngineManager(private val context: Context) {
     suspend fun autoUpdateIfDue(settings: SettingsSnapshot, settingsStore: SettingsStore) {
         if (!settings.autoEngineUpdate) return
         val now = System.currentTimeMillis()
+        if (settings.lastEngineUpdate <= 0L) {
+            // The APK ships a pinned, current yt-dlp. Start the 3-day clock now
+            // instead of pulling an update over the user's connection on the
+            // very first launch, where it would compete with the first analysis.
+            settingsStore.setLastEngineUpdate(now)
+            return
+        }
         val due = now - settings.lastEngineUpdate > TimeUnit.DAYS.toMillis(3)
         if (!due) return
         val result = updateEngine()

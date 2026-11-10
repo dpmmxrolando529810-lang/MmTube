@@ -238,6 +238,24 @@ fun SettingsScreen(
             )
         }
 
+        SettingsGroup(context.getString(R.string.settings_diagnostics)) {
+            SettingsValueRow(
+                icon = Icons.Rounded.VerifiedUser,
+                label = context.getString(R.string.settings_diagnostics),
+                value = context.getString(R.string.settings_diagnostics_desc)
+            )
+            Row(modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 12.dp)) {
+                Button(
+                    onClick = vm::runEngineDiagnostics,
+                    enabled = !ui.engineUpdating,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MmtubePalette.Amber.copy(alpha = 0.9f), contentColor = Color(0xFF3A2500))
+                ) {
+                    Text(if (ui.engineUpdating) context.getString(R.string.settings_diagnostics_running) else context.getString(R.string.settings_diagnostics_run))
+                }
+            }
+        }
+
         SettingsGroup(context.getString(R.string.settings_legal)) {
             SettingsValueRow(
                 icon = Icons.Rounded.Shield,
@@ -302,6 +320,13 @@ fun SettingsScreen(
             title = context.getString(R.string.settings_licenses),
             body = context.getString(R.string.settings_licenses_desc),
             onDismiss = { showLicenses = false }
+        )
+    }
+    ui.engineDiagnostics?.let { report ->
+        DiagnosticsDialog(
+            report = report,
+            onCopy = { context.copyText(context.getString(R.string.settings_diagnostics_title), report) },
+            onDismiss = vm::clearEngineDiagnostics
         )
     }
 }
@@ -524,6 +549,37 @@ private fun RadioDot(selected: Boolean) {
             Box(Modifier.size(9.dp).clip(CircleShape).background(Color.White))
         }
     }
+}
+
+@Composable
+private fun DiagnosticsDialog(
+    report: String,
+    onCopy: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(context.getString(R.string.settings_diagnostics_title), style = MmtubeType.TitleLarge) },
+        text = {
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Text(
+                    report,
+                    style = MmtubeType.LabelSmall.copy(fontSize = 10.sp),
+                    modifier = Modifier
+                        .verticalScroll(rememberScrollState())
+                        .fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onCopy) { Text(context.getString(R.string.settings_diagnostics_copy), color = MmtubePalette.Aqua) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(context.getString(R.string.action_close)) }
+        },
+        containerColor = MaterialTheme.colorScheme.surface
+    )
 }
 
 @Composable

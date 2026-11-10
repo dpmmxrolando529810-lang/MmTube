@@ -41,7 +41,7 @@ class AppContainer(context: Context) {
     val authRepository = AuthRepository(appContext, auth)
     val account = AccountRepository(authRepository, firestore, scope)
     val quota = QuotaManager(authRepository, account, settings, firestore)
-    val media = MediaRepository(engine)
+    val media = MediaRepository(appContext, engine)
     val exporter = MediaExporter(appContext)
     val downloads = DownloadController(
         context = appContext,
@@ -57,6 +57,9 @@ class AppContainer(context: Context) {
     fun bootstrap() {
         engine.start(scope)
         scope.launch {
+            // Let the first analysis/download start before any engine update
+            // download shares the connection.
+            kotlinx.coroutines.delay(30_000L)
             val snapshot = settings.snapshot()
             engine.autoUpdateIfDue(snapshot, settings)
         }

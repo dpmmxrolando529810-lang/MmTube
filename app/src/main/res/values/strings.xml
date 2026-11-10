@@ -61,6 +61,9 @@
     <string name="link_clear">Clear</string>
     <string name="link_analyze">Analyze link</string>
     <string name="link_analyzing">Analyzing…</string>
+    <string name="analyze_stage_connecting">Contacting the server…</string>
+    <string name="analyze_stage_formats">Reading available formats…</string>
+    <string name="analyze_stage_slow">Slow network, still analyzing…</string>
     <string name="detected_youtube">YouTube detected</string>
     <string name="detected_facebook">Facebook detected</string>
     <string name="detected_tiktok">TikTok detected</string>
@@ -221,6 +224,12 @@
     <string name="settings_engine_updating">Updating engine…</string>
     <string name="settings_engine_updated">Engine updated</string>
     <string name="settings_engine_failed">Engine update failed</string>
+    <string name="settings_diagnostics">Engine diagnostics</string>
+    <string name="settings_diagnostics_desc">Check whether the bundled FFmpeg binary actually runs on this device.</string>
+    <string name="settings_diagnostics_run">Run FFmpeg test</string>
+    <string name="settings_diagnostics_running">Running…</string>
+    <string name="settings_diagnostics_title">Engine diagnostics</string>
+    <string name="settings_diagnostics_copy">Copy report</string>
     <string name="settings_auto_engine">Auto-update engine</string>
     <string name="settings_auto_engine_desc">Checks for a newer yt-dlp every 3 days.</string>
     <string name="settings_updates">App updates</string>

@@ -157,7 +157,7 @@ data class ProbeResult(
 
 sealed interface ProbeUi {
     data object Idle : ProbeUi
-    data class Loading(val url: String) : ProbeUi
+    data class Loading(val url: String, val startedAt: Long = System.currentTimeMillis()) : ProbeUi
     data class Success(val result: ProbeResult) : ProbeUi
     data class Error(val kind: ErrorKind, val detail: String? = null) : ProbeUi
 }
