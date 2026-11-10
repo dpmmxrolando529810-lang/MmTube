@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MMTube — 4K ဗီဒီယို ဒေါင်းလုဒ်</title>
+<meta name="description" content="YouTube / Facebook / TikTok ဗီဒီယိုများကို အမြင့်ဆုံး quality (4K/2K/1080p) နဲ့ ဒေါင်းလုဒ် — MMTube Android app & Telegram bot">
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<style>
+:root{
+  --bg:#0b1016;
+  --surface:#12181f;
+  --surface2:#161f27;
+  --surface3:#1d2833;
+  --text:#eef3f7;
+  --muted:#8fa3b2;
+  --teal:#2dd4bf;
+  --teal2:#38bdf8;
+  --danger:#f87171;
+  --radius:18px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans Myanmar',sans-serif;
+  line-height:1.6;
+  overflow-x:hidden;
+}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+nav{
+  position:sticky;top:0;z-index:50;
+  backdrop-filter:blur(14px);
+  background:rgba(11,16,22,.75);
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{display:flex;align-items:center;gap:12px;font-weight:800;font-size:1.15rem;letter-spacing:.02em;text-decoration:none;color:var(--text)}
+.logo .logomark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--teal),var(--teal2));display:flex;align-items:center;justify-content:center}
+.logo .logomark svg{width:19px;height:19px;fill:#04241d}
+.navlinks{display:flex;gap:22px}
+.navlinks a{color:var(--muted);text-decoration:none;font-weight:600;font-size:.92rem}
+.navlinks a:hover{color:var(--text)}
+@media(max-width:640px){.navlinks{display:none}}
+.hero{padding:64px 0 56px;position:relative}
+.hero::before{content:"";position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:640px;height:640px;background:radial-gradient(circle,rgba(45,212,191,.16),transparent 65%);pointer-events:none}
+.hero .wrap{position:relative;text-align:center}
+.pill{display:inline-flex;align-items:center;gap:8px;background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.35);color:var(--teal);font-weight:700;font-size:.78rem;padding:6px 14px;border-radius:999px;margin-bottom:22px;letter-spacing:.03em}
+h1{font-size:clamp(2rem,5.6vw,3.4rem);line-height:1.18;font-weight:800;letter-spacing:-.02em}
+h1 .grad{background:linear-gradient(135deg,var(--teal),var(--teal2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sub{max-width:640px;margin:18px auto 0;color:var(--muted);font-size:1.06rem}
+.cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:30px}
+.btn{display:inline-flex;align-items:center;gap:10px;text-decoration:none;font-weight:800;border-radius:14px;padding:15px 26px;font-size:1rem;transition:transform .15s, box-shadow .15s;border:none;cursor:pointer}
+.btn:hover{transform:translateY(-2px)}
+.btn-primary{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#04241d;box-shadow:0 12px 40px rgba(45,212,191,.35)}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid rgba(255,255,255,.09)}
+.stats{display:flex;gap:34px;justify-content:center;margin-top:44px;flex-wrap:wrap}
+.stat b{font-size:1.3rem;display:block}
+.stat span{color:var(--muted);font-size:.8rem}
+section{padding:56px 0}
+.section-title{font-size:1.6rem;font-weight:800;text-align:center;margin-bottom:8px}
+.section-sub{text-align:center;color:var(--muted);margin-bottom:34px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);padding:22px}
+.card .ic{width:44px;height:44px;border-radius:12px;background:rgba(45,212,191,.12);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.card .ic svg{width:22px;height:22px;stroke:var(--teal);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.card h3{font-size:1.02rem;margin-bottom:6px}
+.card p{color:var(--muted);font-size:.9rem}
+.downloader{background:linear-gradient(180deg,var(--surface),var(--surface2));border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:28px;max-width:720px;margin:0 auto}
+.inputrow{display:flex;gap:10px}
+@media(max-width:560px){.inputrow{flex-direction:column}}
+.inputrow input{flex:1;background:var(--bg);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px 16px;color:var(--text);font-size:1rem;outline:none}
+.inputrow input:focus{border-color:var(--teal)}
+.info-box{display:none;background:var(--bg);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:16px;margin-top:16px;align-items:center;gap:14px}
+.info-box.show{display:flex}
+.info-box img{width:120px;height:74px;object-fit:cover;border-radius:10px;background:var(--surface3)}
+@media(max-width:560px){.info-box img{display:none}}
+.info-box .t{font-weight:700;font-size:.95rem;line-height:1.4}
+.info-box .m{color:var(--muted);font-size:.8rem;margin-top:4px}
+.mode-row{display:flex;gap:10px;margin-top:12px}
+.mode-btn{flex:1;background:var(--surface3);border:1px solid rgba(255,255,255,.09);color:var(--text);border-radius:12px;padding:12px;font-weight:700;cursor:pointer}
+.mode-btn.active{border-color:var(--teal);color:var(--teal)}
+.progress{display:none;margin-top:14px}
+.progress.show{display:block}
+.bar{height:10px;background:var(--surface3);border-radius:999px;overflow:hidden}
+.bar-inner{height:100%;width:0%;background:linear-gradient(90deg,var(--teal),var(--teal2));transition:width .3s}
+.link-out{display:none;margin-top:14px;word-break:break-all;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.3);border-radius:12px;padding:14px;font-size:.9rem}
+.link-out.show{display:block}
+.link-out a{color:var(--teal);font-weight:800}
+.error-msg{display:none;margin-top:12px;color:var(--danger);font-size:.9rem}
+.error-msg.show{display:block}
+.bot-strip{display:flex;align-items:center;justify-content:space-between;gap:20px;background:var(--surface2);border-radius:var(--radius);padding:22px 26px;border:1px solid rgba(255,255,255,.07)}
+@media(max-width:640px){.bot-strip{flex-direction:column;text-align:center}}
+.bot-strip h3{margin-bottom:4px}
+.bot-strip p{color:var(--muted);font-size:.9rem}
+footer{border-top:1px solid rgba(255,255,255,.07);padding:28px 0;color:var(--muted);font-size:.82rem}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+footer a{color:var(--teal);text-decoration:none}
+small.legal{display:block;margin-top:10px;opacity:.75}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="logo" href="#top">
+    <span class="logomark"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+    MMTube
+  </a>
+  <div class="navlinks">
+    <a href="#features">Features</a>
+    <a href="#app">App</a>
+    <a href="#downloader">Download</a>
+    <a href="#bot">Telegram Bot</a>
+  </div>
+</div></nav>
+
+<header class="hero" id="top"><div class="wrap">
+  <div class="pill">◆ Android App + Telegram Bot</div>
+  <h1>YouTube ကို<br><span class="grad">အမြင့်ဆုံး Quality</span> နဲ့ သိမ်းပါ</h1>
+  <p class="sub">YouTube, Facebook, TikTok — မူရင်းပေးတဲ့ အရည်အသွေးအမြင့်ဆုံး (4K/2K/1080p) နဲ့ ဒေါင်းလုဒ်။ TikTok ကို watermark မပါဘဲ။ App မှာ ပထမ ၂၄ ชม အခမဲ့၊ Unlimited plan များ — အမြဲ အခမဲ့ downloader website နဲ့ bot ကတော့ 24/7</p>
+  <div class="cta">
+    <a class="btn btn-primary" href="/MMTube.apk">⬇ APK ဒေါင်းလုဒ်</a>
+    <a class="btn btn-ghost" href="#bot">🤖 Telegram Bot သုံးပါ</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><b>4K</b><span>အမြင့်ဆုံး Resolution</span></div>
+    <div class="stat"><b>3</b><span>Platform</span></div>
+    <div class="stat"><b>Free</b><span>24/7 · Website & Bot</span></div>
+    <div class="stat"><b>0 ads</b><span>ငွေကောက်မှု မရှိ</span></div>
+  </div>
+</div></header>
+
+<section id="features">
+  <div class="wrap">
+    <h2 class="section-title">MMTube က ဘာပေးနိုင်လဲ</h2>
+    <p class="section-sub">မူရင်းအရည်အသွေး အပြည့် — အပိုအဖျက် မရှိ</p>
+    <div class="cards">
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v18m0 0l-6-6m6 6l6-6"/></svg></div><h3>4K / 2K / 1080p</h3><p>YouTube ပေးတဲ့အမြင့်ဆုံး resolution ကို အလိုအလျောက် ရွေးချယ် — bitrate အမြင့်ဆုံးပါ</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 6v6l4 2"/></svg></div><h3>TikTok Watermark မပါ</h3><p>TikTok video တွေကို clean အတိုင်း ဒေါင်း — logo မပါ</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l7 4v5c0 5-3.5 8-7 9-3.5-1-7-4-7-9V7z"/></svg></div><h3>ပေါ်လတာတွေ</h3><p>Facebook Reels / TikTok / YouTube — အကုန် လက်ခံတယ်</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div><h3>MP3 + Video</h3><p>Audio သီးသန့် (MP3 320kbps) ကလည်း ကောင်းကောင်းရတယ်</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M20 6H4m16 6H4m16 6H4"/></svg></div><h3>ခက်ခဲမှု မရှိ</h3><p>Link ကူးထည့်ရုံ — mode ရွေးပြီး Download နှိပ်ရုံ</p></div>
+      <div class="card"><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="10"/></svg></div><h3>24/7 · Free</h3><p>Website နဲ့ Telegram Bot ကို အမြဲ အခမဲ့ အသုံးပြုနိုင်တယ် — PC မလိုဘူး</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="downloader">
+  <div class="wrap">
+    <h2 class="section-title">🌐 Browser ထဲကနေပဲ ဒေါင်းပါ</h2>
+    <p class="section-sub">Link ထည့် → Download — အကန့်အသတ်: ၂ GB အောက်ဖိုင် · ၂၄ ชม အတွင်း ဒေါင်းရမယ်</p>
+    <div class="downloader">
+      <div class="inputrow">
+        <input id="linkInput" type="text" inputmode="url" placeholder="YouTube / Facebook / TikTok link ထည့်ပါ…" autocomplete="off" spellcheck="false">
+        <button class="btn btn-primary" id="analyzeBtn" type="button">စစ်ဆေး</button>
+      </div>
+
+      <div class="error-msg" id="err"></div>
+
+      <div class="info-box" id="infoBox">
+        <img id="thumb" alt="">
+        <div style="min-width:0">
+          <div class="t" id="vTitle"></div>
+          <div class="m" id="vMeta"></div>
+        </div>
+      </div>
+
+      <div class="mode-row" id="modeRow" style="display:none">
+        <button class="mode-btn active" data-mode="video">📺 Video (MAX)</button>
+        <button class="mode-btn" data-mode="mp3">🎵 MP3</button>
+      </div>
+
+      <div class="cta" style="margin-top:16px">
+        <button class="btn btn-primary" id="dlBtn" type="button" style="display:none">⬇ ဒေါင်းလုဒ်</button>
+      </div>
+
+      <div class="progress" id="progBox">
+        <div style="display:flex;justify-content:space-between;font-size:.85rem;color:var(--muted);margin-bottom:6px"><span>ဒေါင်းနေတယ်…</span><span id="progPct">0%</span></div>
+        <div class="bar"><div class="bar-inner" id="barInner"></div></div>
+      </div>
+
+      <div class="link-out" id="linkOut"></div>
+    </div>
+  </div>
+</section>
+
+<section id="bot">
+  <div class="wrap">
+    <h2 class="section-title">🤖 Telegram Bot</h2>
+    <p class="section-sub">Link ပို့ → Download — ဖိုင် ၄၈ MB အောက်ဆို တိုက်ရိုက်ပို့ပေး၊ ထက်ကြီးရင် link ပေးတယ်</p>
+    <div class="bot-strip">
+      <div>
+        <h3>MMTube Bot ကို Telegram မှာ သုံးပါ</h3>
+        <p>YouTube · Facebook · TikTok — အမြင့်ဆုံး quality နဲ့ ဒေါင်း</p>
+      </div>
+      <a class="btn btn-primary" id="botLink" href="https://t.me/mmtubebot" target="_blank" rel="noopener">🤖 Bot ဖွင့်ပါ</a>
+    </div>
+  </div>
+</section>
+
+<section id="app">
+  <div class="wrap">
+    <h2 class="section-title">📱 Android App</h2>
+    <p class="section-sub">In-app download · Gallery save · Quality 4K အထိ · ပထမ ၂၄ စ် အခမဲ့ · Unlimited plans</p>
+    <div class="cta" style="justify-content:center">
+      <a class="btn btn-primary" href="/MMTube.apk">⬇ MMTube.apk (276 MB)</a>
+      <a class="btn btn-ghost" href="https://github.com" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">
+  <div>© <span id="yr"></span> MMTube — အမြင့်ဆုံး Quality။ ရှင်းလင်းမှုအပြည့်။</div>
+  <div><a href="#">Privacy</a> · <a href="#">Terms</a></div>
+  <small class="legal">Personal use အတွက်သာ။ YouTube / Facebook / TikTok ရဲ့ Terms of Service ကို လိုက်နာပါ။ Copyright ပိုင်ရှင်မဟုတ်သော အကြောင်းအရာများ ဖြန့်ဝေခွင့် မရှိပါ။</small>
+</div></footer>
+
+<script>
+const BOT_USERNAME = 'mmtubebot'; // set by deploy script
+document.getElementById('botLink').href = 'https://t.me/' + BOT_USERNAME;
+document.getElementById('yr').textContent = new Date().getFullYear();
+
+const input = document.getElementById('linkInput');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const err = document.getElementById('err');
+const infoBox = document.getElementById('infoBox');
+const modeRow = document.getElementById('modeRow');
+const dlBtn = document.getElementById('dlBtn');
+const progBox = document.getElementById('progBox');
+const barInner = document.getElementById('barInner');
+const progPct = document.getElementById('progPct');
+const linkOut = document.getElementById('linkOut');
+let currentUrl = null, mode = 'video', timer = null;
+
+function showErr(msg){ err.textContent = msg; err.classList.add('show'); }
+function hideErr(){ err.classList.remove('show'); }
+function fmtBytes(n){
+  if(!n) return '';
+  if(n >= 1024**3) return (n/1024**3).toFixed(2) + ' GB';
+  if(n >= 1024**2) return (n/1024**2).toFixed(1) + ' MB';
+  return Math.round(n/1024) + ' KB';
+}
+function fmtDur(s){ s=Math.max(0,s|0); const h=(s/3600)|0, m=((s%3600)/60)|0, sec=s%60; return h?`${h}h ${m}m`:`${m}m ${sec}s`; }
+
+analyzeBtn.addEventListener('click', analyze);
+input.addEventListener('keydown', e => { if(e.key==='Enter') analyze(); });
+
+async function analyze(){
+  hideErr(); infoBox.classList.remove('show'); modeRow.style.display='none'; dlBtn.style.display='none';
+  progBox.classList.remove('show'); linkOut.classList.remove('show');
+  const url = input.value.trim();
+  if(!url){ showErr('Link ထည့်ပေးပါ။'); return; }
+  analyzeBtn.disabled = true; analyzeBtn.textContent = 'စစ်နေတယ်…';
+  try{
+    const res = await fetch('/api/analyze', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url})});
+    const data = await res.json();
+    if(!res.ok){ showErr(data.error || 'စစ်လို့မရပါ။'); return; }
+    currentUrl = url;
+    document.getElementById('vTitle').textContent = data.title || '';
+    document.getElementById('vMeta').textContent =
+      [data.uploader, fmtDur(data.duration), data.max_height ? data.max_height + 'p' : 'Audio', data.estimated_bytes ? '~' + fmtBytes(data.estimated_bytes) : ''].filter(Boolean).join(' · ');
+    document.getElementById('thumb').src = '';
+    infoBox.classList.add('show'); modeRow.style.display='flex'; dlBtn.style.display='inline-flex';
+  }catch(e){ showErr('Server နဲ့ ချိတ်ဆက်လို့မရပါ — နောက်မှ ထပ်စမ်းပါ။'); }
+  finally{ analyzeBtn.disabled = false; analyzeBtn.textContent = 'စစ်ဆေး'; }
+}
+
+document.querySelectorAll('.mode-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.mode-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); mode = btn.dataset.mode;
+  });
+});
+
+dlBtn.addEventListener('click', startDownload);
+
+async function startDownload(){
+  if(!currentUrl) return;
+  dlBtn.disabled = true; hideErr(); progBox.classList.add('show'); barInner.style.width='5%'; progPct.textContent='…';
+  try{
+    const res = await fetch('/api/download', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({url: currentUrl, mode})});
+    const data = await res.json();
+    if(!res.ok){ progBox.classList.remove('show'); showErr(data.error || 'စတင်လို့မရပါ။'); dlBtn.disabled=false; return; }
+    poll(data.job_id);
+  }catch(e){ progBox.classList.remove('show'); showErr('Server နဲ့ ချိတ်ဆက်လို့မရပါ။'); dlBtn.disabled=false; }
+}
+
+function poll(jobId){
+  timer = setInterval(async ()=>{
+    try{
+      const res = await fetch('/api/status/' + jobId);
+      const data = await res.json();
+      if(data.status === 'done'){
+        clearInterval(timer); barInner.style.width='100%'; progPct.textContent='100%';
+        linkOut.innerHTML = '✅ ရပြီး (' + fmtBytes(data.size||0) + ') — <a href="' + data.link + '" download>ဖိုင်ကို ဒီမှာ ဒေါင်းလုဒ်</a>';
+        linkOut.classList.add('show'); dlBtn.disabled = false;
+      } else if(data.status === 'failed'){
+        clearInterval(timer); progBox.classList.remove('show'); showErr(data.error || 'ဒေါင်းလို့မရပါ။'); dlBtn.disabled = false;
+      } else {
+        barInner.style.width = Math.min(90, (parseFloat(progPct.textContent)||10) + 7) + '%';
+        progPct.textContent = Math.round(parseFloat(barInner.style.width)) + '%';
+      }
+    }catch(e){ /* keep polling */ }
+  }, 1500);
+}
+</script>
+</body>
+</html>

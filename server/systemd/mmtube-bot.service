@@ -1,0 +1,21 @@
+[Unit]
+Description=MMTube Telegram Bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mmtube
+Group=mmtube
+WorkingDirectory=/opt/mmtube/server/bot
+EnvironmentFile=/etc/mmtube/mmtube.env
+ExecStart=/opt/mmtube-venv/bin/python /opt/mmtube/server/bot/bot.py
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/mmtube /var/www/mmtube/files /tmp
+
+[Install]
+WantedBy=multi-user.target
