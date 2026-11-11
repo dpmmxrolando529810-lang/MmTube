@@ -206,6 +206,7 @@ sealed interface DownloadState {
     data class Saving(val title: String, val mode: DownloadMode) : DownloadState
     data class Completed(val item: HistoryItem) : DownloadState
     data class Failed(val title: String, val kind: ErrorKind, val detail: String? = null) : DownloadState
+    data class Paused(val title: String, val mode: DownloadMode, val progress: Float) : DownloadState
     data object Cancelled : DownloadState
 }
 
@@ -236,5 +237,6 @@ data class SettingsSnapshot(
     val guestTotalDownloads: Int = 0,
     val lastEngineUpdate: Long = 0L,
     val lastUpdateCheck: Long = 0L,
-    val language: String = ""
+    val language: String = "",
+    val onboardingSeen: Boolean = false
 )

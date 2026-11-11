@@ -56,10 +56,12 @@ fun DownloadsScreen(
     val context = LocalContext.current
     var filter by remember { mutableStateOf(0) }
     var pendingDelete by remember { mutableStateOf<HistoryItem?>(null) }
+    var clearAllConfirm by remember { mutableStateOf(false) }
 
     val active = ui.download
     val hasActive = active is DownloadState.Preparing || active is DownloadState.Running ||
-        active is DownloadState.Merging || active is DownloadState.Saving
+        active is DownloadState.Merging || active is DownloadState.Saving ||
+        active is DownloadState.Paused
 
     val filtered = ui.history.filter { item ->
         when (filter) {
@@ -99,21 +101,34 @@ fun DownloadsScreen(
                 )
             }
             item {
-                ActiveDownloadCard(state = active, onCancel = vm::cancelDownload)
+                ActiveDownloadCard(state = active, onCancel = vm::cancelDownload, onResume = vm::resumeDownload)
             }
         }
         item {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(top = 2.dp)
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp)
             ) {
-                Icon(Icons.Rounded.Storage, contentDescription = null, tint = MmtubePalette.Blue, modifier = Modifier.size(16.dp))
-                Text(
-                    text = context.getString(R.string.storage_used, Formatters.formatBytes(totalBytes)),
-                    style = MmtubeType.LabelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Rounded.Storage, contentDescription = null, tint = MmtubePalette.Blue, modifier = Modifier.size(16.dp))
+                    Text(
+                        text = context.getString(R.string.storage_used, Formatters.formatBytes(totalBytes)),
+                        style = MmtubeType.LabelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                if (ui.history.isNotEmpty()) {
+                    androidx.compose.material3.TextButton(onClick = { clearAllConfirm = true }) {
+                        Text(
+                            context.getString(R.string.history_clear_all),
+                            color = MmtubePalette.Danger,
+                            style = MmtubeType.LabelLarge
+                        )
+                    }
+                }
             }
         }
         item {
@@ -138,6 +153,19 @@ fun DownloadsScreen(
         }
     }
 
+    if (clearAllConfirm) {
+        ConfirmDialog(
+            title = context.getString(R.string.history_clear_all),
+            body = context.getString(R.string.history_clear_all_confirm),
+            confirmLabel = context.getString(R.string.action_delete),
+            onConfirm = {
+                vm.clearAllHistory()
+                clearAllConfirm = false
+            },
+            onDismiss = { clearAllConfirm = false },
+            danger = true
+        )
+    }
     pendingDelete?.let { item ->
         ConfirmDialog(
             title = context.getString(R.string.download_delete_title),

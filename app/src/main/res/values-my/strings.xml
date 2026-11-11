@@ -284,7 +284,7 @@
     <string name="error_private">ဒီဗီဒီယိုက သီးသန့်ဖြစ်နေတာ သို့မဟုတ် အကောင့်ဝင်ရန် လိုအပ်နေပါတယ်။</string>
     <string name="error_age">ဒီဗီဒီယိုက အသက်ကန့်သတ်ထားပြီး cookies လိုအပ်ပါတယ်။</string>
     <string name="error_unavailable">ဒီဗီဒီယိုက သင့်ဒေသမှာ မရနိုင်တာ သို့မဟုတ် ဖယ်ရှားခံထားရတာပါ။</string>
-    <string name="error_network">ကွန်ရက် အမှားအယွင်း။ ချိတ်ဆက်မှုကို စစ်ပြီး ထပ်စမ်းပါ။</string>
+    <string name="error_network">အင်တာနက် မကောင်းပါ — Wi-Fi/မိုဘိုင်းဒေတာ စစ်ပြီး ပြန်ကြိုးစားပါ။</string>
     <string name="error_engine">ဒေါင်းလုဒ် အင်ဂျင် ပြင်ဆင်နေဆဲပါ။ ခဏနေပြီး ထပ်စမ်းပါ။</string>
     <string name="error_download">ဒေါင်းလုဒ် မအောင်မြင်ပါ။ ဆိုက် ပြောင်းသွားနိုင်ပါတယ်။ အင်ဂျင် အပ်ဒိတ်လုပ်ပြီး ထပ်စမ်းပါ။</string>
     <string name="error_quota">အခမဲ့ အစီအစဉ် ကန့်သတ်ချက် ပြည့်သွားပါပြီ။ နောက်မှ ထပ်စမ်းပါ သို့မဟုတ် အဆင့်မြှင့်ပါ။</string>
@@ -301,4 +301,16 @@
     <string name="unlimited">အကန့်အသတ်မရှိ</string>
     <string name="per_day">၁ / ၂၄ နာရီ</string>
     <string name="check_again">ထပ်စစ်</string>
+    <string name="onboarding_title">MMTube မှ ကြိုဆိုပါတယ်</string>
+    <string name="onboarding_body">Link ကူးထည့်ပါ → စစ်ဆေးပါ → source ရဲ့ အမြင့်ဆုံး quality (4K + audio အကောင်းဆုံး) နဲ့ ရယူပါ။ အခမဲ့ user က ၂၄ နာရီ ၁ ကြိမ်။ Unlimited plan: ၁ / ၃ / ၆ / ၁၂ လ — Account → Upgrade မှာကြည့်ပါ။</string>
+    <string name="onboarding_got_it">နားလည်ပါပြီ</string>
+    <string name="action_history_cleared">Download history ဖျက်ပြီးပြီ</string>
+    <string name="history_storage_used">သုံးထားတဲ့ နေရာ</string>
+    <string name="history_clear_all">History အားလုံး ဖျက်ခြင်း</string>
+    <string name="history_clear_all_confirm">Download ထားတဲ့ ဖိုင်နဲ့ history အားလုံး ဖျက်မှာလား?</string>
+    <string name="download_pause">ယာယီရပ်</string>
+    <string name="download_resume">ဆက်လုပ်ခြင်း</string>
+    <string name="download_status_paused">ခေတ္တရပ်ထားသည်</string>
+    <string name="download_notification_paused">ဒေါင်းလုဒ် ခေတ္တရပ်ထား</string>
+    <string name="download_notification_resume">ဆက်လုပ်</string>
 </resources>

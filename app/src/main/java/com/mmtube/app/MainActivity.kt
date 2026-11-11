@@ -48,7 +48,7 @@ class MainActivity : AppCompatActivity() {
             Intent.ACTION_SEND -> {
                 val text = intent.getStringExtra(Intent.EXTRA_TEXT)
                 if (!text.isNullOrBlank()) {
-                    viewModel.pasteLink(text)
+                    viewModel.pasteLink(text, autoStart = true)
                 }
             }
             Intent.ACTION_VIEW -> {

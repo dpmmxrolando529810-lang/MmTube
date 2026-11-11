@@ -62,7 +62,8 @@ class DownloadService : Service() {
                         updateNotification(state)
                         if (state is DownloadState.Completed ||
                             state is DownloadState.Failed ||
-                            state is DownloadState.Cancelled
+                            state is DownloadState.Cancelled ||
+                            state is DownloadState.Paused
                         ) {
                             finishService()
                         }
@@ -116,6 +117,7 @@ class DownloadService : Service() {
             state is DownloadState.Running ||
             state is DownloadState.Merging ||
             state is DownloadState.Saving
+        val paused = state is DownloadState.Paused
 
         val title = when (state) {
             is DownloadState.Preparing -> getString(R.string.notification_downloading, state.title)
@@ -124,6 +126,7 @@ class DownloadService : Service() {
             is DownloadState.Saving -> getString(R.string.download_status_saving)
             is DownloadState.Completed -> getString(R.string.notification_complete)
             is DownloadState.Failed -> getString(R.string.notification_failed)
+            is DownloadState.Paused -> getString(R.string.download_status_paused)
             is DownloadState.Cancelled -> getString(R.string.download_status_cancelled)
             DownloadState.Idle -> getString(R.string.app_name)
         }
@@ -146,6 +149,7 @@ class DownloadService : Service() {
             is DownloadState.Saving -> state.title
             is DownloadState.Completed -> state.item.title
             is DownloadState.Failed -> state.title
+            is DownloadState.Paused -> getString(R.string.download_status_paused)
             is DownloadState.Cancelled -> getString(R.string.app_name)
             DownloadState.Idle -> ""
         }
@@ -171,6 +175,9 @@ class DownloadService : Service() {
                 val percent = Formatters.progressPercent(state.progress)
                 builder.setProgress(100, percent, state.progress <= 0f)
             }
+            is DownloadState.Paused -> {
+                builder.setProgress(100, Formatters.progressPercent(state.progress), false)
+            }
             is DownloadState.Preparing, is DownloadState.Merging, is DownloadState.Saving ->
                 builder.setProgress(0, 0, true)
             else -> builder.setProgress(0, 0, false)
@@ -181,6 +188,12 @@ class DownloadService : Service() {
                 R.drawable.ic_notification_cancel,
                 getString(R.string.notification_cancel),
                 cancelPendingIntent()
+            )
+        } else if (paused) {
+            builder.addAction(
+                R.drawable.ic_notification_open,
+                getString(R.string.download_notification_resume),
+                openAppPendingIntent()
             )
         } else {
             builder.addAction(
@@ -269,7 +282,8 @@ class DownloadService : Service() {
             mode = mode,
             thumbnail = getStringExtra(EXTRA_THUMBNAIL),
             durationSeconds = getIntExtra(EXTRA_DURATION, 0),
-            qualityLabel = quality
+            qualityLabel = quality,
+            resume = getBooleanExtra(EXTRA_RESUME, false)
         )
     }
 
@@ -287,6 +301,7 @@ class DownloadService : Service() {
         private const val EXTRA_QUALITY = "quality"
         private const val EXTRA_THUMBNAIL = "thumbnail"
         private const val EXTRA_DURATION = "duration"
+        private const val EXTRA_RESUME = "resume"
 
         fun start(context: Context, request: DownloadRequest) {
             val intent = Intent(context, DownloadService::class.java).apply {
@@ -298,6 +313,7 @@ class DownloadService : Service() {
                 putExtra(EXTRA_QUALITY, request.qualityLabel)
                 putExtra(EXTRA_THUMBNAIL, request.thumbnail)
                 putExtra(EXTRA_DURATION, request.durationSeconds)
+                putExtra(EXTRA_RESUME, request.resume)
             }
             ContextCompat.startForegroundService(context, intent)
         }

@@ -30,6 +30,7 @@ class SettingsStore(private val context: Context) {
         val LAST_ENGINE_UPDATE = longPreferencesKey("last_engine_update")
         val LAST_UPDATE_CHECK = longPreferencesKey("last_update_check")
         val LANGUAGE = stringPreferencesKey("language")
+        val ONBOARDING = booleanPreferencesKey("onboarding_seen")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -51,7 +52,8 @@ class SettingsStore(private val context: Context) {
         guestTotalDownloads = this[Keys.GUEST_TOTAL] ?: 0,
         lastEngineUpdate = this[Keys.LAST_ENGINE_UPDATE] ?: 0L,
         lastUpdateCheck = this[Keys.LAST_UPDATE_CHECK] ?: 0L,
-        language = this[Keys.LANGUAGE] ?: ""
+        language = this[Keys.LANGUAGE] ?: "",
+        onboardingSeen = this[Keys.ONBOARDING] ?: false
     )
 
     suspend fun setTheme(mode: ThemeMode) {
@@ -98,6 +100,10 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setLocalNextAllowed(uid: String, value: Long) {
         context.settingsDataStore.edit { it[longPreferencesKey("next_allowed_$uid")] = value }
+    }
+
+    suspend fun setOnboardingSeen() {
+        context.settingsDataStore.edit { it[Keys.ONBOARDING] = true }
     }
 
     suspend fun localTotalDownloads(uid: String): Int =

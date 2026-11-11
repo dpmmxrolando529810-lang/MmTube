@@ -59,7 +59,8 @@ data class MainUiState(
     val engineUpdating: Boolean = false,
     val accountBusy: Boolean = false,
     val sha1: String = "",
-    val engineDiagnostics: String? = null
+    val engineDiagnostics: String? = null,
+    val pendingAutoDownload: Boolean = false
 ) {
     val termsAccepted: Boolean get() = settings.acceptedTerms
 }
@@ -146,9 +147,14 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun pasteLink(text: String) {
+        pasteLink(text, autoStart = false)
+    }
+
+    /** Used by the YouTube/Facebook share-sheet: analyze then auto-start the download. */
+    fun pasteLink(text: String, autoStart: Boolean) {
         val url = UrlUtils.extractUrl(text) ?: return
         val detected = UrlUtils.detectPlatform(url)
-        _ui.update { it.copy(link = url, detected = detected, probe = ProbeUi.Idle) }
+        _ui.update { it.copy(link = url, detected = detected, probe = ProbeUi.Idle, pendingAutoDownload = autoStart) }
         event(UiEvent.Message(context.getString(R.string.link_pasted)))
         event(UiEvent.OpenTab(MainTab.HOME))
         analyze()
@@ -174,14 +180,17 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         probeJob = viewModelScope.launch {
             container.media.probe(raw)
                 .onSuccess { result ->
+                    val autoStart = _ui.value.pendingAutoDownload
                     _ui.update {
                         it.copy(
                             link = result.url,
                             probe = ProbeUi.Success(result),
                             mode = if (result.audioOnly) DownloadMode.MP3 else DownloadMode.MAX,
-                            detected = result.platform
+                            detected = result.platform,
+                            pendingAutoDownload = false
                         )
                     }
+                    if (autoStart) startDownload()
                 }
                 .onFailure { error ->
                     val kind = (error as? MmtubeException)?.kind ?: ErrorKind.GENERIC
@@ -230,6 +239,17 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun cancelDownload() {
         container.downloads.cancel()
+    }
+
+    fun pauseDownload() {
+        container.downloads.pause()
+    }
+
+    fun resumeDownload() {
+        // Consume the paused snapshot and restart through the foreground
+        // service so the download gets the same wakelock + progress wiring.
+        val request = container.downloads.consumePausedRequest() ?: return
+        DownloadService.start(context, request.copy(resume = true))
     }
 
     fun resetDownload() {
@@ -319,6 +339,19 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     event(UiEvent.Message(message))
                 }
             _ui.update { it.copy(accountBusy = false) }
+        }
+    }
+
+    fun markOnboardingSeen() {
+        viewModelScope.launch { container.settings.setOnboardingSeen() }
+    }
+
+    fun clearAllHistory() {
+        viewModelScope.launch {
+            val items = container.history.snapshot()
+            items.forEach { runCatching { container.exporter.delete(it) } }
+            container.history.clear()
+            event(UiEvent.Message(context.getString(R.string.action_history_cleared)))
         }
     }
 

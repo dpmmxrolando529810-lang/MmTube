@@ -121,6 +121,11 @@ fun HomeScreen(
         item {
             Header(ui = ui, onSettings = onSettings)
         }
+        if (!ui.settings.onboardingSeen) {
+            item {
+                OnboardingCard(onDismiss = vm::markOnboardingSeen)
+            }
+        }
         item {
             HeroTitle()
         }
@@ -149,9 +154,6 @@ fun HomeScreen(
         }
         item {
             RecentSection(history = ui.history, onSeeAll = onSeeAll, onOpen = vm::openHistory)
-        }
-        item {
-            WhySection()
         }
         item {
             Text(
@@ -375,16 +377,50 @@ private fun EngineCard(ui: MainUiState, onRetry: () -> Unit) {
                         strokeWidth = 3.dp,
                         color = MmtubePalette.Aqua.copy(alpha = alpha)
                     )
-                    Column {
+                    Column(Modifier.weight(1f)) {
                         Text(context.getString(R.string.engine_preparing_title), style = MmtubeType.TitleMedium, color = MaterialTheme.colorScheme.onSurface)
                         Text(
                             text = context.getString(R.string.engine_preparing_desc),
                             style = MmtubeType.BodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                        androidx.compose.material3.LinearProgressIndicator(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp)
+                                .clip(RoundedCornerShape(8.dp)),
+                            color = MmtubePalette.Aqua,
+                            trackColor = MaterialTheme.colorScheme.surfaceVariant
+                        )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun OnboardingCard(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    FrostedCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = context.getString(R.string.onboarding_title),
+            style = MmtubeType.TitleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+        Text(
+            text = context.getString(R.string.onboarding_body),
+            style = MmtubeType.BodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        androidx.compose.material3.Button(
+            onClick = onDismiss,
+            shape = RoundedCornerShape(12.dp),
+            colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = MmtubePalette.AquaDeep),
+            modifier = Modifier.padding(top = 12.dp)
+        ) {
+            Text(context.getString(R.string.onboarding_got_it))
         }
     }
 }
@@ -800,6 +836,13 @@ private fun DownloadSection(ui: MainUiState, vm: MainViewModel) {
             onNew = vm::dismissCompleted
         )
 
+        is DownloadState.Paused -> {
+            ActiveDownloadCard(
+                state = state,
+                onCancel = vm::cancelDownload,
+                onResume = vm::resumeDownload
+            )
+        }
         is DownloadState.Failed -> {
             FrostedCard(modifier = Modifier.fillMaxWidth()) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -929,53 +972,5 @@ private fun RecentCard(item: HistoryItem, onClick: () -> Unit) {
             style = MmtubeType.LabelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-@Composable
-private fun WhySection() {
-    val context = LocalContext.current
-    FrostedCard(modifier = Modifier.fillMaxWidth()) {
-        Text(
-            text = context.getString(R.string.section_why),
-            style = MmtubeType.TitleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-        FeatureRow(Icons.Rounded.PhoneAndroid, context.getString(R.string.feature_on_device_title), context.getString(R.string.feature_on_device_desc), 0)
-        FeatureRow(Icons.Rounded.HighQuality, context.getString(R.string.feature_max_title), context.getString(R.string.feature_max_desc), 1)
-        FeatureRow(Icons.Rounded.Shield, context.getString(R.string.feature_private_title), context.getString(R.string.feature_private_desc), 2)
-    }
-}
-
-@Composable
-private fun FeatureRow(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    description: String,
-    index: Int
-) {
-    val accents = listOf(MmtubePalette.Aqua, MmtubePalette.Blue, MmtubePalette.Violet)
-    val accent = accents[index % accents.size]
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .size(46.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(accent.copy(alpha = 0.16f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(24.dp))
-        }
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MmtubeType.TitleMedium, color = MaterialTheme.colorScheme.onSurface)
-            Text(description, style = MmtubeType.BodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
     }
 }

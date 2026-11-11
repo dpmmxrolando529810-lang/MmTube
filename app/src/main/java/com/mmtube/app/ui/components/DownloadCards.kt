@@ -25,6 +25,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DownloadForOffline
 import androidx.compose.material.icons.rounded.FolderOpen
+import androidx.compose.material.icons.rounded.HourglassTop
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
@@ -62,6 +63,7 @@ import com.mmtube.app.util.Formatters
 fun ActiveDownloadCard(
     state: DownloadState,
     onCancel: () -> Unit,
+    onResume: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -70,15 +72,23 @@ fun ActiveDownloadCard(
         is DownloadState.Running -> state.title
         is DownloadState.Merging -> state.title
         is DownloadState.Saving -> state.title
+        is DownloadState.Paused -> state.title
         else -> context.getString(R.string.download_status_preparing)
     }
     val isRunning = state is DownloadState.Running
-    val progress = if (isRunning) (state as DownloadState.Running).progress / 100f else null
+    val isPaused = state is DownloadState.Paused
+    val rawProgress = when {
+        isRunning -> (state as DownloadState.Running).progress
+        isPaused -> (state as DownloadState.Paused).progress
+        else -> null
+    }
+    val progress = rawProgress?.div(100f)
     val statusText = when (state) {
         is DownloadState.Preparing -> context.getString(R.string.download_status_preparing)
         is DownloadState.Running -> "${Formatters.progressPercent(state.progress)}%"
         is DownloadState.Merging -> context.getString(R.string.download_status_merging)
         is DownloadState.Saving -> context.getString(R.string.download_status_saving)
+        is DownloadState.Paused -> context.getString(R.string.download_status_paused)
         else -> ""
     }
     FrostedCard(modifier = modifier.fillMaxWidth()) {
@@ -94,7 +104,7 @@ fun ActiveDownloadCard(
                     ),
                 contentAlignment = Alignment.Center
             ) {
-                if (progress == null) {
+                if (progress == null && !isPaused) {
                     androidx.compose.material3.CircularProgressIndicator(
                         modifier = Modifier.size(26.dp),
                         strokeWidth = 2.5.dp,
@@ -104,7 +114,7 @@ fun ActiveDownloadCard(
                     Text(
                         text = statusText,
                         style = MmtubeType.LabelLarge,
-                        color = MmtubePalette.Aqua
+                        color = if (isPaused) MmtubePalette.Amber else MmtubePalette.Aqua
                     )
                 }
             }
@@ -131,6 +141,15 @@ fun ActiveDownloadCard(
                         if (state.totalBytes > 0) add("/ ${Formatters.formatBytes(state.totalBytes)}")
                     }.joinToString("  •  ")
                     Text(meta, style = MmtubeType.BodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                }
+            }
+            if (isPaused) {
+                IconButton(onClick = onResume) {
+                    Icon(Icons.Rounded.PlayArrow, contentDescription = context.getString(R.string.download_resume), tint = MmtubePalette.Aqua)
+                }
+            } else if (isRunning) {
+                IconButton(onClick = onCancel) {
+                    Icon(Icons.Rounded.HourglassTop, contentDescription = context.getString(R.string.download_pause), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
             IconButton(onClick = onCancel) {

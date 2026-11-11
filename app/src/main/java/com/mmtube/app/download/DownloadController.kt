@@ -36,7 +36,8 @@ data class DownloadRequest(
     val mode: DownloadMode,
     val thumbnail: String?,
     val durationSeconds: Int,
-    val qualityLabel: String
+    val qualityLabel: String,
+    val resume: Boolean = false
 )
 
 class DownloadController(
@@ -57,8 +58,13 @@ class DownloadController(
     private var currentRequest: DownloadRequest? = null
     private var lastProgressUpdate = 0L
 
+    /** Snapshot of the paused request so the UI can offer Resume. */
+    var pausedRequest: DownloadRequest? = null
+        private set
+
     fun start(request: DownloadRequest) {
         if (job?.isActive == true) return
+        if (_state.value is DownloadState.Paused) return
         currentRequest = request
         _state.value = DownloadState.Preparing(request.title, request.mode)
         job = scope.launch {
@@ -120,7 +126,35 @@ class DownloadController(
             runCatching { YoutubeDL.getInstance().destroyProcessById(id) }
         }
         job?.cancel()
+        pausedRequest = null
         _state.value = DownloadState.Cancelled
+    }
+
+    fun pause() {
+        val state = _state.value
+        val request = currentRequest ?: return
+        val id = processId
+        if (id != null) {
+            runCatching { YoutubeDL.getInstance().destroyProcessById(id) }
+        }
+        job?.cancel()
+        val progress = (state as? DownloadState.Running)?.progress ?: 0f
+        pausedRequest = request
+        _state.value = DownloadState.Paused(request.title, request.mode, progress)
+    }
+
+    fun resume() {
+        val request = pausedRequest ?: return
+        pausedRequest = null
+        start(request.copy(resume = true))
+    }
+
+    /** Consumes (clears) the paused snapshot and returns it, if any. */
+    fun consumePausedRequest(): DownloadRequest? {
+        val req = pausedRequest ?: return null
+        pausedRequest = null
+        _state.value = DownloadState.Preparing(req.title, req.mode)
+        return req
     }
 
     fun reset() {
@@ -237,6 +271,7 @@ class DownloadController(
             addOption("--concurrent-fragments", "24")
             addOption("--embed-metadata")
             addOption("-o", output)
+            if (request.resume) addOption("--continue")
             when (request.mode) {
                 DownloadMode.MAX -> {
                     addOption("-f", "bestvideo+bestaudio/best")
