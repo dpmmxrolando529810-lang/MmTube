@@ -219,11 +219,52 @@ fun SettingsScreen(
                     value = "GitHub Releases"
                 )
             }
-            SettingsValueRow(
-                icon = Icons.Rounded.Info,
-                label = context.getString(R.string.settings_version),
-                value = BuildConfig.VERSION_NAME
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .combinedClickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null,
+                        onClick = {
+                            // Hidden owner entry: seven taps on the Version row.
+                            ownerTaps += 1
+                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                            when {
+                                ownerTaps >= 7 -> {
+                                    ownerTaps = 0
+                                    onOpenOwner()
+                                }
+
+                                ownerTaps >= 5 -> Toast.makeText(
+                                    context,
+                                    "နောက်ထပ် ${7 - ownerTaps} ချက်",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        },
+                        onLongClick = {
+                            ownerTaps = 0
+                            onOpenOwner()
+                        }
+                    )
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                SettingsIcon(Icons.Rounded.Info)
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        context.getString(R.string.settings_version),
+                        style = MmtubeType.TitleMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        BuildConfig.VERSION_NAME,
+                        style = MmtubeType.BodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
 
         SettingsGroup(context.getString(R.string.settings_about)) {
