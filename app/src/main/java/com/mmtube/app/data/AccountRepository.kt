@@ -49,6 +49,13 @@ class AccountRepository(
     suspend fun signIn(activity: Activity): Result<Unit> =
         authRepository.signIn(activity).map { Unit }
 
+    suspend fun signInWithEmail(
+        email: String,
+        password: String,
+        createAccount: Boolean
+    ): Result<Unit> =
+        authRepository.signInWithEmail(email, password, createAccount).map { Unit }
+
     fun signOut() {
         detach()
         authRepository.signOut()

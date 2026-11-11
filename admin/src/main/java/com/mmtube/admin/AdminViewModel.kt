@@ -1,18 +1,13 @@
 package com.mmtube.admin
 
-import android.app.Activity
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.credentials.CredentialManager
-import androidx.credentials.GetCredentialRequest
-import androidx.credentials.exceptions.GetCredentialCancellationException
-import com.google.android.libraries.identity.googleid.GetGoogleIdOption
-import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.FieldValue
@@ -99,33 +94,29 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
         checkAdmin(uid, email, _ui.value.adminPhoto)
     }
 
-    fun signIn(activity: Activity) {
+    /** Sign in with the existing admin email + password. */
+    fun signInWithEmail(email: String, password: String) {
         val firebaseAuth = auth ?: return
         if (_ui.value.busy) return
-        if (!AdminFirebaseConfig.canSignIn) {
+        if (!AdminFirebaseConfig.isConfigured) {
             _ui.update { it.copy(message = context.getString(R.string.admin_not_configured)) }
             return
         }
-        _ui.update { it.copy(busy = true) }
+        if (email.isBlank() || password.isBlank()) {
+            _ui.update { it.copy(message = "Email နဲ့ password ဖြည့်ပါ") }
+            return
+        }
+        _ui.update { it.copy(busy = true, message = null) }
         viewModelScope.launch {
             try {
-                val credentialManager = CredentialManager.create(activity)
-                val googleIdOption = GetGoogleIdOption.Builder()
-                    .setFilterByAuthorizedAccounts(false)
-                    .setServerClientId(AdminFirebaseConfig.webClientId)
-                    .setAutoSelectEnabled(false)
-                    .build()
-                val request = GetCredentialRequest.Builder()
-                    .addCredentialOption(googleIdOption)
-                    .build()
-                val result = credentialManager.getCredential(activity, request)
-                val googleCredential = GoogleIdTokenCredential.createFrom(result.credential.data)
-                val firebaseCredential = GoogleAuthProvider.getCredential(googleCredential.idToken, null)
-                firebaseAuth.signInWithCredential(firebaseCredential).await()
-            } catch (cancelled: GetCredentialCancellationException) {
-                // User dismissed the account picker; stay signed out.
+                firebaseAuth.signInWithEmailAndPassword(email.trim(), password).await()
+                // auth listener will run checkAdmin once the user is signed in.
+            } catch (error: FirebaseAuthInvalidUserException) {
+                _ui.update { it.copy(message = "ဒီ email နဲ့ account မရှိပါဘူး — Main app မှာ အကောင့်ဆောက်ပါ") }
+            } catch (error: FirebaseAuthInvalidCredentialsException) {
+                _ui.update { it.copy(message = "Email သို့မဟုတ် password မှားနေတယ်") }
             } catch (error: Exception) {
-                _ui.update { it.copy(message = "Sign-in failed: ${error.message}") }
+                _ui.update { it.copy(message = "Sign in မအောင်မြင်ဘူး (${error.message})") }
             }
             _ui.update { it.copy(busy = false) }
         }

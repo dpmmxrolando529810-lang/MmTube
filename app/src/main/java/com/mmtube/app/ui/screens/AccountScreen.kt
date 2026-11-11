@@ -31,8 +31,10 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -78,6 +80,8 @@ fun AccountScreen(
     val context = LocalContext.current
     var signOutConfirm by remember { mutableStateOf(false) }
     var deleteConfirm by remember { mutableStateOf(false) }
+    var emailSignInEmail by remember { mutableStateOf("") }
+    var emailSignInPassword by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -105,6 +109,12 @@ fun AccountScreen(
             AuthState.SignedOut -> GuestAccountCard(
                 busy = ui.accountBusy,
                 firebaseConfigured = FirebaseConfig.isConfigured,
+                email = emailSignInEmail,
+                password = emailSignInPassword,
+                onEmailChange = { emailSignInEmail = it },
+                onPasswordChange = { emailSignInPassword = it },
+                onEmailSignIn = { vm.signInWithEmail(emailSignInEmail, emailSignInPassword, createAccount = false) },
+                onEmailCreate = { vm.signInWithEmail(emailSignInEmail, emailSignInPassword, createAccount = true) },
                 onSignIn = {
                     context.findActivity()?.let { vm.signIn(it) }
                 }
@@ -192,6 +202,12 @@ private fun LoadingProfile() {
 private fun GuestAccountCard(
     busy: Boolean,
     firebaseConfigured: Boolean,
+    email: String,
+    password: String,
+    onEmailChange: (String) -> Unit,
+    onPasswordChange: (String) -> Unit,
+    onEmailSignIn: () -> Unit,
+    onEmailCreate: () -> Unit,
     onSignIn: () -> Unit
 ) {
     val context = LocalContext.current
@@ -225,6 +241,51 @@ private fun GuestAccountCard(
                 )
             }
             if (firebaseConfigured) {
+                Text(
+                    text = context.getString(R.string.account_email_hint),
+                    style = MmtubeType.LabelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = onEmailChange,
+                    label = { Text("Email") },
+                    singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Email
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = password,
+                    onValueChange = onPasswordChange,
+                    label = { Text("Password") },
+                    singleLine = true,
+                    visualTransformation = androidx.compose.ui.text.input.PasswordVisualTransformation(),
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                        keyboardType = androidx.compose.ui.text.input.KeyboardType.Password
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Button(
+                        onClick = onEmailSignIn,
+                        enabled = !busy,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (busy) "…" else context.getString(R.string.account_email_sign_in))
+                    }
+                    Button(
+                        onClick = onEmailCreate,
+                        enabled = !busy,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(if (busy) "…" else context.getString(R.string.account_email_create))
+                    }
+                }
                 GoogleSignInButton(busy = busy, onClick = onSignIn)
                 Text(
                     text = context.getString(R.string.account_sign_in_note),

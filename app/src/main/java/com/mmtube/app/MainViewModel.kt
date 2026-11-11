@@ -300,6 +300,28 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    fun signInWithEmail(email: String, password: String, createAccount: Boolean) {
+        if (_ui.value.accountBusy) return
+        if (email.isBlank() || password.isBlank()) {
+            event(UiEvent.Message(context.getString(R.string.account_email_missing)))
+            return
+        }
+        _ui.update { it.copy(accountBusy = true) }
+        viewModelScope.launch {
+            container.account.signInWithEmail(email, password, createAccount)
+                .onSuccess {
+                    event(UiEvent.Message(context.getString(R.string.signed_in)))
+                    refreshQuota()
+                }
+                .onFailure { error ->
+                    val message = error.message?.takeIf { it.isNotBlank() }
+                        ?: errorText((error as? MmtubeException)?.kind ?: ErrorKind.GENERIC)
+                    event(UiEvent.Message(message))
+                }
+            _ui.update { it.copy(accountBusy = false) }
+        }
+    }
+
     fun signOut() {
         container.account.signOut()
         refreshQuota()

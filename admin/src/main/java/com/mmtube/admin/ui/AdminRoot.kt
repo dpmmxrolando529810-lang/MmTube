@@ -37,6 +37,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -62,6 +64,7 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.foundation.text.BasicTextField
@@ -73,7 +76,6 @@ import com.mmtube.admin.AdminUser
 import com.mmtube.admin.AdminViewModel
 import com.mmtube.admin.Plans
 import com.mmtube.admin.R
-import com.mmtube.admin.util.findActivity
 
 private val Amber = Color(0xFFFFB84D)
 private val Aqua = Color(0xFF2FE3C0)
@@ -85,7 +87,6 @@ private val Muted = Color(0xFF8B97B5)
 fun AdminRoot(viewModel: AdminViewModel) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val activity = context.findActivity()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(ui.message) {
@@ -109,9 +110,7 @@ fun AdminRoot(viewModel: AdminViewModel) {
                 AdminAuthState.NotConfigured -> NotConfiguredScreen()
                 AdminAuthState.SignedOut -> SignInScreen(
                     busy = ui.busy,
-                    onSignIn = {
-                        activity?.let { viewModel.signIn(it) }
-                    }
+                    onSignIn = { email, password -> viewModel.signInWithEmail(email, password) }
                 )
                 AdminAuthState.Checking -> CenteredLoading(LocalContext.current.getString(R.string.admin_checking))
                 is AdminAuthState.Denied -> DeniedScreen(
@@ -170,9 +169,12 @@ private fun AdminMark(size: androidx.compose.ui.unit.Dp) {
 @Composable
 private fun SignInScreen(
     busy: Boolean,
-    onSignIn: () -> Unit
+    onSignIn: (String, String) -> Unit
 ) {
     val context = LocalContext.current
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -200,40 +202,50 @@ private fun SignInScreen(
             modifier = Modifier.padding(top = 8.dp)
         )
 
-        Surface(
-            onClick = { if (!busy) onSignIn() },
-            shape = RoundedCornerShape(18.dp),
-            color = Color.White,
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Email,
+                capitalization = KeyboardCapitalization.None
+            ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 34.dp)
-                .height(58.dp)
+                .padding(top = 28.dp)
+        )
+        OutlinedTextField(
+            value = password,
+            onValueChange = { password = it },
+            label = { Text("Password") },
+            singleLine = true,
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp)
+        )
+
+        Button(
+            onClick = { onSignIn(email, password) },
+            enabled = !busy,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 18.dp)
+                .height(56.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (busy) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(24.dp),
-                        strokeWidth = 2.5.dp,
-                        color = Color(0xFF4285F4)
-                    )
-                } else {
-                    Text(
-                        text = "G",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF4285F4)
-                    )
-                }
+            if (busy) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(22.dp),
+                    strokeWidth = 2.5.dp,
+                    color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimary
+                )
+            } else {
                 Text(
-                    text = context.getString(R.string.admin_sign_in),
+                    text = context.getString(R.string.admin_sign_in_btn),
                     fontSize = 17.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1F1F1F),
-                    modifier = Modifier.padding(start = 12.dp)
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         }
@@ -259,7 +271,7 @@ private fun SignInScreen(
                 Icon(Icons.Rounded.Lock, contentDescription = null, tint = Amber, modifier = Modifier.size(20.dp))
                 Text(
                     text = context.getString(R.string.admin_secure_note),
-                    fontSize = 11.sp,
+                    style = MaterialTheme.typography.bodySmall,
                     color = Muted
                 )
             }

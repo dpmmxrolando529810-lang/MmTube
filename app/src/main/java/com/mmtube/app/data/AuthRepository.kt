@@ -12,6 +12,10 @@ import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -96,6 +100,48 @@ class AuthRepository(
                 is MmtubeException -> throw error
                 else -> throw MmtubeException(ErrorKind.FIREBASE, error.message, error)
             }
+        }
+    }
+
+    /**
+     * Email + password sign-in / registration. Used as the primary sign-in
+     * method on networks where Google sign-in (Credential Manager) is not
+     * reachable.
+     */
+    suspend fun signInWithEmail(
+        email: String,
+        password: String,
+        createAccount: Boolean
+    ): Result<AuthState.SignedIn> {
+        val firebaseAuth = auth
+            ?: return Result.failure(MmtubeException(ErrorKind.FIREBASE, "Cloud accounts are not configured"))
+        return runCatching {
+            val task = if (createAccount) {
+                firebaseAuth.createUserWithEmailAndPassword(email.trim(), password)
+            } else {
+                firebaseAuth.signInWithEmailAndPassword(email.trim(), password)
+            }
+            val user = task.await().user
+                ?: throw MmtubeException(ErrorKind.FIREBASE, "No Firebase user returned")
+            AuthState.SignedIn(
+                uid = user.uid,
+                email = user.email,
+                displayName = user.displayName,
+                photoUrl = user.photoUrl?.toString()
+            ).also { _state.value = it }
+        }.recoverCatching { error ->
+            Log.w("AuthRepository", "Email sign-in failed", error)
+            val message = when (error) {
+                is FirebaseAuthWeakPasswordException -> "Password အနည်းဆုံး ၆ လုံး ဖြစ်ရမယ်"
+                is FirebaseAuthUserCollisionException ->
+                    "ဒီ email နဲ့ account ဆောက်ပြီးသား ဖြစ်တယ် — Sign in လုပ်ပါ"
+                is FirebaseAuthInvalidUserException ->
+                    "ဒီ email နဲ့ account မရှိသေးဘူး — Create account လုပ်ပါ"
+                is FirebaseAuthInvalidCredentialsException ->
+                    "Email သို့မဟုတ် password မှားနေတယ်"
+                else -> "Sign in မအောင်မြင်ဘူး (${error.message})"
+            }
+            throw MmtubeException(ErrorKind.FIREBASE, message, error)
         }
     }
 

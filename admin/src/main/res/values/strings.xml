@@ -2,9 +2,10 @@
 <resources>
     <string name="admin_app_name">MMTube Admin</string>
     <string name="admin_title">MMTube Admin</string>
-    <string name="admin_subtitle">Activate plans with a User ID. No passwords.</string>
+    <string name="admin_subtitle">Activate plans with a User ID.</string>
+    <string name="admin_sign_in_btn">Sign in</string>
     <string name="admin_sign_in">Sign in with Google</string>
-    <string name="admin_sign_in_note">Use the Google account that owns or moderates this MMTube project.</string>
+    <string name="admin_sign_in_note">The email and password of your MMTube owner account (same account as the main app sign-in).</string>
     <string name="admin_not_configured">Firebase is not configured</string>
     <string name="admin_not_configured_desc">Add FIREBASE_API_KEY, FIREBASE_APP_ID, FIREBASE_PROJECT_ID, FIREBASE_SENDER_ID and GOOGLE_WEB_CLIENT_ID to GitHub Secrets, then rebuild both apps.</string>
     <string name="admin_checking">Checking admin access…</string>

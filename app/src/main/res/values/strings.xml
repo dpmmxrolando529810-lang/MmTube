@@ -157,6 +157,10 @@
     <string name="account_guest">You are browsing as a guest</string>
     <string name="account_guest_desc">Sign in with Google to sync your plan, User ID and download history across devices. Guest downloads are limited locally.</string>
     <string name="account_sign_in_google">Continue with Google</string>
+    <string name="account_email_hint">Or use email</string>
+    <string name="account_email_missing">Email and password are required</string>
+    <string name="account_email_sign_in">Sign in</string>
+    <string name="account_email_create">Create account</string>
     <string name="account_sign_in_note">We only receive your name, email and profile photo. MMTube never sees your Google password.</string>
     <string name="account_cloud_disabled">Cloud accounts are not configured in this build</string>
     <string name="account_cloud_disabled_desc">Add your Firebase keys in GitHub Secrets and rebuild to enable Google sign-in. Guest mode still works.</string>

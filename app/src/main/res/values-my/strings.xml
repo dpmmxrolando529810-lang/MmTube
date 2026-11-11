@@ -157,6 +157,10 @@
     <string name="account_guest">သင် ဧည့်သည်အဖြစ် အသုံးပြုနေသည်</string>
     <string name="account_guest_desc">အစီအစဉ်၊ User ID နဲ့ ဒေါင်းလုဒ် မှတ်တမ်းကို စက်များအကြား ချိတ်ဆက်ရန် Google နဲ့ ဝင်ပါ။ ဧည့်သည် ဒေါင်းလုဒ်က ဒီစက်ပေါ်မှာ ကန့်သတ်ထားပါတယ်။</string>
     <string name="account_sign_in_google">Google နဲ့ ဆက်လုပ်</string>
+    <string name="account_email_hint">Email ဖြင့်လည်း ဝင်ရောက်နိုင်တယ်</string>
+    <string name="account_email_missing">Email နဲ့ password ဖြည့်ပါ</string>
+    <string name="account_email_sign_in">အကောင့်ဝင်မယ်</string>
+    <string name="account_email_create">အကောင့်ဆောက်မယ်</string>
     <string name="account_sign_in_note">သင့်နာမည်၊ အီးမေးလ်နဲ့ ပရိုဖိုင်ဓာတ်ပုံကိုသာ ရရှိပါတယ်။ MMTube က သင့် Google စကားဝှက်ကို ဘယ်တော့မှ မမြင်ပါဘူး။</string>
     <string name="account_cloud_disabled">ဒီ build မှာ cloud အကောင့် မသတ်မှတ်ထားပါ</string>
     <string name="account_cloud_disabled_desc">Google ဝင်ရန် GitHub Secrets မှာ Firebase ကီးများ ထည့်ပြီး ပြန်တည်ဆောက်ပါ။ ဧည့်သည် မုဒ် ဆက်အလုပ်လုပ်ပါတယ်။</string>
