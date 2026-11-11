@@ -14,7 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "common"))
 
 import downloader  # noqa: E402
 
-from flask import Flask, jsonify, request  # noqa: E402
+from flask import Flask, abort, jsonify, redirect, request, send_from_directory  # noqa: E402
 
 logging.basicConfig(
     format="%(asctime)s %(levelname)s %(name)s: %(message)s",
@@ -37,6 +37,11 @@ _jobs: dict[str, dict] = {}
 _jobs_lock = threading.Lock()
 
 app = Flask(__name__)
+
+# Directory that holds index.html + assets. On the VM nginx serves it; on a
+# platform without nginx (Render, Docker) Flask serves it too.
+SITE_DIR = Path(os.environ.get("MMTube_SITE_DIR", str(Path(__file__).resolve().parent)))
+APK_URL = os.environ.get("MMTube_APK_URL", "").strip()
 
 
 def _ip_allowed(ip: str) -> bool:
@@ -80,6 +85,30 @@ def add_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     return response
+
+
+@app.get("/")
+def index():
+    return send_from_directory(SITE_DIR, "index.html")
+
+
+@app.get("/MMTube.apk")
+def apk():
+    if APK_URL:
+        return redirect(APK_URL)
+    abort(404)
+
+
+@app.get("/d/<path:name>")
+def download_file(name):
+    return send_from_directory(downloader.PUBLIC_DIR, name, as_attachment=True)
+
+
+@app.get("/<path:name>")
+def site_asset(name):
+    if name.startswith("api/"):
+        abort(404)
+    return send_from_directory(SITE_DIR, name)
 
 
 @app.get("/api/limits")
@@ -165,7 +194,9 @@ def health():
 def main() -> None:
     downloader.make_job_dir()
     _sweep_files()
-    app.run(host="127.0.0.1", port=int(os.environ.get("WEB_PORT", "8001")))
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT") or os.environ.get("WEB_PORT", "8001"))
+    app.run(host=host, port=port, threaded=True)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,17 @@
+# Render Blueprint — free plan, no credit card required.
+# In Render: New + → Blueprint → pick this repository.
+services:
+  - type: web
+    name: mmtube-web
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./server/Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: MAX_CONCURRENT_JOBS
+        value: "1"
+      - key: IP_DOWNLOADS_PER_HOUR
+        value: "10"
+      - key: MMTube_APK_URL
+        sync: false

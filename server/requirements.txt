@@ -2,3 +2,4 @@
 yt-dlp==2026.10.26
 python-telegram-bot==21.10
 Flask==3.1.2
+gunicorn==23.0.0
