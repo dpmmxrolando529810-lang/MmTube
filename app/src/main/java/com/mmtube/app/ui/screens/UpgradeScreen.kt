@@ -50,6 +50,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mmtube.app.MainUiState
 import com.mmtube.app.MainViewModel
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import com.mmtube.app.R
 import com.mmtube.app.ui.components.FrostedCard
 import com.mmtube.app.ui.components.GradientButton
@@ -349,6 +352,16 @@ private fun PaymentCard() {
                 )
             }
         }
+        Image(
+            painter = painterResource(R.drawable.kbzpay_qr),
+            contentDescription = "KBZ Pay QR — Thu Khant Aung",
+            contentScale = ContentScale.FillWidth,
+            modifier = Modifier
+                .fillMaxWidth(0.68f)
+                .align(Alignment.CenterHorizontally)
+                .clip(RoundedCornerShape(14.dp))
+                .padding(top = 12.dp)
+        )
         Text(
             text = context.getString(R.string.upgrade_payment_desc),
             style = MmtubeType.BodyMedium,
