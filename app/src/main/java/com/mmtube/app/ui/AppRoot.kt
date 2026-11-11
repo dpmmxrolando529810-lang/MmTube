@@ -58,6 +58,7 @@ import com.mmtube.app.ui.components.rememberPressInteraction
 import com.mmtube.app.ui.screens.AccountScreen
 import com.mmtube.app.ui.screens.DownloadsScreen
 import com.mmtube.app.ui.screens.HomeScreen
+import com.mmtube.app.ui.screens.OwnerBotScreen
 import com.mmtube.app.ui.screens.SettingsScreen
 import com.mmtube.app.ui.screens.TermsScreen
 import com.mmtube.app.ui.screens.UpgradeScreen
@@ -72,6 +73,7 @@ object Routes {
     const val ACCOUNT = "account"
     const val SETTINGS = "settings"
     const val UPGRADE = "upgrade"
+    const val OWNER_BOT = "owner_bot"
 }
 
 private val MainTab.route: String
@@ -179,8 +181,14 @@ fun AppRoot(
                             SettingsScreen(
                                 ui = ui,
                                 vm = viewModel,
-                                onBack = { navController.popBackStack() }
+                                onBack = { navController.popBackStack() },
+                                onOpenOwner = {
+                                    navController.navigate(Routes.OWNER_BOT) { launchSingleTop = true }
+                                }
                             )
+                        }
+                        composable(Routes.OWNER_BOT) {
+                            OwnerBotScreen(onBack = { navController.popBackStack() })
                         }
                         composable(Routes.UPGRADE) {
                             UpgradeScreen(

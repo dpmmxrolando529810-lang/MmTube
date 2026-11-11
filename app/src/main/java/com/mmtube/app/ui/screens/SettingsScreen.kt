@@ -2,6 +2,7 @@ package com.mmtube.app.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,6 +47,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -73,13 +75,15 @@ import com.mmtube.app.util.copyText
 fun SettingsScreen(
     ui: MainUiState,
     vm: MainViewModel,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onOpenOwner: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showLanguage by remember { mutableStateOf(false) }
     var showTerms by remember { mutableStateOf(false) }
     var showPrivacy by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
+    var ownerTaps by remember { mutableIntStateOf(0) }
 
     Column(
         modifier = Modifier
@@ -286,7 +290,20 @@ fun SettingsScreen(
             text = BuildConfig.VERSION_NAME.let { context.getString(R.string.settings_about_version, it) },
             style = MmtubeType.LabelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 24.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    // Hidden owner entry: seven taps on the version line.
+                    ownerTaps += 1
+                    if (ownerTaps >= 7) {
+                        ownerTaps = 0
+                        onOpenOwner()
+                    }
+                },
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
     }
