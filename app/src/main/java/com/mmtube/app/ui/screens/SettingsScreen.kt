@@ -1,7 +1,10 @@
 package com.mmtube.app.ui.screens
 
+import android.widget.Toast
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,7 +59,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mmtube.app.BuildConfig
@@ -71,6 +76,7 @@ import com.mmtube.app.ui.theme.MmtubePalette
 import com.mmtube.app.ui.theme.MmtubeType
 import com.mmtube.app.util.copyText
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun SettingsScreen(
     ui: MainUiState,
@@ -84,6 +90,7 @@ fun SettingsScreen(
     var showPrivacy by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
     var ownerTaps by remember { mutableIntStateOf(0) }
+    val haptic = LocalHapticFeedback.current
 
     Column(
         modifier = Modifier
@@ -292,18 +299,33 @@ fun SettingsScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 24.dp)
-                .clickable(
+                .combinedClickable(
                     interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) {
-                    // Hidden owner entry: seven taps on the version line.
-                    ownerTaps += 1
-                    if (ownerTaps >= 7) {
+                    indication = null,
+                    onClick = {
+                        // Hidden owner entry: seven taps on the version line.
+                        ownerTaps += 1
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        when {
+                            ownerTaps >= 7 -> {
+                                ownerTaps = 0
+                                onOpenOwner()
+                            }
+
+                            ownerTaps >= 5 -> Toast.makeText(
+                                context,
+                                "နောက်ထပ် ${7 - ownerTaps} ချက်",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    },
+                    onLongClick = {
+                        // Long press is a second, equally hidden shortcut.
                         ownerTaps = 0
                         onOpenOwner()
                     }
-                },
+                )
+                .padding(top = 14.dp, bottom = 24.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
         )
     }
