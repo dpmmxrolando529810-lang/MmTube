@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MMTube — 4K အမြင့်ဆုံး Quality ဒေါင်းလုဒ်</title>
+<meta name="description" content="Link ထည့်ပြီး Telegram Bot ကနေ YouTube / Facebook / TikTok ကို အမြင့်ဆုံး quality (4K) နဲ့ ဒေါင်းပါ">
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
+<style>
+:root{
+  --bg:#0b1016; --surface:#12181f; --surface2:#161f27; --surface3:#1d2833;
+  --text:#eef3f7; --muted:#8fa3b2; --teal:#2dd4bf; --teal2:#38bdf8;
+  --danger:#f87171; --radius:18px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans Myanmar',sans-serif;line-height:1.6;overflow-x:hidden}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+nav{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,16,22,.78);border-bottom:1px solid rgba(255,255,255,.06)}
+nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px}
+.logo{display:flex;align-items:center;gap:12px;font-weight:800;font-size:1.15rem;text-decoration:none;color:var(--text)}
+.logo .mark{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--teal),var(--teal2));display:flex;align-items:center;justify-content:center}
+.logo .mark svg{width:19px;height:19px;fill:#04241d}
+.navlinks{display:flex;gap:22px}
+.navlinks a{color:var(--muted);text-decoration:none;font-weight:600;font-size:.92rem}
+.navlinks a:hover{color:var(--text)}
+@media(max-width:640px){.navlinks{display:none}}
+.hero{padding:62px 0 50px;position:relative;text-align:center}
+.hero::before{content:"";position:absolute;top:-120px;left:50%;transform:translateX(-50%);width:620px;height:620px;background:radial-gradient(circle,rgba(45,212,191,.16),transparent 65%);pointer-events:none}
+.hero .wrap{position:relative}
+.pill{display:inline-flex;align-items:center;gap:8px;background:rgba(45,212,191,.12);border:1px solid rgba(45,212,191,.35);color:var(--teal);font-weight:700;font-size:.78rem;padding:6px 14px;border-radius:999px;margin-bottom:22px}
+h1{font-size:clamp(2rem,5.6vw,3.2rem);line-height:1.18;font-weight:800;letter-spacing:-.02em}
+h1 .grad{background:linear-gradient(135deg,var(--teal),var(--teal2));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.sub{max-width:640px;margin:18px auto 0;color:var(--muted);font-size:1.04rem}
+section{padding:52px 0}
+.section-title{font-size:1.55rem;font-weight:800;text-align:center;margin-bottom:8px}
+.section-sub{text-align:center;color:var(--muted);margin-bottom:30px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;font-weight:800;border-radius:14px;padding:15px 26px;font-size:1rem;transition:transform .15s;border:none;cursor:pointer}
+.btn:hover{transform:translateY(-2px)}
+.btn-primary{background:linear-gradient(135deg,var(--teal),var(--teal2));color:#04241d;box-shadow:0 12px 40px rgba(45,212,191,.32)}
+.btn-ghost{background:var(--surface2);color:var(--text);border:1px solid rgba(255,255,255,.09)}
+.cta{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:28px}
+.box{background:linear-gradient(180deg,var(--surface),var(--surface2));border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:26px;max-width:720px;margin:0 auto}
+.inputrow{display:flex;gap:10px}
+@media(max-width:560px){.inputrow{flex-direction:column}}
+.inputrow input{flex:1;background:var(--bg);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:14px 16px;color:var(--text);font-size:1rem;outline:none}
+.inputrow input:focus{border-color:var(--teal)}
+.hint{color:var(--muted);font-size:.85rem;margin-top:12px}
+.error{display:none;margin-top:12px;color:var(--danger);font-size:.9rem}
+.error.show{display:block}
+.ok{display:none;margin-top:14px;background:rgba(45,212,191,.08);border:1px solid rgba(45,212,191,.3);border-radius:12px;padding:14px;font-size:.92rem}
+.ok.show{display:block}
+.ok a{color:var(--teal);font-weight:800}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px}
+.card{background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:var(--radius);padding:22px}
+.card h3{font-size:1rem;margin-bottom:6px}
+.card p{color:var(--muted);font-size:.9rem}
+.steps{display:grid;gap:14px;max-width:720px;margin:0 auto}
+.step{display:flex;gap:14px;background:var(--surface);border:1px solid rgba(255,255,255,.06);border-radius:14px;padding:16px}
+.step .num{width:32px;height:32px;flex:0 0 32px;border-radius:10px;background:rgba(45,212,191,.14);color:var(--teal);display:flex;align-items:center;justify-content:center;font-weight:800}
+.step b{display:block;margin-bottom:2px}
+.step span{color:var(--muted);font-size:.9rem}
+.notice{max-width:720px;margin:22px auto 0;background:rgba(255,201,105,.08);border:1px solid rgba(255,201,105,.28);border-radius:14px;padding:16px;font-size:.9rem;color:#ffd88a}
+footer{border-top:1px solid rgba(255,255,255,.07);padding:26px 0;color:var(--muted);font-size:.82rem}
+footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+small.legal{display:block;margin-top:10px;opacity:.75}
+</style>
+</head>
+<body>
+
+<nav><div class="wrap">
+  <a class="logo" href="#top">
+    <span class="mark"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span>
+    MMTube
+  </a>
+  <div class="navlinks">
+    <a href="#download">ဒေါင်းလုဒ်</a>
+    <a href="#how">ဘယ်လိုအလုပ်လုပ်လဲ</a>
+    <a href="#app">Android App</a>
+  </div>
+</div></nav>
+
+<header class="hero" id="top"><div class="wrap">
+  <div class="pill">◆ 100% Maximum Quality · 4K အထိ</div>
+  <h1>Link ထည့်ပြီး<br><span class="grad">အမြင့်ဆုံး Quality</span> နဲ့ ဒေါင်းပါ</h1>
+  <p class="sub">
+    YouTube · Facebook · TikTok — မူရင်းပေးတဲ့ အမြင့်ဆုံး resolution နဲ့ bitrate ကို
+    အလိုအလျောက် ရွေးပြီး ဒေါင်းပေးတယ်။ ဖိုင်အရွယ် ကန့်သတ်မရှိ၊ အခမဲ့။
+  </p>
+</div></header>
+
+<section id="download">
+  <div class="wrap">
+    <h2 class="section-title">⬇ Link ထည့်ပြီး ဒေါင်းမယ်</h2>
+    <p class="section-sub">Link ကို ကူးထည့် → ခလုတ်နှိပ် → Telegram Bot က ဒေါင်းပေးမယ်</p>
+
+    <div class="box">
+      <div class="inputrow">
+        <input id="linkInput" type="text" inputmode="url" placeholder="https://youtu.be/… သို့မဟုတ် TikTok / Facebook link" autocomplete="off" spellcheck="false">
+        <button class="btn btn-primary" id="goBtn" type="button">🤖 ဒေါင်းမယ်</button>
+      </div>
+      <p class="hint">ဖိုင်က သင့် Telegram ထဲ ရောက်မလာပါ — ဒေါင်းပြီး <b>ဖုန်း Gallery</b> ထဲ သိမ်းပေးမယ်။</p>
+      <div class="error" id="err"></div>
+      <div class="ok" id="ok"></div>
+    </div>
+
+    <div class="notice">
+      ⚠️ ဒီ website က ကိုယ်တိုင် ဒေါင်းတာ မဟုတ်ပါ — သင့် Telegram Bot ကို link လွှဲပေးတာပါ။
+      ဒါကြောင့် <b>bot run နေတဲ့ ဖုန်း ဖွင့်ထားဖို့</b> လိုတယ်။ ဖုန်းပိတ်ထားရင် ဒေါင်းလို့ မရပါ။
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="wrap">
+    <h2 class="section-title">🔧 ဘယ်လိုအလုပ်လုပ်လဲ</h2>
+    <p class="section-sub">အဆင့် ၃ ဆင့်ပဲ</p>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><div><b>Link ထည့်</b><span>YouTube / Facebook / TikTok link ကို အပေါ်က box မှာ ထည့်ပါ</span></div></div>
+      <div class="step"><div class="num">2</div><div><b>Telegram ဖွင့်</b><span>ခလုတ်နှိပ်ရင် သင့် bot ကို link အလိုအလျောက် ပို့ပေးမယ်</span></div></div>
+      <div class="step"><div class="num">3</div><div><b>⬇ နှိပ်</b><span>Bot က quality ပြမယ် — နှိပ်လိုက်ရင် 4K အမြင့်ဆုံးနဲ့ ဒေါင်းပြီး Gallery ထဲ သိမ်းမယ်</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="app">
+  <div class="wrap">
+    <h2 class="section-title">📱 MMTube Android App</h2>
+    <p class="section-sub">App ထဲကနေ တိုက်ရိုက် ဒေါင်းချင်ရင်လည်း ရတယ်</p>
+    <div class="cta">
+      <a class="btn btn-primary" id="apkLink" href="#">⬇ APK ဒေါင်းလုဒ်</a>
+      <a class="btn btn-ghost" href="#download">🤖 Bot နဲ့ ဒေါင်းမယ်</a>
+    </div>
+  </div>
+</section>
+
+<footer><div class="wrap">
+  <div>© <span id="yr"></span> MMTube — အမြင့်ဆုံး Quality။</div>
+  <div><a href="#top">↑ အပေါ်သို့</a></div>
+  <small class="legal">Personal use အတွက်သာ။ YouTube / Facebook / TikTok ရဲ့ Terms of Service နဲ့ copyright ကို လိုက်နာပါ။</small>
+</div></footer>
+
+<script>
+// ⚠️ ဒီ ၂ ခုကို သင့်အတွက် ပြောင်းပါ
+const BOT_USERNAME = 'mmtubebot';                 // t.me/<ဒီနာမည်>
+const GITHUB_REPO = 'YOUR_USERNAME/MmTube';       // APK ရှိတဲ့ repo
+
+document.getElementById('yr').textContent = new Date().getFullYear();
+document.getElementById('apkLink').href =
+  'https://github.com/' + GITHUB_REPO + '/releases/latest';
+
+const input = document.getElementById('linkInput');
+const goBtn = document.getElementById('goBtn');
+const err = document.getElementById('err');
+const ok = document.getElementById('ok');
+
+function showError(text) {
+  err.textContent = text;
+  err.classList.add('show');
+  ok.classList.remove('show');
+}
+
+function showOk(html) {
+  ok.innerHTML = html;
+  ok.classList.add('show');
+  err.classList.remove('show');
+}
+
+function normalize(raw) {
+  const match = String(raw || '').match(/https?:\/\/[^\s<>"']+/i);
+  if (!match) return null;
+  try {
+    const url = new URL(match[0]);
+    if (!url.hostname.includes('.')) return null;
+    return url.toString();
+  } catch (e) {
+    return null;
+  }
+}
+
+function base64url(text) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  bytes.forEach(b => { binary += String.fromCharCode(b); });
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function openBot(payload) {
+  const base = 'https://t.me/' + BOT_USERNAME;
+  const url = payload ? base + '?start=' + payload : base;
+  window.open(url, '_blank', 'noopener');
+}
+
+goBtn.addEventListener('click', () => {
+  err.classList.remove('show');
+  ok.classList.remove('show');
+  const url = normalize(input.value);
+  if (!url) {
+    showError('Link မမှန်ပါ။ YouTube / Facebook / TikTok link ကို ကူးထည့်ပါ။');
+    return;
+  }
+
+  const payload = base64url(url);
+  if (payload.length <= 64) {
+    openBot(payload);
+    showOk('✅ Telegram ဖွင့်လိုက်ပြီ — bot က link ကို ချက်ချင်း စစ်ပေးမယ်။ ' +
+      '<a href="https://t.me/' + BOT_USERNAME + '?start=' + payload + '" target="_blank" rel="noopener">Bot မပွင့်ရင် ဒီမှာ နှိပ်ပါ</a>');
+  } else {
+    navigator.clipboard?.writeText(url).catch(() => {});
+    openBot('');
+    showOk('📋 Link ကို copy လုပ်ထားတယ် — Telegram bot ထဲမှာ paste ပြီး ပို့လိုက်ပါ။');
+  }
+});
+
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') goBtn.click();
+});
+</script>
+</body>
+</html>

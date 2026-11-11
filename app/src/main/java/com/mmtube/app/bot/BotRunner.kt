@@ -103,7 +103,13 @@ class BotRunner(private val context: Context) {
         BotRuntime.update { it.copy(lastActivityAt = System.currentTimeMillis()) }
 
         when {
-            text.startsWith("/start") || text.startsWith("/help") -> sendWelcome(chatId)
+            text.startsWith("/start") -> {
+                var rest = text.removePrefix("/start").trim()
+                if (rest.startsWith("@")) rest = rest.substringAfter(' ', "").trim()
+                if (rest.isEmpty()) sendWelcome(chatId) else handleStartPayload(chatId, rest)
+            }
+
+            text.startsWith("/help") -> sendWelcome(chatId)
             text.startsWith("/status") -> sendStatus(chatId)
             else -> analyzeAndOffer(chatId, text)
         }
@@ -152,6 +158,29 @@ class BotRunner(private val context: Context) {
         BotRuntime.update { it.copy(lastActivityAt = System.currentTimeMillis()) }
         container.downloads.start(request)
         trackJob(chatId, messageId, probe, mode)
+    }
+
+    /**
+     * Website deep link: t.me/<bot>?start=<base64url(link)>.
+     * The static website cannot download by itself, so it hands the link to
+     * this phone, which downloads at the source's maximum quality.
+     */
+    private suspend fun handleStartPayload(chatId: Long, payload: String) {
+        val decoded = runCatching {
+            val bytes = android.util.Base64.decode(
+                payload,
+                android.util.Base64.URL_SAFE or
+                    android.util.Base64.NO_PADDING or
+                    android.util.Base64.NO_WRAP
+            )
+            String(bytes, Charsets.UTF_8)
+        }.getOrNull()
+        val url = UrlUtils.normalize(decoded) ?: UrlUtils.normalize(payload)
+        if (url == null) {
+            reply(chatId, "🔗 Link ကို ဖတ်လို့မရပါ။ Link ကို တိုက်ရိုက် ပို့ပေးပါ။")
+            return
+        }
+        analyzeAndOffer(chatId, url)
     }
 
     // ------------------------------------------------------------- analysing
