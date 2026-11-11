@@ -198,6 +198,8 @@
     <string name="upgrade_step_1">အစီအစဉ် ရွေးပြီး ပံ့ပိုးကူညီရေးထံ ဆက်သွယ်ပါ။</string>
     <string name="upgrade_step_2">သင့် User ID ကို ပို့ပါ။ Gmail စကားဝှက် ဘယ်တော့မှ မပို့ပါနဲ့။</string>
     <string name="upgrade_step_3">အက်ဒမင်က သင့်အကောင့်ကို ဖွင့်ပေးပါမယ်။ အကောင့်စာမျက်နှာ ပြန်ဖွင့်ပြီး ကြည့်ပါ။</string>
+    <string name="upgrade_payment_title">KBZ Pay</string>
+    <string name="upgrade_payment_desc">အောက်က KBZ Pay နံပါတ်ကို ငွေလွှဲပြီး၊ Telegram မှာ @TKA_MTC ထံ User ID + ငွေလွှဲ ID ကို ပို့ပါ — မိနစ်တိုအတွင်း plan ဖွင့်ပေးပါမယ်။</string>
     <string name="upgrade_no_payment">ဒီ build မှာ အက်ပ်အတွင်း ငွေပေးချေမှု မပါပါ။ အစီအစဉ်ကို အက်ဒမင်က ဖွင့်ပေးပါတယ်။</string>
     <string name="upgrade_price_note">ဈေးနှုန်းနဲ့ ငွေပေးချေနည်းကို ပံ့ပိုးကူညီရေးနဲ့ ညှိနှိုင်းပါ။</string>
 

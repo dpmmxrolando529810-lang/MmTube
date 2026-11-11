@@ -55,7 +55,9 @@ import com.mmtube.app.ui.components.FrostedCard
 import com.mmtube.app.ui.components.GradientButton
 import com.mmtube.app.ui.theme.MmtubePalette
 import com.mmtube.app.ui.theme.MmtubeType
+import android.widget.Toast
 import com.mmtube.app.util.Formatters
+import com.mmtube.app.util.copyText
 
 @Composable
 fun UpgradeScreen(
@@ -110,6 +112,7 @@ fun UpgradeScreen(
 
         BenefitsCard()
         UserIdCard(ui = ui, vm = vm)
+        PaymentCard()
         StepsCard()
 
         GradientButton(
@@ -301,6 +304,53 @@ private fun UserIdCard(ui: MainUiState, vm: MainViewModel) {
         }
         Text(
             text = context.getString(R.string.upgrade_contact_note),
+            style = MmtubeType.BodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp)
+        )
+    }
+}
+
+@Composable
+private fun PaymentCard() {
+    val context = LocalContext.current
+    FrostedCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = context.getString(R.string.upgrade_payment_title),
+            style = MmtubeType.TitleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "09989037775",
+                    style = MmtubeType.HeadlineMedium.copy(letterSpacing = 2.sp),
+                    color = MmtubePalette.Aqua
+                )
+                Text(
+                    text = "Thu Khant Aung",
+                    style = MmtubeType.BodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = {
+                context.copyText("KBZPay", "09989037775")
+                Toast.makeText(context, "KBZ Pay number copied", Toast.LENGTH_SHORT).show()
+            }) {
+                Icon(
+                    Icons.Rounded.ContentCopy,
+                    contentDescription = "Copy",
+                    tint = MmtubePalette.Blue
+                )
+            }
+        }
+        Text(
+            text = context.getString(R.string.upgrade_payment_desc),
             style = MmtubeType.BodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp)

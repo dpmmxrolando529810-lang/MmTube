@@ -198,6 +198,8 @@
     <string name="upgrade_step_1">Choose a plan and contact support.</string>
     <string name="upgrade_step_2">Send your User ID, never your Gmail password.</string>
     <string name="upgrade_step_3">Admin activates your account. Reopen Account to see it.</string>
+    <string name="upgrade_payment_title">KBZ Pay</string>
+    <string name="upgrade_payment_desc">Send the amount to the KBZ Pay wallet below, then message @TKA_MTC on Telegram with your User ID + transaction ID. Plan activates in a few minutes.</string>
     <string name="upgrade_no_payment">This build has no in-app payment. Plans are activated by the admin.</string>
     <string name="upgrade_price_note">Prices and payment methods are arranged with support.</string>
 
