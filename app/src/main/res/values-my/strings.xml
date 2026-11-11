@@ -220,7 +220,7 @@
     <string name="language_burmese">မြန်မာ</string>
     <string name="settings_downloads">ဒေါင်းလုဒ်များ</string>
     <string name="settings_turbo">Turbo မုဒ်</string>
-    <string name="settings_turbo_desc">aria2c ကို ချိတ်ဆက်မှု ၁၆ ခုနဲ့ သုံးပါတယ်။ ကွန်ရက်အများစုမှာ အမြန်ဆုံးပါ။</string>
+    <string name="settings_turbo_desc">aria2c ကို ချိတ်ဆက်မှု ၂၄ ခုနဲ့ သုံးပါတယ်။ ကွန်ရက်အများစုမှာ အမြန်ဆုံးပါ။</string>
     <string name="settings_quality">အရည်အသွေး</string>
     <string name="settings_quality_desc">အမြင့်ဆုံး ဗီဒီယိုနဲ့ အသံ stream များကို အမြဲရွေးပြီး FFmpeg နဲ့ ပေါင်းပါတယ်။</string>
     <string name="settings_engine">ဒေါင်းလုဒ် အင်ဂျင်</string>

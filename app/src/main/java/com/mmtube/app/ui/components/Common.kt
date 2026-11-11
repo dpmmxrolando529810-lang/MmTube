@@ -54,16 +54,8 @@ fun AuroraBackground(
     content: @Composable () -> Unit
 ) {
     val dark = LocalMmtubeDark.current
-    val transition = rememberInfiniteTransition(label = "aurora")
-    val drift by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 16000),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "drift"
-    )
+    // Static background: no per-frame redraws — much cheaper on low-end devices.
+    val drift = 0.5f
     val baseTop = if (dark) MmtubePalette.DarkBackgroundTop else MmtubePalette.LightBackgroundTop
     val baseBottom = if (dark) MmtubePalette.DarkBackground else MmtubePalette.LightBackground
     val glowA = if (dark) MmtubePalette.Aqua.copy(alpha = 0.22f) else MmtubePalette.Aqua.copy(alpha = 0.35f)

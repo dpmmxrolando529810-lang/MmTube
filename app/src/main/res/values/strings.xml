@@ -220,7 +220,7 @@
     <string name="language_burmese">မြန်မာ</string>
     <string name="settings_downloads">Downloads</string>
     <string name="settings_turbo">Turbo mode</string>
-    <string name="settings_turbo_desc">Uses aria2c with 16 parallel connections. Fastest on most networks.</string>
+    <string name="settings_turbo_desc">Uses aria2c with 24 parallel connections. Fastest on most networks.</string>
     <string name="settings_quality">Quality</string>
     <string name="settings_quality_desc">Always chooses the highest video and audio streams, then merges them with FFmpeg.</string>
     <string name="settings_engine">Download engine</string>
