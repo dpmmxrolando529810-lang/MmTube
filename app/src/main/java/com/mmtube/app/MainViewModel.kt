@@ -1,7 +1,11 @@
 package com.mmtube.app
 
 import android.app.Activity
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Intent
 import android.net.Uri
+import androidx.core.app.NotificationCompat
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.ViewModel
@@ -33,6 +37,8 @@ import com.mmtube.app.util.openFile
 import com.mmtube.app.util.openUrl
 import com.mmtube.app.util.sha1Fingerprint
 import com.mmtube.app.util.shareFile
+import kotlinx.coroutines.Dispatchers
+import java.io.File
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -90,6 +96,16 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 _ui.update { it.copy(settings = snapshot) }
             }
         }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val mgr = context.getSystemService(NotificationManager::class.java)
+            mgr?.createNotificationChannel(
+                NotificationChannel(
+                    QUEUE_NOTIFICATION_CHANNEL,
+                    "MMTube queue",
+                    NotificationManager.IMPORTANCE_LOW
+                )
+            )
+        }
         viewModelScope.launch {
             container.engine.state.collect { engine ->
                 _ui.update { it.copy(engine = engine) }
@@ -109,6 +125,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             container.downloads.state.collect { state ->
                 _ui.update { it.copy(download = state, queuedTitle = container.downloads.queuedRequest?.title) }
+                updateQueueNotification(container.downloads.queuedRequest?.title)
                 when (state) {
                     is DownloadState.Completed -> {
                         refreshQuota()
@@ -120,6 +137,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                         event(UiEvent.Message(message))
                     }
                     is DownloadState.Failed -> {
+                        appendDiagnosticLog("download failed: kind=" + state.kind + " detail=" + state.detail)
                         event(UiEvent.Message(errorText(state.kind)))
                     }
                     DownloadState.Cancelled -> {
@@ -194,6 +212,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     if (autoStart) startDownload()
                 }
                 .onFailure { error ->
+                    appendDiagnosticLog("analyze failed: kind=" + (error as? MmtubeException)?.kind + " msg=" + error.message)
                     val kind = (error as? MmtubeException)?.kind ?: ErrorKind.GENERIC
                     _ui.update { it.copy(probe = ProbeUi.Error(kind, error.message)) }
                     event(UiEvent.Message(errorText(kind)))
@@ -348,6 +367,74 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             val stat = android.os.StatFs(directory.absolutePath)
             stat.availableBytes
         }.getOrDefault(Long.MAX_VALUE)
+    }
+
+    private fun appendDiagnosticLog(line: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val file = File(context.filesDir, "diagnostic.log")
+                if (!file.exists()) file.createNewFile()
+                val stamp = System.currentTimeMillis()
+                file.appendText("[$stamp] $line\n")
+                if (file.length() > 64 * 1024L) {
+                    val text = file.readText()
+                    file.writeText(text.takeLast(48 * 1024))
+                }
+            }
+        }
+    }
+
+    fun shareDiagnosticLog() {
+        val file = File(context.filesDir, "diagnostic.log")
+        val content = runCatching { if (file.exists()) file.readText() else "No diagnostic log yet." }.getOrDefault("No diagnostic log yet.")
+        val intent = Intent(Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(Intent.EXTRA_TEXT, content.takeLast(4096))
+            putExtra(Intent.EXTRA_SUBJECT, "MMTube diagnostic log")
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        context.startActivity(Intent.createChooser(intent, context.getString(R.string.logs_share)))
+    }
+
+    fun deletePartialFiles() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val external = context.getExternalFilesDir(android.os.Environment.DIRECTORY_MOVIES)
+                ?: context.filesDir
+            val directory = java.io.File(external, "MMTube")
+            val targets = directory.listFiles()?.filter {
+                it.name.endsWith(".part") || it.name.endsWith(".ytdl") ||
+                    it.name.endsWith(".aria2") || it.name.endsWith(".temp")
+            }.orEmpty()
+            var deleted = 0
+            targets.forEach {
+                if (runCatching { it.delete() }.getOrDefault(false)) deleted += 1
+            }
+            event(UiEvent.Message(context.getString(R.string.partial_deleted, deleted)))
+        }
+    }
+
+    private fun updateQueueNotification(queuedTitle: String?) {
+        val mgr = context.getSystemService(NotificationManager::class.java) ?: return
+        if (queuedTitle.isNullOrBlank()) {
+            mgr.cancel(QUEUE_NOTIFICATION_ID)
+            return
+        }
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        val tap = androidx.core.app.PendingIntentCompat.getActivity(
+            context, 7700, intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT, false
+        )
+        val notif = NotificationCompat.Builder(context, QUEUE_NOTIFICATION_CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_mmtube)
+            .setContentTitle(context.getString(R.string.queue_notification_title))
+            .setContentText(queuedTitle.take(64))
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setContentIntent(tap)
+            .build()
+        mgr.notify(QUEUE_NOTIFICATION_ID, notif)
     }
 
     // ---------- Account ----------
@@ -742,6 +829,9 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     companion object {
+        private const val QUEUE_NOTIFICATION_CHANNEL = "mmtube_queue"
+        private const val QUEUE_NOTIFICATION_ID = 7700
+
         fun factory(container: AppContainer) = viewModelFactory {
             initializer { MainViewModel(container) }
         }

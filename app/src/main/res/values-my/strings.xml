@@ -357,4 +357,9 @@ MP3 အတွက် — ချက်ချင်း audio tag တွေ့မယ
     <string name="batch_start">အားလုံး ဒေါင်းမယ်</string>
     <string name="batch_empty">Link မပါသေးပါ</string>
     <string name="batch_queued">Link များ တန်းစီ ထည့်သွင်းပြီးပြီ (%1$d)။ ဒေါင်းမယ်…</string>
+    <string name="diagnostics_view_logs">ဒေါင်းလုဒ် log ကြည့်/မျှဝေမည်</string>
+    <string name="diagnostics_delete_partial">ဆုံးမဖြစ်ဖိုင်များ ဖျက်မည် (.part/.aria2)</string>
+    <string name="partial_deleted">partial ဖိုင် %1$d ခု ဖျက်ပြီး</string>
+    <string name="logs_share">ဒေါင်းလုဒ် log မျှဝေခြင်း</string>
+    <string name="queue_notification_title">တန်းစီထားသော ဒေါင်းလုဒ်များ</string>
 </resources>

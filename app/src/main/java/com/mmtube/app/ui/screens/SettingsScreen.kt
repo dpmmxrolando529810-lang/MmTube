@@ -27,6 +27,7 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Devices
+import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Search
@@ -338,7 +339,19 @@ fun SettingsScreen(
             )
         }
 
-        SettingsGroup(context.getString(R.string.settings_diagnostics), visibleIf = qMatch(query, listOf("diagnostics", "diagnostic", "ffmpeg", "ပြဿနာ", "ပြဿနာစစ်"))) {
+        SettingsGroup(context.getString(R.string.settings_diagnostics), visibleIf = qMatch(query, listOf("diagnostics", "diagnostic", "ffmpeg", "ပြဿနာ", "ပြဿနာစစ်", "logs", "log", "partial", "အရှင်း", "အမှား"))) {
+            SettingsClickRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.diagnostics_view_logs),
+                value = "",
+                onClick = vm::shareDiagnosticLog
+            )
+            SettingsClickRow(
+                icon = Icons.Rounded.DeleteOutline,
+                label = context.getString(R.string.diagnostics_delete_partial),
+                value = "",
+                onClick = vm::deletePartialFiles
+            )
             SettingsValueRow(
                 icon = Icons.Rounded.VerifiedUser,
                 label = context.getString(R.string.settings_diagnostics),

@@ -164,7 +164,7 @@ class DownloadService : Service() {
             .setOnlyAlertOnce(true)
             .setShowWhen(false)
             .setSilent(true)
-            .setOngoing(active)
+            .setOngoing(true)
             .setAutoCancel(!active)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
