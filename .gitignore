@@ -20,3 +20,6 @@ keystore/release.p12
 # Repacked Termux FFmpeg 9.0.2 binaries (fetched by tools/ffmpeg/fetch-termux-ffmpeg.sh)
 /app/src/main/jniLibs/
 /tools/ffmpeg/build/
+
+# google-services.json is generated at build time from env vars
+app/google-services.json

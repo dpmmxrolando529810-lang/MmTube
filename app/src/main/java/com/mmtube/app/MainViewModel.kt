@@ -72,7 +72,8 @@ data class MainUiState(
     val storageFullPrompt: Boolean = false,
     val announcementId: String? = null,
     val announcementText: String? = null,
-    val whatsNewVersion: String? = null
+    val whatsNewVersion: String? = null,
+    val queue: List<com.mmtube.app.download.DownloadRequest> = emptyList()
 ) {
     val termsAccepted: Boolean get() = settings.acceptedTerms
 }
@@ -148,6 +149,12 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             container.account.ui.collect { account ->
                 val wasPaid = _ui.value.quota?.paid == true
+                runCatching {
+                    if (com.mmtube.app.data.FirebaseConfig.isConfigured) {
+                        com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance()
+                            .setUserId(account.profile?.userCode.orEmpty())
+                    }
+                }
                 _ui.update { it.copy(account = account) }
                 refreshQuota()
                 // Expiry check: paid -> free transition should notify the user.
@@ -158,9 +165,15 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             }
         }
         viewModelScope.launch {
+            container.downloads.queue.collect { queued ->
+                _ui.update { it.copy(queue = queued, queuedTitle = queued.firstOrNull()?.title) }
+                updateQueueNotification(queued)
+            }
+        }
+        viewModelScope.launch {
             container.downloads.state.collect { state ->
-                _ui.update { it.copy(download = state, queuedTitle = container.downloads.queuedRequest?.title) }
-                updateQueueNotification(container.downloads.queuedRequest?.title)
+                _ui.update { it.copy(download = state, queuedTitle = container.downloads.queue.value.firstOrNull()?.title) }
+                updateQueueNotification(container.downloads.queue.value)
                 when (state) {
                     is DownloadState.Completed -> {
                         playCompletionChime()
@@ -173,6 +186,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                         event(UiEvent.Message(message))
                     }
                     is DownloadState.Failed -> {
+                        recordException(MmtubeException(state.kind, state.detail))
                         appendDiagnosticLog("download failed: kind=" + state.kind + " detail=" + state.detail)
                         event(UiEvent.Message(errorText(state.kind)))
                     }
@@ -263,6 +277,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     if (autoStart) startDownload()
                 }
                 .onFailure { error ->
+                    recordException(error)
                     appendDiagnosticLog("analyze failed: kind=" + (error as? MmtubeException)?.kind + " msg=" + error.message)
                     val kind = (error as? MmtubeException)?.kind ?: ErrorKind.GENERIC
                     _ui.update { it.copy(probe = ProbeUi.Error(kind, error.message)) }
@@ -298,6 +313,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     else -> context.getString(R.string.error_quota)
                 }
                 event(UiEvent.Message(message))
+                showQuotaBlockNotification()
                 return@launch
             }
             val mode = _ui.value.mode
@@ -654,9 +670,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    private fun updateQueueNotification(queuedTitle: String?) {
+    private fun updateQueueNotification(queued: List<com.mmtube.app.download.DownloadRequest>) {
         val mgr = context.getSystemService(NotificationManager::class.java) ?: return
-        if (queuedTitle.isNullOrBlank()) {
+        val head = queued.firstOrNull()
+        if (head == null) {
             mgr.cancel(QUEUE_NOTIFICATION_ID)
             return
         }
@@ -667,15 +684,64 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             context, 7700, intent,
             android.app.PendingIntent.FLAG_UPDATE_CURRENT, false
         )
+        val count = queued.size
+        val text = if (count > 1) {
+            context.getString(R.string.queue_notification_count, count, head.title.take(48))
+        } else {
+            head.title.take(64)
+        }
         val notif = NotificationCompat.Builder(context, QUEUE_NOTIFICATION_CHANNEL)
             .setSmallIcon(R.drawable.ic_stat_mmtube)
             .setContentTitle(context.getString(R.string.queue_notification_title))
-            .setContentText(queuedTitle.take(64))
+            .setContentText(text)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(tap)
             .build()
         mgr.notify(QUEUE_NOTIFICATION_ID, notif)
+    }
+
+    private fun showQuotaBlockNotification() {
+        runCatching {
+            val mgr = context.getSystemService(NotificationManager::class.java) ?: return
+            val intent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(MainActivity.EXTRA_OPEN_UPGRADE, true)
+            }
+            val tap = android.app.PendingIntent.getActivity(
+                context, 7703, intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val notif = NotificationCompat.Builder(context, PLAN_REMINDER_CHANNEL)
+                .setSmallIcon(R.drawable.ic_stat_mmtube)
+                .setContentTitle(context.getString(R.string.quota_block_notification_title))
+                .setContentText(context.getString(R.string.quota_block_notification_body))
+                .setAutoCancel(true)
+                .setContentIntent(tap)
+                .addAction(
+                    android.R.drawable.ic_menu_upload,
+                    context.getString(R.string.quota_block_notification_action),
+                    tap
+                )
+                .build()
+            mgr.notify(QUOTA_BLOCK_NOTIFICATION_ID, notif)
+        }
+    }
+
+    private fun recordException(error: Throwable) {
+        runCatching {
+            if (com.mmtube.app.data.FirebaseConfig.isConfigured) {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(error)
+            }
+        }
+    }
+
+    fun moveQueueItem(fromIndex: Int, toIndex: Int) {
+        container.downloads.moveQueueItem(fromIndex, toIndex)
+    }
+
+    fun removeFromQueue(index: Int) {
+        container.downloads.removeFromQueue(index)
     }
 
     // ---------- Account ----------
@@ -1085,6 +1151,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         private const val UPDATE_NOTIFICATION_ID = 7701
         private const val PLAN_REMINDER_CHANNEL = "mmtube_plan_reminder"
         private const val PLAN_REMINDER_NOTIFICATION_ID = 7702
+        private const val QUOTA_BLOCK_NOTIFICATION_ID = 7703
 
         fun factory(container: AppContainer) = viewModelFactory {
             initializer { MainViewModel(container) }

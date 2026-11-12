@@ -3,6 +3,45 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
+}
+
+// google-services.json is generated from the same env vars as the manual Firebase bootstrap,
+// so CI/local builds keep working without committing the file.
+run {
+    val apiKey = envOrProp("FIREBASE_API_KEY")
+    val appId = envOrProp("FIREBASE_APP_ID")
+    val projectId = envOrProp("FIREBASE_PROJECT_ID")
+    val senderId = envOrProp("FIREBASE_SENDER_ID")
+    val json = File(projectDir, "google-services.json")
+    val valid = apiKey.isNotBlank() && appId.isNotBlank() && projectId.isNotBlank()
+    val content = if (valid) {
+        """{
+          "project_info": { "project_number": "$senderId", "project_id": "$projectId", "storage_bucket": "$projectId.appspot.com" },
+          "client": [ {
+            "client_info": { "mobilesdk_app_id": "$appId", "android_client_info": { "package_name": "com.mmtube.app" } },
+            "oauth_client": [],
+            "api_key": [ { "current_key": "$apiKey" } ],
+            "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+          } ],
+          "configuration_version": "1"
+        }"""
+    } else {
+        """{
+          "project_info": { "project_number": "0", "project_id": "placeholder" },
+          "client": [ {
+            "client_info": { "mobilesdk_app_id": "1:0:android:0", "android_client_info": { "package_name": "com.mmtube.app" } },
+            "oauth_client": [],
+            "api_key": [ { "current_key": "placeholder" } ],
+            "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+          } ],
+          "configuration_version": "1"
+        }"""
+    }
+    if (!json.exists() || json.readText() != content) {
+        json.writeText(content)
+    }
 }
 
 fun envOrProp(name: String, default: String = ""): String {
@@ -13,8 +52,8 @@ fun envOrProp(name: String, default: String = ""): String {
 fun quoted(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 16
-val appVersionName = (project.findProperty("versionName") as String?) ?: "1.1.0"
+val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 17
+val appVersionName = (project.findProperty("versionName") as String?) ?: "1.2.0"
 val keystorePath = envOrProp("KEYSTORE_PATH", "keystore/mmtube-demo.p12")
 
 android {
@@ -146,11 +185,13 @@ dependencies {
     implementation("org.apache.commons:commons-compress:1.27.1")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("sh.calvin.reorderable:reorderable:3.1.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-crashlytics")
 
     implementation("androidx.credentials:credentials:1.3.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")

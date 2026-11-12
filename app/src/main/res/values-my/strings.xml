@@ -406,4 +406,13 @@ Firebase project: %4$s</string>
     <string name="announcement_title">ကြေညာချက်</string>
     <string name="announcement_dismiss">ကြေညာချက် ဖျောက်ရန်</string>
     <string name="announcement_got_it">ရပြီ</string>
+
+    <string name="queue_section">တန်းစီထားသည် (%1$d) — ဆွဲရွှေ့ပြီး ပြင်ပါ</string>
+    <string name="queue_drag_hint">ဖုန်းနှိပ်ပြီး ဆွဲရွှေ့ပါ</string>
+    <string name="queue_drag_handle">ဆွဲရန်</string>
+    <string name="queue_remove">တန်းစီမှ ဖယ်ရန်</string>
+    <string name="queue_notification_count">%1$d တန်းစီထား — %2$s</string>
+    <string name="quota_block_notification_title">ယနေ့ဒေါင်းလုဒ် ပြည့်သွားပြီ</string>
+    <string name="quota_block_notification_body">Unlimited ပြောင်းပြီး အကန့်အသတ်မရှိ ဒေါင်းပါ</string>
+    <string name="quota_block_notification_action">Upgrade လုပ်ရန်</string>
 </resources>

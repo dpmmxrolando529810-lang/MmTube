@@ -37,7 +37,9 @@ data class DownloadRequest(
     val thumbnail: String?,
     val durationSeconds: Int,
     val qualityLabel: String,
-    val resume: Boolean = false
+    val resume: Boolean = false,
+    /** Stable identity for reorderable queue UI. */
+    val queueId: String = java.util.UUID.randomUUID().toString()
 )
 
 class DownloadController(
@@ -62,13 +64,40 @@ class DownloadController(
     var pausedRequest: DownloadRequest? = null
         private set
 
-    /** Queued (not yet started) download — started automatically when the active one finishes. */
-    var queuedRequest: DownloadRequest? = null
-        private set
+    /** Downloads waiting to start — surfaced for the reorderable queue UI. */
+    val queue: kotlinx.coroutines.flow.MutableStateFlow<List<DownloadRequest>> =
+        kotlinx.coroutines.flow.MutableStateFlow(emptyList())
+
+    /** Snapshot of the head of the queue (first queued download) — started automatically when the active one finishes. */
+    val queuedRequest: DownloadRequest?
+        get() = queue.value.firstOrNull()
+
+    fun moveQueueItem(fromIndex: Int, toIndex: Int) {
+        queue.value = queue.value.toMutableList().apply {
+            val item = removeAt(fromIndex)
+            add(toIndex.coerceIn(0, size), item)
+        }
+    }
+
+    fun removeFromQueue(index: Int): DownloadRequest? {
+        val list = queue.value
+        if (index !in list.indices) return null
+        val removed = list[index]
+        queue.value = list.filterIndexed { i, _ -> i != index }
+        return removed
+    }
+
+    private fun dequeueHead(): DownloadRequest? {
+        val list = queue.value
+        if (list.isEmpty()) return null
+        val head = list.first()
+        queue.value = list.drop(1)
+        return head
+    }
 
     fun start(request: DownloadRequest) {
-        if (job?.isActive == true) { queuedRequest = request; return }
-        if (_state.value is DownloadState.Paused) return
+        if (job?.isActive == true) { queue.value = queue.value + request; return }
+        if (_state.value is DownloadState.Paused) { queue.value = queue.value + request; return }
         currentRequest = request
         _state.value = DownloadState.Preparing(request.title, request.mode)
         job = scope.launch {
@@ -104,9 +133,8 @@ class DownloadController(
                 runCatching { quotaManager.consume() }
                     .onFailure { Log.w(TAG, "Could not consume quota", it) }
                 _state.value = DownloadState.Completed(item)
-                // Auto-start anything queued while we were downloading.
-                val queued = queuedRequest
-                queuedRequest = null
+                // Auto-start the next queued download.
+                val queued = dequeueHead()
                 if (queued != null) {
                     scope.launch {
                         kotlinx.coroutines.delay(400L)
@@ -117,11 +145,29 @@ class DownloadController(
                 if (_state.value !is DownloadState.Cancelled) {
                     _state.value = DownloadState.Cancelled
                 }
+                dequeueHead()?.let { queued ->
+                    scope.launch {
+                        kotlinx.coroutines.delay(400L)
+                        start(queued)
+                    }
+                }
             } catch (cancelled: YoutubeDL.CanceledException) {
                 _state.value = DownloadState.Cancelled
+                dequeueHead()?.let { queued ->
+                    scope.launch {
+                        kotlinx.coroutines.delay(400L)
+                        start(queued)
+                    }
+                }
             } catch (error: Throwable) {
                 if (_state.value is DownloadState.Cancelled) return@launch
                 Log.w(TAG, "Download failed", error)
+                dequeueHead()?.let { queued ->
+                    scope.launch {
+                        kotlinx.coroutines.delay(400L)
+                        start(queued)
+                    }
+                }
                 val kind = (error as? MmtubeException)?.kind ?: ErrorKind.DOWNLOAD
                 _state.value = DownloadState.Failed(
                     title = request.title,

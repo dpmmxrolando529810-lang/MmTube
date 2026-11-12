@@ -73,6 +73,13 @@ class MMTubeApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        // Crashlytics is only enabled when Firebase is configured for this build.
+        runCatching {
+            if (com.mmtube.app.data.FirebaseConfig.isConfigured) {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance()
+                    .setCrashlyticsCollectionEnabled(true)
+            }
+        }
         container.bootstrap()
     }
 }

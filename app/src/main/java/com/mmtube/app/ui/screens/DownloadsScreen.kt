@@ -19,6 +19,9 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.FolderOff
 import androidx.compose.material.icons.rounded.Storage
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.DragHandle
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -47,6 +50,8 @@ import com.mmtube.app.ui.components.SectionHeader
 import com.mmtube.app.ui.theme.MmtubePalette
 import com.mmtube.app.ui.theme.MmtubeType
 import com.mmtube.app.util.Formatters
+import sh.calvin.reorderable.ReorderableColumn
+import androidx.compose.runtime.key
 
 @Composable
 fun DownloadsScreen(
@@ -103,6 +108,17 @@ fun DownloadsScreen(
             }
             item {
                 ActiveDownloadCard(state = active, onCancel = vm::cancelDownload, onResume = vm::resumeDownload)
+            }
+        }
+        if (ui.queue.isNotEmpty()) {
+            item {
+                SectionHeader(
+                    title = context.getString(R.string.queue_section, ui.queue.size),
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 0.dp)
+                )
+            }
+            item {
+                QueuedDownloadsCard(queue = ui.queue, vm = vm)
             }
         }
         item {
@@ -229,6 +245,98 @@ fun DownloadsScreen(
             onDismiss = { pendingDelete = null },
             danger = true
         )
+    }
+}
+
+@Composable
+private fun QueuedDownloadsCard(
+    queue: List<com.mmtube.app.download.DownloadRequest>,
+    vm: MainViewModel
+) {
+    val context = LocalContext.current
+    FrostedCard(modifier = Modifier.fillMaxWidth()) {
+        ReorderableColumn(
+            list = queue,
+            onSettle = { fromIndex, toIndex -> vm.moveQueueItem(fromIndex, toIndex) },
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) { index, request, isDragging ->
+            key(request.queueId) {
+                ReorderableItem {
+                    QueueRow(
+                        index = index,
+                        request = request,
+                        dragging = isDragging,
+                        dragHandle = {
+                            IconButton(
+                                onClick = {},
+                                modifier = Modifier.draggableHandle()
+                            ) {
+                                Icon(
+                                    Icons.Rounded.DragHandle,
+                                    contentDescription = context.getString(R.string.queue_drag_handle),
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        },
+                        onRemove = { idx -> vm.removeFromQueue(idx) }
+                    )
+                }
+            }
+        }
+        Text(
+            text = context.getString(R.string.queue_drag_hint),
+            style = MmtubeType.LabelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+            modifier = Modifier.padding(top = 10.dp)
+        )
+    }
+}
+
+@Composable
+private fun QueueRow(
+    index: Int,
+    request: com.mmtube.app.download.DownloadRequest,
+    dragging: Boolean,
+    dragHandle: @Composable () -> Unit,
+    onRemove: (Int) -> Unit
+) {
+    val context = LocalContext.current
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = if (dragging) MmtubePalette.Blue.copy(alpha = 0.18f) else Color(0xFF141E33),
+        border = androidx.compose.foundation.BorderStroke(1.dp, if (dragging) MmtubePalette.Aqua else Color(0xFF26354E)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            dragHandle()
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = request.title,
+                    style = MmtubeType.BodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+                Text(
+                    text = "#${index + 1} · ${request.qualityLabel}",
+                    style = MmtubeType.LabelSmall,
+                    color = MmtubePalette.Aqua
+                )
+            }
+            IconButton(
+                onClick = { onRemove(index) },
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    Icons.Rounded.Clear,
+                    contentDescription = context.getString(R.string.queue_remove),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
