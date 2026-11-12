@@ -60,7 +60,8 @@ data class MainUiState(
     val accountBusy: Boolean = false,
     val sha1: String = "",
     val engineDiagnostics: String? = null,
-    val pendingAutoDownload: Boolean = false
+    val pendingAutoDownload: Boolean = false,
+    val queuedTitle: String? = null
 ) {
     val termsAccepted: Boolean get() = settings.acceptedTerms
 }
@@ -107,7 +108,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         }
         viewModelScope.launch {
             container.downloads.state.collect { state ->
-                _ui.update { it.copy(download = state) }
+                _ui.update { it.copy(download = state, queuedTitle = container.downloads.queuedRequest?.title) }
                 when (state) {
                     is DownloadState.Completed -> {
                         refreshQuota()
@@ -208,8 +209,8 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         val state = _ui.value
         val probe = (state.probe as? ProbeUi.Success)?.result ?: return
         if (container.downloads.isActive()) {
-            event(UiEvent.Message(context.getString(R.string.already_downloading)))
-            return
+            // Controller queues the request and starts it automatically.
+            event(UiEvent.Message(context.getString(R.string.download_queued)))
         }
         viewModelScope.launch {
             val quota = runCatching { container.quota.current() }.getOrNull()
@@ -352,6 +353,19 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             items.forEach { runCatching { container.exporter.delete(it) } }
             container.history.clear()
             event(UiEvent.Message(context.getString(R.string.action_history_cleared)))
+        }
+    }
+
+    /** Delete only entries older than 30 days (files + history rows). */
+    fun clearOldHistory() {
+        viewModelScope.launch {
+            val cutoff = System.currentTimeMillis() - 30L * 24L * 60L * 60L * 1000L
+            val all = container.history.snapshot()
+            all.filter { it.createdAt < cutoff }.forEach {
+                runCatching { container.exporter.delete(it) }
+                container.history.remove(it.id)
+            }
+            event(UiEvent.Message(context.getString(R.string.history_cleanup_old_done)))
         }
     }
 

@@ -57,6 +57,7 @@ fun DownloadsScreen(
     var filter by remember { mutableStateOf(0) }
     var pendingDelete by remember { mutableStateOf<HistoryItem?>(null) }
     var clearAllConfirm by remember { mutableStateOf(false) }
+    var cleanupOldConfirm by remember { mutableStateOf(false) }
 
     val active = ui.download
     val hasActive = active is DownloadState.Preparing || active is DownloadState.Running ||
@@ -112,21 +113,38 @@ fun DownloadsScreen(
                     .fillMaxWidth()
                     .padding(top = 2.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Rounded.Storage, contentDescription = null, tint = MmtubePalette.Blue, modifier = Modifier.size(16.dp))
-                    Text(
-                        text = context.getString(R.string.storage_used, Formatters.formatBytes(totalBytes)),
-                        style = MmtubeType.LabelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Rounded.Storage, contentDescription = null, tint = MmtubePalette.Blue, modifier = Modifier.size(16.dp))
+                        Text(
+                            text = context.getString(R.string.storage_used, Formatters.formatBytes(totalBytes)),
+                            style = MmtubeType.LabelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (ui.history.isNotEmpty()) {
+                        val audios = ui.history.count { it.mimeType.startsWith("audio") }
+                        val videos = ui.history.size - audios
+                        Text(
+                            text = context.getString(R.string.download_stats, ui.history.size, videos, audios, Formatters.formatBytes(totalBytes)),
+                            style = MmtubeType.LabelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                            modifier = Modifier.padding(start = 24.dp, top = 2.dp)
+                        )
+                    }
                 }
                 if (ui.history.isNotEmpty()) {
-                    androidx.compose.material3.TextButton(onClick = { clearAllConfirm = true }) {
-                        Text(
-                            context.getString(R.string.history_clear_all),
-                            color = MmtubePalette.Danger,
-                            style = MmtubeType.LabelLarge
-                        )
+                    Column {
+                        androidx.compose.material3.TextButton(onClick = { cleanupOldConfirm = true }) {
+                            Text(context.getString(R.string.history_cleanup_old), color = MmtubePalette.Amber, style = MmtubeType.LabelSmall)
+                        }
+                        androidx.compose.material3.TextButton(onClick = { clearAllConfirm = true }) {
+                            Text(
+                                context.getString(R.string.history_clear_all),
+                                color = MmtubePalette.Danger,
+                                style = MmtubeType.LabelLarge
+                            )
+                        }
                     }
                 }
             }
@@ -153,6 +171,19 @@ fun DownloadsScreen(
         }
     }
 
+    if (cleanupOldConfirm) {
+        ConfirmDialog(
+            title = context.getString(R.string.history_cleanup_old),
+            body = context.getString(R.string.history_cleanup_old_confirm),
+            confirmLabel = context.getString(R.string.history_cleanup_old),
+            onConfirm = {
+                vm.clearOldHistory()
+                cleanupOldConfirm = false
+            },
+            onDismiss = { cleanupOldConfirm = false },
+            danger = true
+        )
+    }
     if (clearAllConfirm) {
         ConfirmDialog(
             title = context.getString(R.string.history_clear_all),

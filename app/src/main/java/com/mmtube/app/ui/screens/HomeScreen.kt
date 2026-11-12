@@ -823,6 +823,28 @@ private fun ErrorPreviewCard(message: String, onRetry: () -> Unit) {
 @Composable
 private fun DownloadSection(ui: MainUiState, vm: MainViewModel) {
     val context = LocalContext.current
+    ui.queuedTitle?.let { queuedTitle ->
+        Column(modifier = Modifier.fillMaxWidth().padding(bottom = 10.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(
+                    Icons.Rounded.HourglassTop,
+                    contentDescription = null,
+                    tint = MmtubePalette.Blue,
+                    modifier = Modifier.size(18.dp)
+                )
+                Text(
+                    text = context.getString(R.string.queued_banner, queuedTitle),
+                    style = MmtubeType.LabelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
+            }
+        }
+    }
     when (val state = ui.download) {
         is DownloadState.Preparing,
         is DownloadState.Running,

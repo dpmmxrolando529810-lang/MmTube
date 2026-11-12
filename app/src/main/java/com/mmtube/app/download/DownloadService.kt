@@ -196,13 +196,30 @@ class DownloadService : Service() {
                 openAppPendingIntent()
             )
         } else {
+            val completed = state as? DownloadState.Completed
             builder.addAction(
                 R.drawable.ic_notification_open,
-                getString(R.string.notification_open),
-                openAppPendingIntent()
+                if (completed?.item?.mimeType?.startsWith("audio") == true)
+                    getString(R.string.notification_open_music)
+                else getString(R.string.notification_open_file),
+                if (completed != null) openFilePendingIntent(completed.item) else openAppPendingIntent()
             )
         }
         return builder.build()
+    }
+
+    private fun openFilePendingIntent(item: com.mmtube.app.data.HistoryItem): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
+            putExtra(MainActivity.EXTRA_OPEN_FILE_URI, item.uri)
+            putExtra(MainActivity.EXTRA_OPEN_FILE_MIME, item.mimeType)
+        }
+        return PendingIntent.getActivity(
+            this,
+            103,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
     }
 
     private fun openAppPendingIntent(): PendingIntent {

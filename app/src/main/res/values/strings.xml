@@ -313,4 +313,12 @@
     <string name="download_status_paused">Paused</string>
     <string name="download_notification_paused">Download paused</string>
     <string name="download_notification_resume">Resume</string>
+    <string name="download_queued">Added to queue — it will start automatically.</string>
+    <string name="notification_open_file">Open file</string>
+    <string name="notification_open_music">Open in music player</string>
+    <string name="download_stats">%1$d files · %2$d video · %3$d audio · %4$s</string>
+    <string name="history_cleanup_old">Clean up old files (30+ days)</string>
+    <string name="history_cleanup_old_confirm">Delete downloaded files and history entries older than 30 days?</string>
+    <string name="history_cleanup_old_done">Old files cleaned up</string>
+    <string name="queued_banner">Queued next: %1$s</string>
 </resources>

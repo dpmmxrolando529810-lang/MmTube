@@ -313,4 +313,12 @@
     <string name="download_status_paused">ခေတ္တရပ်ထားသည်</string>
     <string name="download_notification_paused">ဒေါင်းလုဒ် ခေတ္တရပ်ထား</string>
     <string name="download_notification_resume">ဆက်လုပ်</string>
+    <string name="download_queued">တန်းစီထည့်လိုက်ပြီ — အလိုအလျောက် ဒေါင်းမယ်</string>
+    <string name="notification_open_file">ဖိုင်ဖွင့်ခြင်း</string>
+    <string name="notification_open_music">Music player တွင်ဖွင့်ရန်</string>
+    <string name="download_stats">%1$d ဖိုင် · ဗီဒီယို %2$d · သီချင်း %3$d · %4$s</string>
+    <string name="history_cleanup_old">အဟောင်းဖိုင်များ ရှင်းလင်းရန် (၃၀ ရက်+)</string>
+    <string name="history_cleanup_old_confirm">၃၀ ရက်ထက်ကျော် download များကို ဖျက်မှာလား?</string>
+    <string name="history_cleanup_old_done">အဟောင်းဖိုင်များ ဖျက်ပြီးပြီ</string>
+    <string name="queued_banner">တန်းစီထားသည်: %1$s</string>
 </resources>

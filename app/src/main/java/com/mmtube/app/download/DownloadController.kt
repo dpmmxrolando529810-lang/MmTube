@@ -62,8 +62,12 @@ class DownloadController(
     var pausedRequest: DownloadRequest? = null
         private set
 
+    /** Queued (not yet started) download — started automatically when the active one finishes. */
+    var queuedRequest: DownloadRequest? = null
+        private set
+
     fun start(request: DownloadRequest) {
-        if (job?.isActive == true) return
+        if (job?.isActive == true) { queuedRequest = request; return }
         if (_state.value is DownloadState.Paused) return
         currentRequest = request
         _state.value = DownloadState.Preparing(request.title, request.mode)
@@ -98,6 +102,15 @@ class DownloadController(
                 runCatching { quotaManager.consume() }
                     .onFailure { Log.w(TAG, "Could not consume quota", it) }
                 _state.value = DownloadState.Completed(item)
+                // Auto-start anything queued while we were downloading.
+                val queued = queuedRequest
+                queuedRequest = null
+                if (queued != null) {
+                    scope.launch {
+                        kotlinx.coroutines.delay(400L)
+                        start(queued)
+                    }
+                }
             } catch (cancelled: CancellationException) {
                 if (_state.value !is DownloadState.Cancelled) {
                     _state.value = DownloadState.Cancelled

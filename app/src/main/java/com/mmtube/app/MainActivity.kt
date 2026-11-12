@@ -10,6 +10,7 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.mmtube.app.ui.AppRoot
+import com.mmtube.app.util.openFile
 
 class MainActivity : AppCompatActivity() {
 
@@ -43,7 +44,21 @@ class MainActivity : AppCompatActivity() {
         handleIntent(intent)
     }
 
+    private fun handleFileIntent(intent: Intent) {
+        val uri = intent.getStringExtra(EXTRA_OPEN_FILE_URI) ?: return
+        val mime = intent.getStringExtra(EXTRA_OPEN_FILE_MIME)
+            ?: intent.type
+            ?: "application/*"
+        this.openFile(android.net.Uri.parse(uri), mime)
+    }
+
     private fun handleIntent(intent: Intent?) {
+        intent?.let {
+            if (it.getStringExtra(EXTRA_OPEN_FILE_URI) != null) {
+                handleFileIntent(it)
+                return
+            }
+        }
         when (intent?.action) {
             Intent.ACTION_SEND -> {
                 val text = intent.getStringExtra(Intent.EXTRA_TEXT)
@@ -87,6 +102,8 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         const val EXTRA_OPEN_DOWNLOADS = "open_downloads"
+        const val EXTRA_OPEN_FILE_URI = "open_file_uri"
+        const val EXTRA_OPEN_FILE_MIME = "open_file_mime"
         private const val REQUEST_NOTIFICATIONS = 4101
         private const val REQUEST_STORAGE = 4102
     }
