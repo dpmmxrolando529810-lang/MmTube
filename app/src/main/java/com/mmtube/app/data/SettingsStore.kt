@@ -33,6 +33,10 @@ class SettingsStore(private val context: Context) {
         val ONBOARDING = booleanPreferencesKey("onboarding_seen")
         val COLORBLIND = booleanPreferencesKey("colorblind_mode")
         val DYNAMIC = booleanPreferencesKey("dynamic_color")
+        val CHIME = booleanPreferencesKey("chime_enabled")
+        val LAST_SEEN_VERSION = stringPreferencesKey("last_seen_version")
+        val DISMISSED_ANNOUNCEMENT = stringPreferencesKey("dismissed_announcement")
+        val LAST_PLAN_REMINDER = longPreferencesKey("last_plan_reminder")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -57,7 +61,11 @@ class SettingsStore(private val context: Context) {
         language = this[Keys.LANGUAGE] ?: "",
         onboardingSeen = this[Keys.ONBOARDING] ?: false,
         colorblindMode = this[Keys.COLORBLIND] ?: false,
-        dynamicColor = this[Keys.DYNAMIC] ?: false
+        dynamicColor = this[Keys.DYNAMIC] ?: false,
+        chimeEnabled = this[Keys.CHIME] ?: true,
+        lastSeenVersion = this[Keys.LAST_SEEN_VERSION] ?: "",
+        dismissedAnnouncementId = this[Keys.DISMISSED_ANNOUNCEMENT] ?: "",
+        lastPlanReminderAt = this[Keys.LAST_PLAN_REMINDER] ?: 0L
     )
 
     suspend fun setTheme(mode: ThemeMode) {
@@ -108,6 +116,14 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setColorblindMode(v: Boolean) { context.settingsDataStore.edit { it[Keys.COLORBLIND] = v } }
     suspend fun setDynamicColor(v: Boolean) { context.settingsDataStore.edit { it[Keys.DYNAMIC] = v } }
+
+    suspend fun setChimeEnabled(v: Boolean) { context.settingsDataStore.edit { it[Keys.CHIME] = v } }
+
+    suspend fun setLastSeenVersion(v: String) { context.settingsDataStore.edit { it[Keys.LAST_SEEN_VERSION] = v } }
+
+    suspend fun setDismissedAnnouncementId(v: String) { context.settingsDataStore.edit { it[Keys.DISMISSED_ANNOUNCEMENT] = v } }
+
+    suspend fun setLastPlanReminderAt(v: Long) { context.settingsDataStore.edit { it[Keys.LAST_PLAN_REMINDER] = v } }
 
     suspend fun setOnboardingSeen() {
         context.settingsDataStore.edit { it[Keys.ONBOARDING] = true }

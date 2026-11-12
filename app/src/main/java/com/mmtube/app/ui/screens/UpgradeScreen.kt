@@ -59,8 +59,19 @@ import com.mmtube.app.ui.components.GradientButton
 import com.mmtube.app.ui.theme.MmtubePalette
 import com.mmtube.app.ui.theme.MmtubeType
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import com.mmtube.app.util.Formatters
 import com.mmtube.app.util.copyText
+import com.mmtube.app.data.PaymentSummary
+import android.util.Base64
 
 @Composable
 fun UpgradeScreen(
@@ -116,6 +127,7 @@ fun UpgradeScreen(
         BenefitsCard()
         UserIdCard(ui = ui, vm = vm)
         PaymentCard()
+        PaymentProofCard(ui = ui, vm = vm, selected = selected, isActive = isActive)
         StepsCard()
 
         GradientButton(
@@ -311,6 +323,230 @@ private fun UserIdCard(ui: MainUiState, vm: MainViewModel) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp)
         )
+    }
+}
+
+private fun planAmountKs(plan: String): Int = when (plan) {
+    "1m" -> 1000
+    "3m" -> 2000
+    "6m" -> 4000
+    "12m" -> 7000
+    else -> 0
+}
+
+private fun planLabel(plan: String): String = when (plan) {
+    "1m" -> "1 Month"
+    "3m" -> "3 Months"
+    "6m" -> "6 Months"
+    "12m" -> "12 Months"
+    else -> plan
+}
+
+private fun compressImageToBase64(context: android.content.Context, uri: android.net.Uri): String? {
+    return runCatching {
+        val input = context.contentResolver.openInputStream(uri) ?: return null
+        val bytes = input.readBytes()
+        input.close()
+        var bitmap = android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return null
+        val longest = maxOf(bitmap.width, bitmap.height)
+        if (longest > 1280) {
+            val factor = 1280f / longest
+            bitmap = android.graphics.Bitmap.createScaledBitmap(
+                bitmap,
+                (bitmap.width * factor).toInt(),
+                (bitmap.height * factor).toInt(),
+                true
+            )
+        }
+        var quality = 72
+        var encoded: String? = null
+        while (quality > 0 && encoded == null) {
+            val out = java.io.ByteArrayOutputStream()
+            bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, out)
+            val arr = out.toByteArray()
+            if (arr.size <= 700_000 || quality <= 35) {
+                encoded = Base64.encodeToString(arr, Base64.NO_WRAP)
+            }
+            quality -= 17
+        }
+        encoded
+    }.getOrNull()
+}
+
+@Composable
+private fun PaymentProofCard(
+    ui: MainUiState,
+    vm: MainViewModel,
+    selected: String,
+    isActive: Boolean
+) {
+    val context = LocalContext.current
+    var phone by remember { mutableStateOf("") }
+    var note by remember { mutableStateOf("") }
+    var imageBase64 by remember { mutableStateOf<String?>(null) }
+    var imageAttached by remember { mutableStateOf(false) }
+    var submitting by remember { mutableStateOf(false) }
+    var latest by remember { mutableStateOf<PaymentSummary?>(null) }
+    val signedIn = ui.account.profile != null
+
+    LaunchedEffect(ui.account.profile) {
+        if (ui.account.profile != null) {
+            vm.fetchMyLatestPayment { latest = it }
+        }
+    }
+
+    val pickImage = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        if (uri != null) {
+            imageBase64 = compressImageToBase64(context, uri)
+            imageAttached = imageBase64 != null
+            if (imageBase64 == null) {
+                Toast.makeText(context, "ဓာတ်ပုံဖိုင်ပြဿနာ — နောက်တစ်ပုံ စမ်းပါ", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(context, "ဓာတ်ပုံထည့်ပြီးပါပြီ", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    FrostedCard(modifier = Modifier.fillMaxWidth()) {
+        Text(
+            text = context.getString(R.string.payment_card_title),
+            style = MmtubeType.TitleMedium,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Text(
+            text = context.getString(R.string.payment_card_desc),
+            style = MmtubeType.BodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp)
+        )
+
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MmtubePalette.Aqua.copy(alpha = 0.12f),
+            modifier = Modifier.padding(top = 10.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.Rounded.WorkspacePremium, contentDescription = null, tint = MmtubePalette.Aqua, modifier = Modifier.size(18.dp))
+                Text(
+                    text = context.getString(R.string.payment_plan_amount, planLabel(selected), planAmountKs(selected)),
+                    style = MmtubeType.LabelLarge,
+                    color = MmtubePalette.Aqua,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+        }
+
+        OutlinedTextField(
+            value = phone,
+            onValueChange = { phone = it.filter { ch -> ch.isDigit() || ch == '+' } },
+            label = { Text(context.getString(R.string.payment_phone_label), style = MmtubeType.BodyMedium) },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            colors = OutlinedTextFieldDefaults.colors()
+        )
+        OutlinedTextField(
+            value = note,
+            onValueChange = { note = it },
+            label = { Text(context.getString(R.string.payment_note_label), style = MmtubeType.BodyMedium) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            colors = OutlinedTextFieldDefaults.colors()
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Button(
+                onClick = { pickImage.launch("image/*") },
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+            ) {
+                Icon(Icons.Rounded.Bolt, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(16.dp))
+                Text(
+                    text = context.getString(R.string.payment_pick_image),
+                    style = MmtubeType.LabelSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(start = 6.dp)
+                )
+            }
+            if (imageAttached) {
+                Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = MmtubePalette.Aqua, modifier = Modifier.size(22.dp))
+            }
+        }
+
+        Button(
+            onClick = {
+                val payload = imageBase64
+                if (payload == null) {
+                    Toast.makeText(context, context.getString(R.string.payment_no_image), Toast.LENGTH_SHORT).show()
+                    return@Button
+                }
+                submitting = true
+                vm.submitPayment(selected, phone, note, payload) { ok, error ->
+                    submitting = false
+                    if (ok) {
+                        Toast.makeText(context, context.getString(R.string.payment_submit_ok), Toast.LENGTH_LONG).show()
+                        imageBase64 = null
+                        imageAttached = false
+                        note = ""
+                        vm.fetchMyLatestPayment { latest = it }
+                    } else {
+                        Toast.makeText(context, context.getString(R.string.payment_submit_err, error ?: "?"), Toast.LENGTH_LONG).show()
+                    }
+                }
+            },
+            enabled = !submitting && signedIn,
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = MmtubePalette.BlueDeep, contentColor = Color.White),
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+        ) {
+            Text(
+                text = if (submitting) context.getString(R.string.payment_submitting) else context.getString(R.string.payment_submit),
+                style = MmtubeType.LabelLarge,
+                color = Color.White
+            )
+        }
+
+        latest?.let { p ->
+            val (label, color) = when (p.status) {
+                "approved" -> context.getString(R.string.payment_status_approved) to MmtubePalette.Success
+                "rejected" -> context.getString(R.string.payment_status_rejected) to MmtubePalette.Danger
+                else -> context.getString(R.string.payment_status_pending) to MmtubePalette.Amber
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = color,
+                    modifier = Modifier.size(10.dp)
+                ) {}
+                Text(
+                    text = context.getString(R.string.payment_latest_title) + ": " +
+                        planLabel(p.plan) + " — " + p.amountKs + " Ks · " + label,
+                    style = MmtubeType.LabelSmall,
+                    color = color,
+                    modifier = Modifier.padding(start = 8.dp)
+                )
+            }
+            p.adminNote?.takeIf { it.isNotBlank() }?.let { reason ->
+                Text(
+                    text = reason,
+                    style = MmtubeType.BodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+        }
     }
 }
 

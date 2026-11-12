@@ -13,8 +13,8 @@ fun envOrProp(name: String, default: String = ""): String {
 fun quoted(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 15
-val appVersionName = (project.findProperty("versionName") as String?) ?: "1.0.15"
+val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 16
+val appVersionName = (project.findProperty("versionName") as String?) ?: "1.1.0"
 val keystorePath = envOrProp("KEYSTORE_PATH", "keystore/mmtube-demo.p12")
 
 android {

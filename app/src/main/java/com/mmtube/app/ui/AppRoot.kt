@@ -26,6 +26,8 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -204,6 +206,10 @@ fun AppRoot(
                 }
             }
 
+            val whatsNew = ui.whatsNewVersion
+            if (whatsNew != null) {
+                WhatsNewDialog(version = whatsNew, onDismiss = viewModel::dismissWhatsNew)
+            }
             val update = ui.update
             if (update.info != null && !update.dismissed) {
                 UpdateDialog(
@@ -216,6 +222,37 @@ fun AppRoot(
             }
         }
     }
+}
+
+@Composable
+private fun WhatsNewDialog(version: String, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val items = listOf(
+        "ငွေပေးချေမှု ပုံ screenshot တိုက်ရိုက်ပို့နိုင်ပါသည် (Upgrade စာမျက်နှာ)",
+        "Admin ထံမှ Plan အတည်ပြုချက်ကို App ထဲတွင် သိရမယ်",
+        "Plan သက်တမ်းကုန်ခါနီး သတိပေး notification",
+        "Notification permission ခွင့်ပြုချက် စစ်ဆေးရန် Settings ထဲ ထည့်ထားတယ်",
+        "Custom ROM များအတွက် Autostart လမ်းညွှန်"
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(context.getString(R.string.whats_new_title, version)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items.forEach { item ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+                        Text("✦", color = MmtubePalette.Aqua, style = MmtubeType.LabelLarge)
+                        Text(item, style = MmtubeType.BodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(context.getString(R.string.whats_new_got_it), color = MmtubePalette.Aqua)
+            }
+        }
+    )
 }
 
 @Composable

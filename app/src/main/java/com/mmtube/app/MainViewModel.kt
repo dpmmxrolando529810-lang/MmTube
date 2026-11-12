@@ -38,6 +38,7 @@ import com.mmtube.app.util.openUrl
 import com.mmtube.app.util.sha1Fingerprint
 import com.mmtube.app.util.shareFile
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.tasks.await
 import java.io.File
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -68,7 +69,10 @@ data class MainUiState(
     val engineDiagnostics: String? = null,
     val pendingAutoDownload: Boolean = false,
     val queuedTitle: String? = null,
-    val storageFullPrompt: Boolean = false
+    val storageFullPrompt: Boolean = false,
+    val announcementId: String? = null,
+    val announcementText: String? = null,
+    val whatsNewVersion: String? = null
 ) {
     val termsAccepted: Boolean get() = settings.acceptedTerms
 }
@@ -114,12 +118,28 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     NotificationManager.IMPORTANCE_LOW
                 )
             )
+            mgr?.createNotificationChannel(
+                NotificationChannel(
+                    PLAN_REMINDER_CHANNEL,
+                    "Plan reminders",
+                    NotificationManager.IMPORTANCE_DEFAULT
+                )
+            )
         }
         viewModelScope.launch {
             container.engine.state.collect { engine ->
                 _ui.update { it.copy(engine = engine) }
             }
         }
+        // What's New: show once per version upgrade.
+        viewModelScope.launch {
+            val snap = container.settings.snapshot()
+            val version = BuildConfig.VERSION_NAME
+            if (snap.lastSeenVersion != version) {
+                _ui.update { it.copy(whatsNewVersion = version) }
+            }
+        }
+        refreshAnnouncement()
         viewModelScope.launch {
             container.history.items.collect { items ->
                 _ui.update { it.copy(history = items) }
@@ -143,6 +163,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 updateQueueNotification(container.downloads.queuedRequest?.title)
                 when (state) {
                     is DownloadState.Completed -> {
+                        playCompletionChime()
                         refreshQuota()
                         val message = if (state.item.savedToGallery) {
                             context.getString(R.string.download_saved_gallery)
@@ -203,10 +224,25 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         _ui.update { it.copy(link = "", detected = null, probe = ProbeUi.Idle, mode = DownloadMode.MAX) }
     }
 
+    private fun isKnownUnsupportedHost(url: String): Boolean {
+        val host = runCatching { android.net.Uri.parse(url).host?.lowercase() }.getOrNull() ?: return false
+        val unsupported = listOf(
+            "instagram.com", "twitter.com", "x.com", "reddit.com", "pinterest.com",
+            "vimeo.com", "dailymotion.com", "soundcloud.com", "twitch.tv", "snapchat.com",
+            "linkedin.com", "pin.it", "ixigua.com", "bilibili.com", "vimeo.video"
+        )
+        return unsupported.any { host == it || host.endsWith(".$it") }
+    }
+
     fun analyze() {
         val raw = _ui.value.link.trim()
         if (UrlUtils.normalize(raw) == null) {
             event(UiEvent.Message(context.getString(R.string.error_invalid_link)))
+            return
+        }
+        if (UrlUtils.detectPlatform(raw) == Platform.OTHER && isKnownUnsupportedHost(raw)) {
+            _ui.update { it.copy(probe = ProbeUi.Error(ErrorKind.UNSUPPORTED, "unsupported_site")) }
+            event(UiEvent.Message(context.getString(R.string.error_unsupported_site)))
             return
         }
         probeJob?.cancel()
@@ -371,7 +407,164 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             val quota = runCatching { container.quota.current() }.getOrNull()
             if (quota != null) {
                 _ui.update { it.copy(quota = quota) }
+                maybeRemindPlanExpiry()
             }
+        }
+    }
+
+    fun refreshAnnouncement() {
+        viewModelScope.launch {
+            val db = container.firestore ?: return@launch
+            val snap = container.settings.snapshot()
+            val doc = runCatching { db.collection("announcements").document("latest").get().await() }.getOrNull() ?: return@launch
+            if (!doc.exists()) return@launch
+            val text = doc.getString("text").orEmpty().trim()
+            val id = doc.getString("id") ?: "latest"
+            if (text.isNotBlank() && id != snap.dismissedAnnouncementId) {
+                _ui.update { it.copy(announcementId = id, announcementText = text) }
+            }
+        }
+    }
+
+    fun dismissAnnouncement() {
+        val id = _ui.value.announcementId ?: return
+        viewModelScope.launch { container.settings.setDismissedAnnouncementId(id) }
+        _ui.update { it.copy(announcementId = null, announcementText = null) }
+    }
+
+    fun dismissWhatsNew() {
+        viewModelScope.launch { container.settings.setLastSeenVersion(BuildConfig.VERSION_NAME) }
+        _ui.update { it.copy(whatsNewVersion = null) }
+    }
+
+    private suspend fun maybeRemindPlanExpiry() {
+        val profile = _ui.value.account.profile ?: return
+        if (!profile.isPaid) return
+        val expiresAt = profile.planExpiresAt ?: return
+        val now = System.currentTimeMillis()
+        val remaining = expiresAt - now
+        if (remaining <= 0 || remaining > 3L * 24 * 3600 * 1000) return
+        val last = container.settings.snapshot().lastPlanReminderAt
+        if (now - last < 24L * 3600 * 1000) return
+        container.settings.setLastPlanReminderAt(now)
+        runCatching {
+            val mgr = context.getSystemService(NotificationManager::class.java) ?: return@runCatching
+            val intent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(MainActivity.EXTRA_OPEN_UPGRADE, true)
+            }
+            val tap = android.app.PendingIntent.getActivity(
+                context, 7702, intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val notif = NotificationCompat.Builder(context, PLAN_REMINDER_CHANNEL)
+                .setSmallIcon(R.drawable.ic_stat_mmtube)
+                .setContentTitle(context.getString(R.string.plan_reminder_title))
+                .setContentText(context.getString(R.string.plan_reminder_body, Formatters.formatDate(expiresAt)))
+                .setAutoCancel(true)
+                .setContentIntent(tap)
+                .build()
+            mgr.notify(PLAN_REMINDER_NOTIFICATION_ID, notif)
+        }
+    }
+
+    private fun playCompletionChime() {
+        if (!_ui.value.settings.chimeEnabled) return
+        runCatching {
+            val uri = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+            android.media.RingtoneManager.getRingtone(context, uri)?.play()
+        }
+    }
+
+    fun setChimeEnabled(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setChimeEnabled(enabled) }
+    }
+
+    fun fetchMyLatestPayment(onDone: (com.mmtube.app.data.PaymentSummary?) -> Unit) {
+        val profile = _ui.value.account.profile ?: run { onDone(null); return }
+        val db = container.firestore ?: run { onDone(null); return }
+        viewModelScope.launch {
+            val snapshot = runCatching {
+                db.collection("payments").whereEqualTo("uid", profile.uid).get().await()
+            }.getOrNull()
+            val latest = snapshot?.documents?.maxByOrNull {
+                it.getTimestamp("createdAt")?.seconds ?: 0L
+            }
+            if (latest == null) {
+                onDone(null)
+                return@launch
+            }
+            onDone(
+                com.mmtube.app.data.PaymentSummary(
+                    id = latest.id,
+                    plan = latest.getString("plan") ?: "",
+                    amountKs = latest.getLong("amountKs") ?: 0L,
+                    status = latest.getString("status") ?: "pending",
+                    adminNote = latest.getString("adminNote"),
+                    createdAt = latest.getTimestamp("createdAt")?.toDate()?.time ?: 0L
+                )
+            )
+        }
+    }
+
+    fun sendDiagnosticToTelegram() {
+        viewModelScope.launch {
+            val file = java.io.File(context.filesDir, "diagnostic.log")
+            val tail = if (file.exists()) file.readText().takeLast(1500) else "diagnostic log not created yet"
+            val message = "MMTube diagnostic log:\n\n" + tail
+            val encoded = android.net.Uri.encode(message)
+            val telegram = Intent(Intent.ACTION_SENDTO, android.net.Uri.parse("tg://resolve?domain=TKA_MTC&text=$encoded")).apply {
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            runCatching { context.startActivity(telegram) }.recoverCatching {
+                val web = Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://t.me/TKA_MTC")).apply {
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(web)
+            }
+        }
+    }
+
+    fun submitPayment(plan: String, buyerPhone: String, note: String, imageBase64: String, onDone: (Boolean, String?) -> Unit) {
+        val profile = _ui.value.account.profile
+        val db = container.firestore
+        if (profile == null || db == null) {
+            onDone(false, "Sign in လုပ်ပါ")
+            return
+        }
+        val months = Plans.months(plan)
+        val amount = when (plan) {
+            Plans.M1 -> 1000
+            Plans.M3 -> 2000
+            Plans.M6 -> 4000
+            Plans.M12 -> 7000
+            else -> 0
+        }
+        if (months <= 0 || imageBase64.isBlank()) {
+            onDone(false, "Plan နဲ့ ငွေပြေစာပုံ ဖြည့်ပါ")
+            return
+        }
+        viewModelScope.launch {
+            val result = runCatching {
+                db.collection("payments").add(
+                    mapOf(
+                        "uid" to profile.uid,
+                        "userCode" to profile.userCode,
+                        "email" to profile.email,
+                        "plan" to plan,
+                        "planMonths" to months,
+                        "amountKs" to amount,
+                        "buyerPhone" to buyerPhone.trim().ifBlank { null },
+                        "note" to note.trim().ifBlank { null },
+                        "imageBase64" to imageBase64,
+                        "status" to "pending",
+                        "createdAt" to com.google.firebase.Timestamp.now()
+                    )
+                ).await()
+            }
+            result
+                .onSuccess { onDone(true, null) }
+                .onFailure { onDone(false, it.message) }
         }
     }
 
@@ -890,6 +1083,8 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         private const val QUEUE_NOTIFICATION_ID = 7700
         private const val UPDATE_NOTIFICATION_CHANNEL = "mmtube_update"
         private const val UPDATE_NOTIFICATION_ID = 7701
+        private const val PLAN_REMINDER_CHANNEL = "mmtube_plan_reminder"
+        private const val PLAN_REMINDER_NOTIFICATION_ID = 7702
 
         fun factory(container: AppContainer) = viewModelFactory {
             initializer { MainViewModel(container) }

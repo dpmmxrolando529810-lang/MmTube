@@ -4,9 +4,12 @@ rules_version = '2';
  * MMTube Firestore security rules.
  *
  * Collections:
- *   users/{uid}   — public profile + plan (read: owner or admin, create: owner as free, update: admin only, delete: owner)
- *   usage/{uid}   — per-user download counters (read: owner or admin, write: owner with restricted keys or admin, delete: owner or admin)
- *   admins/{uid}  — allow-list of admin uids (read: that admin only; writes: console only)
+ *   users/{uid}          — public profile + plan (read: owner or admin, create: owner as free, update: admin only, delete: owner)
+ *   usage/{uid}          — per-user download counters (read: owner or admin, write: owner with restricted keys or admin, delete: owner or admin)
+ *   admins/{uid}         — allow-list of admin uids (read: that admin only; writes: console only)
+ *   payments/{paymentId} — payment proof submissions (create: owner as pending, read: owner or admin, update: admin only)
+ *   activationLog/{id}   — plan activation audit trail (admin only)
+ *   announcements/latest — broadcast message shown in the app (read: signed-in users, write: admin)
  */
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -55,6 +58,53 @@ service cloud.firestore {
               ]));
 
       allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid == resource.data.uid);
+
+      allow create: if isSignedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasOnly([
+            'uid', 'userCode', 'email', 'plan', 'planMonths', 'amountKs',
+            'buyerPhone', 'note', 'imageBase64', 'status', 'createdAt'
+          ])
+        && request.resource.data.plan in ['1m', '3m', '6m', '12m']
+        && request.resource.data.planMonths is int
+        && request.resource.data.amountKs is int
+        && request.resource.data.imageBase64 is string
+        && request.resource.data.imageBase64.size() < 750000;
+
+      // Admins review and set the final outcome. Nobody else can change a payment.
+      allow update: if isAdmin();
+      allow delete: if false;
+    }
+
+    match /activationLog/{logId} {
+      allow read: if isAdmin();
+
+      allow create: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+            'uid', 'userCode', 'plan', 'months',
+            'prevPlan', 'prevExpiresAt', 'newExpiresAt',
+            'source', 'paymentId', 'amountKs', 'buyerPhone', 'note', 'byAdminUid', 'createdAt'
+          ]);
+
+      allow update: if isAdmin()
+        && request.resource.data.keys().hasOnly([
+            'uid', 'userCode', 'plan', 'months',
+            'prevPlan', 'prevExpiresAt', 'newExpiresAt',
+            'source', 'paymentId', 'amountKs', 'buyerPhone', 'note', 'byAdminUid', 'createdAt',
+            'undoneAt', 'undoneBy'
+          ]);
+
+      allow delete: if false;
+    }
+
+    match /announcements/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }

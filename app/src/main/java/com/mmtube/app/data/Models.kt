@@ -229,6 +229,15 @@ data class HistoryItem(
     val downloadDurationMs: Long = 0L
 )
 
+data class PaymentSummary(
+    val id: String,
+    val plan: String,
+    val amountKs: Long,
+    val status: String,
+    val adminNote: String?,
+    val createdAt: Long
+)
+
 data class SettingsSnapshot(
     val theme: ThemeMode = ThemeMode.SYSTEM,
     val turbo: Boolean = true,
@@ -242,5 +251,9 @@ data class SettingsSnapshot(
     val language: String = "",
     val onboardingSeen: Boolean = false,
     val colorblindMode: Boolean = false,
-    val dynamicColor: Boolean = false
+    val dynamicColor: Boolean = false,
+    val chimeEnabled: Boolean = true,
+    val lastSeenVersion: String = "",
+    val dismissedAnnouncementId: String = "",
+    val lastPlanReminderAt: Long = 0L
 )

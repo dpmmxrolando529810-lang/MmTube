@@ -31,7 +31,7 @@ class AppContainer(context: Context) {
     val engine = EngineManager(appContext)
 
     private val firebaseApp: FirebaseApp? = FirebaseBootstrap.init(appContext)
-    private val firestore: FirebaseFirestore? = firebaseApp?.let {
+    val firestore: FirebaseFirestore? = firebaseApp?.let {
         FirebaseFirestore.getInstance(it)
     }
     private val auth: FirebaseAuth? = firebaseApp?.let {

@@ -40,6 +40,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,6 +63,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.mmtube.admin.AdminAuthState
+import com.mmtube.admin.AdminTab
 import com.mmtube.admin.AdminUiState
 import com.mmtube.admin.AdminUser
 import com.mmtube.admin.AdminViewModel
@@ -100,26 +103,41 @@ fun Dashboard(ui: AdminUiState, vm: AdminViewModel) {
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item { HeaderRow(email = adminEmail, onSignOut = vm::signOut) }
-            item { SearchCard(ui = ui, vm = vm) }
-            item {
-                when {
-                    ui.searching -> LoadingUserCard()
-                    ui.user != null -> UserDetailCard(
-                        user = ui.user,
-                        busy = ui.busy,
-                        onRefresh = vm::refreshUser,
-                        onCopyCode = { vm.copyText(ui.user.userCode, "User ID") },
-                        onActivate = { confirm = ConfirmAction.Activate(it) },
-                        onFree = { confirm = ConfirmAction.Free },
-                        onReset = { confirm = ConfirmAction.Reset },
-                        onDisabled = { confirm = ConfirmAction.Disabled(it) }
-                    )
-                    ui.searched -> NotFoundCard()
-                    else -> Unit
+            item { AdminTabRow(current = ui.tab, onSelect = vm::setTab) }
+            if (ui.tab == AdminTab.SEARCH) {
+                item { SearchCard(ui = ui, vm = vm) }
+                item {
+                    when {
+                        ui.searching -> LoadingUserCard()
+                        ui.user != null -> UserDetailCard(
+                            user = ui.user,
+                            busy = ui.busy,
+                            onRefresh = vm::refreshUser,
+                            onCopyCode = { vm.copyText(ui.user.userCode, "User ID") },
+                            onActivate = { confirm = ConfirmAction.Activate(it) },
+                            onFree = { confirm = ConfirmAction.Free },
+                            onReset = { confirm = ConfirmAction.Reset },
+                            onDisabled = { confirm = ConfirmAction.Disabled(it) },
+                            adminNote = ui.adminNote,
+                            onAdminNote = vm::setAdminNote
+                        )
+                        ui.searched -> NotFoundCard()
+                        else -> Unit
+                    }
+                }
+                item { RecentActionsCard(ui = ui) }
+                item { SecureNote() }
+            } else {
+                item {
+                    when (ui.tab) {
+                        AdminTab.PAYMENTS -> PaymentsTab(ui = ui, vm = vm)
+                        AdminTab.EXPIRING -> ExpiringTab(ui = ui, vm = vm)
+                        AdminTab.LOGS -> LogsTab(ui = ui, vm = vm)
+                        AdminTab.BROADCAST -> BroadcastTab(ui = ui, vm = vm)
+                        else -> Unit
+                    }
                 }
             }
-            item { RecentActionsCard(ui = ui) }
-            item { SecureNote() }
         }
         if (ui.busy) {
             LinearProgressIndicator(
@@ -128,6 +146,33 @@ fun Dashboard(ui: AdminUiState, vm: AdminViewModel) {
                 trackColor = Color.Transparent
             )
         }
+    }
+
+    val template = ui.approvalTemplate
+    if (template != null) {
+        AlertDialog(
+            onDismissRequest = { vm.clearApprovalTemplate() },
+            title = { Text("ပုံစံ စာကို ပို့ရန်", color = OnDark, fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(template, color = OnDark)
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.copyText(template, "Approval message")
+                    vm.clearApprovalTemplate()
+                }) {
+                    Text("ကူးယူရန်", color = Aqua, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.clearApprovalTemplate() }) {
+                    Text("ပိတ်ရန်", color = Muted)
+                }
+            },
+            containerColor = Color(0xFF141E33)
+        )
     }
 
     confirm?.let { action ->
@@ -360,6 +405,8 @@ private fun NotFoundCard() {
 private fun UserDetailCard(
     user: AdminUser,
     busy: Boolean,
+    adminNote: String = "",
+    onAdminNote: (String) -> Unit = {},
     onRefresh: () -> Unit,
     onCopyCode: () -> Unit,
     onActivate: (String) -> Unit,
@@ -480,6 +527,24 @@ private fun UserDetailCard(
             fontSize = 11.sp,
             color = if (expired) Amber else Muted,
             modifier = Modifier.padding(top = 10.dp)
+        )
+
+        OutlinedTextField(
+            value = adminNote,
+            onValueChange = onAdminNote,
+            label = { Text("မှတ်ချက် (reason / note — မှတ်တမ်းထဲပါမယ်)") },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Amber,
+                unfocusedBorderColor = Color(0xFF26354E),
+                focusedTextColor = OnDark,
+                unfocusedTextColor = OnDark,
+                cursorColor = Amber,
+                focusedLabelColor = Amber,
+                unfocusedLabelColor = Muted
+            ),
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
         )
 
         AdminSectionLabel(context.getString(R.string.admin_set_plan), modifier = Modifier.padding(top = 16.dp))
@@ -643,7 +708,7 @@ private fun SecureNote() {
     }
 }
 
-private fun formatDate(millis: Long?): String {
+internal fun formatDate(millis: Long?): String {
     if (millis == null) return "—"
     return runCatching {
         Instant.ofEpochMilli(millis)
@@ -652,7 +717,7 @@ private fun formatDate(millis: Long?): String {
     }.getOrDefault("—")
 }
 
-private fun formatTime(millis: Long): String = runCatching {
+internal fun formatTime(millis: Long): String = runCatching {
     Instant.ofEpochMilli(millis)
         .atZone(ZoneId.systemDefault())
         .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))

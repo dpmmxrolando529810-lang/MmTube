@@ -368,4 +368,42 @@ MP3/အသံအတွက် — ခွဲပြီးကျော်ပါ။ M
     <string name="update_ready_notification">ဗားရှင်းအသစ် အဆင်သင့်ဖြစ်ပြီ — နှိပ်ပြီး Install လုပ်ပါ</string>
     <string name="expired_plan_message">Unlimited Plan သက်တမ်းကုန်ပြီ — အခမဲ့သို့ ပြန်ကူးမယ်</string>
     <string name="notification_eta">Time remaining: %1$s</string>
+
+    <string name="settings_notifications">Notifications</string>
+    <string name="notification_chime">Completion chime</string>
+    <string name="notification_chime_desc">Play a sound when a download finishes</string>
+    <string name="notification_permission">Notification permission</string>
+    <string name="notification_perm_granted">Allowed</string>
+    <string name="notification_perm_denied">Not allowed — tap to enable</string>
+    <string name="help_autostart">Autostart on custom ROMs</string>
+    <string name="help_autostart_body">Some custom ROMs (MIUI, ColorOS, a few MTK builds) kill background apps aggressively. If downloads stop while the app is closed, allow MMTube in Settings → Battery → Background restriction and enable Autostart for MMTube in your ROM’s security settings.</string>
+    <string name="diagnostics_telegram">Send log to owner Telegram</string>
+    <string name="error_unsupported_site">This app can only download from YouTube, Facebook and TikTok links.</string>
+    <string name="version_details_title">Build details</string>
+    <string name="version_details_body">Version: %1$s
+Package: %2$s
+Android: %3$d
+Firebase project: %4$s</string>
+    <string name="plan_reminder_title">Unlimited plan expiring soon</string>
+    <string name="plan_reminder_body">Your plan expires on %1$s — renew in Upgrade with KBZ Pay.</string>
+    <string name="whats_new_title">What’s new in %1$s</string>
+    <string name="whats_new_got_it">Got it</string>
+    <string name="payment_card_title">Payment verification</string>
+    <string name="payment_card_desc">Paid via KBZ Pay? Upload your payment screenshot — our team will verify and activate your plan.</string>
+    <string name="payment_phone_label">Your KBZ Pay sender number (optional)</string>
+    <string name="payment_note_label">Note for the admin (optional)</string>
+    <string name="payment_pick_image">Attach payment screenshot</string>
+    <string name="payment_submit">Submit payment proof</string>
+    <string name="payment_no_image">Attach your payment screenshot first</string>
+    <string name="payment_submitting">Submitting…</string>
+    <string name="payment_submit_ok">Payment submitted — the admin will review it shortly.</string>
+    <string name="payment_submit_err">Could not submit payment (%1$s)</string>
+    <string name="payment_latest_title">Your latest payment</string>
+    <string name="payment_status_pending">Waiting for review</string>
+    <string name="payment_status_approved">Approved</string>
+    <string name="payment_status_rejected">Rejected</string>
+    <string name="payment_plan_amount">%1$s — %2$d Ks</string>
+    <string name="announcement_title">Announcement</string>
+    <string name="announcement_dismiss">Dismiss announcement</string>
+    <string name="announcement_got_it">Got it</string>
 </resources>

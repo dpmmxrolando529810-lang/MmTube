@@ -31,7 +31,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
+import androidx.compose.material.icons.rounded.Campaign
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Download
@@ -148,9 +150,17 @@ fun HomeScreen(
                 onRefresh = vm::refreshQuota
             )
         }
-        if (ui.quota?.paid != true) {
+        if (ui.quota?.paid != true && (ui.quota?.totalDownloads ?: 0) >= 3) {
             item(key = "upsell") {
                 PremiumUpsellCard(onUpgrade = onUpgrade)
+            }
+        }
+        if (ui.announcementText != null) {
+            item(key = "announcement") {
+                AnnouncementBanner(
+                    text = ui.announcementText!!,
+                    onDismiss = vm::dismissAnnouncement
+                )
             }
         }
         item(key = "link") {
@@ -221,6 +231,39 @@ private fun StorageFullDialog(
             }
         }
     )
+}
+
+@Composable
+private fun AnnouncementBanner(text: String, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MmtubePalette.Amber.copy(alpha = 0.14f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MmtubePalette.Amber.copy(alpha = 0.45f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(
+                Icons.Rounded.Campaign,
+                contentDescription = null,
+                tint = MmtubePalette.Amber,
+                modifier = Modifier.size(22.dp)
+            )
+            Text(
+                text = text,
+                style = MmtubeType.BodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
+                Icon(Icons.Rounded.Close, contentDescription = context.getString(R.string.announcement_dismiss), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            }
+        }
+    }
 }
 
 @Composable

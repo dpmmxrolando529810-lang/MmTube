@@ -77,6 +77,41 @@ sealed interface AdminAuthState {
     data class Ready(val uid: String, val email: String?) : AdminAuthState
 }
 
+
+enum class AdminTab { SEARCH, PAYMENTS, EXPIRING, LOGS, BROADCAST }
+
+data class PaymentRequest(
+    val id: String,
+    val uid: String,
+    val userCode: String,
+    val email: String?,
+    val plan: String,
+    val planMonths: Int,
+    val amountKs: Long,
+    val buyerPhone: String?,
+    val note: String?,
+    val imageBase64: String,
+    val status: String,
+    val createdAt: Long
+)
+
+data class ActivationLog(
+    val id: String,
+    val uid: String,
+    val userCode: String,
+    val plan: String,
+    val months: Int,
+    val newExpiresAt: Long?,
+    val prevPlan: String?,
+    val prevExpiresAt: Long?,
+    val source: String,
+    val amountKs: Long?,
+    val buyerPhone: String?,
+    val note: String?,
+    val createdAt: Long,
+    val undoneAt: Long?
+)
+
 data class AdminAction(
     val text: String,
     val at: Long
@@ -91,5 +126,16 @@ data class AdminUiState(
     val user: AdminUser? = null,
     val busy: Boolean = false,
     val message: String? = null,
-    val actions: List<AdminAction> = emptyList()
+    val actions: List<AdminAction> = emptyList(),
+    val tab: AdminTab = AdminTab.SEARCH,
+    val pendingPayments: List<PaymentRequest> = emptyList(),
+    val payingLoading: Boolean = false,
+    val expiringUsers: List<AdminUser> = emptyList(),
+    val expiringLoading: Boolean = false,
+    val logs: List<ActivationLog> = emptyList(),
+    val logsLoading: Boolean = false,
+    val adminNote: String = "",
+    val approvalTemplate: String? = null,
+    val announcementText: String = "",
+    val announcementSaving: Boolean = false
 )

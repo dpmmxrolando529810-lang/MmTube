@@ -32,6 +32,10 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.NotificationsActive
+import androidx.compose.material.icons.rounded.BatteryAlert
+import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.Shield
@@ -94,6 +98,8 @@ fun SettingsScreen(
     var showTerms by remember { mutableStateOf(false) }
     var showPrivacy by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
+    var showAutostart by remember { mutableStateOf(false) }
+    var showVersionDetails by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var ownerTaps by remember { mutableIntStateOf(0) }
     val haptic = LocalHapticFeedback.current
@@ -296,7 +302,28 @@ fun SettingsScreen(
             }
         }
 
-        SettingsGroup(context.getString(R.string.settings_help), visibleIf = qMatch(query, listOf("help", "support", "faq", "ကူညီ", "help me"))) {
+        SettingsGroup(context.getString(R.string.settings_notifications), visibleIf = qMatch(query, listOf("notification", "notifications", "chime", "sound", "alert", "notify", "အကြောင်းကြား", "အသံ"))) {
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Notifications,
+                label = context.getString(R.string.notification_chime),
+                description = context.getString(R.string.notification_chime_desc),
+                checked = ui.settings.chimeEnabled,
+                onChange = vm::setChimeEnabled
+            )
+            SettingsClickRow(
+                icon = Icons.Rounded.NotificationsActive,
+                label = context.getString(R.string.notification_permission),
+                value = if (isNotificationsAllowed(context)) context.getString(R.string.notification_perm_granted) else context.getString(R.string.notification_perm_denied),
+                onClick = {
+                    val intent = android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                        putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+                        addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    runCatching { context.startActivity(intent) }
+                }
+            )
+        }
+        SettingsGroup(context.getString(R.string.settings_help), visibleIf = qMatch(query, listOf("help", "support", "faq", "ကူညီ", "help me", "autostart", "rom", "custom rom"))) {
             SettingsClickRow(
                 icon = Icons.Rounded.Info,
                 label = context.getString(R.string.help_download_failed),
@@ -314,6 +341,12 @@ fun SettingsScreen(
                 label = context.getString(R.string.help_slow_quality),
                 value = "",
                 onClick = { showHelp3 = true }
+            )
+            SettingsClickRow(
+                icon = Icons.Rounded.BatteryAlert,
+                label = context.getString(R.string.help_autostart),
+                value = "",
+                onClick = { showAutostart = true }
             )
         }
         SettingsGroup(context.getString(R.string.settings_about), visibleIf = qMatch(query, listOf("about", "version", "ဗားရှင်း", "about mmtube"))) {
@@ -337,6 +370,12 @@ fun SettingsScreen(
                 value = if (FirebaseConfig.isConfigured) context.getString(R.string.settings_firebase_on) else context.getString(R.string.settings_firebase_off),
                 valueAccent = if (FirebaseConfig.isConfigured) MmtubePalette.Success else MmtubePalette.Amber
             )
+            SettingsClickRow(
+                icon = Icons.Rounded.PhoneAndroid,
+                label = context.getString(R.string.version_details_title),
+                value = "",
+                onClick = { showVersionDetails = true }
+            )
         }
 
         SettingsGroup(context.getString(R.string.settings_diagnostics), visibleIf = qMatch(query, listOf("diagnostics", "diagnostic", "ffmpeg", "ပြဿနာ", "ပြဿနာစစ်", "logs", "log", "partial", "အရှင်း", "အမှား"))) {
@@ -345,6 +384,12 @@ fun SettingsScreen(
                 label = context.getString(R.string.diagnostics_view_logs),
                 value = "",
                 onClick = vm::shareDiagnosticLog
+            )
+            SettingsClickRow(
+                icon = Icons.Rounded.Send,
+                label = context.getString(R.string.diagnostics_telegram),
+                value = "",
+                onClick = vm::sendDiagnosticToTelegram
             )
             SettingsClickRow(
                 icon = Icons.Rounded.DeleteOutline,
@@ -405,7 +450,6 @@ fun SettingsScreen(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
                     onClick = {
-                        // Hidden owner entry: seven taps on the version line.
                         ownerTaps += 1
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         when {
@@ -429,6 +473,27 @@ fun SettingsScreen(
                 )
                 .padding(top = 14.dp, bottom = 24.dp),
             textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        )
+    }
+
+    if (showAutostart) {
+        SimpleTextDialog(
+            title = context.getString(R.string.help_autostart),
+            body = context.getString(R.string.help_autostart_body),
+            onDismiss = { showAutostart = false }
+        )
+    }
+    if (showVersionDetails) {
+        SimpleTextDialog(
+            title = context.getString(R.string.version_details_title),
+            body = context.getString(
+                R.string.version_details_body,
+                BuildConfig.VERSION_NAME,
+                context.packageName,
+                android.os.Build.VERSION.SDK_INT,
+                BuildConfig.FIREBASE_PROJECT_ID
+            ),
+            onDismiss = { showVersionDetails = false }
         )
     }
 
@@ -776,3 +841,13 @@ private fun qMatch(query: String, keywords: List<String>): Boolean {
     return keywords.any { it.lowercase().contains(q) }
 }
 
+private fun isNotificationsAllowed(context: android.content.Context): Boolean {
+    return if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+        androidx.core.content.ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.POST_NOTIFICATIONS
+        ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+    } else {
+        true
+    }
+}

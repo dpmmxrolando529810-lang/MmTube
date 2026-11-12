@@ -368,4 +368,42 @@ MP3 အတွက် — ချက်ချင်း audio tag တွေ့မယ
     <string name="update_ready_notification">ဗားရှင်းအသစ် အဆင်သင့် — နှိပ်ပြီး Install လုပ်ပါ</string>
     <string name="expired_plan_message">Unlimited Plan သက်တမ်းကုန်ပြီ — အခမဲ့သို့ ပြန်ပြောင်းပါ</string>
     <string name="notification_eta">ကျန်ချိန်: %1$s</string>
+
+    <string name="settings_notifications">အကြောင်းကြားချက်များ</string>
+    <string name="notification_chime">ဒေါင်းပြီးရင် အသံမြည်ရန်</string>
+    <string name="notification_chime_desc">ဒေါင်းလုဒ်ပြီးတဲ့အချိန် အသံတိုးမယ်</string>
+    <string name="notification_permission">အကြောင်းကြားချက် ခွင့်ပြုချက်</string>
+    <string name="notification_perm_granted">ခွင့်ပြုထားသည်</string>
+    <string name="notification_perm_denied">ပိတ်ထားသည် — ဖွင့်ရန်နှိပ်ပါ</string>
+    <string name="help_autostart">Custom ROM များတွင် Autostart</string>
+    <string name="help_autostart_body">Custom ROM အချို့ (MIUI, ColorOS, MTK builds အချို့) က background app များကို ပြင်းထန်စွာ ပိတ်တတ်ပါတယ်။ App ပိတ်ထားချိန် ဒေါင်းလုဒ်ရပ်သွားရင် — Settings → Battery → Background restriction မှာ MMTube ကို ခွင့်ပြုပါ၊ ROM ရဲ့ Security app ထဲမှာ Autostart ကို ဖွင့်ပေးပါ။</string>
+    <string name="diagnostics_telegram">Owner Telegram သို့ log ပို့ရန်</string>
+    <string name="error_unsupported_site">ဒီ app က YouTube, Facebook, TikTok link များသာ ဒေါင်းနိုင်ပါတယ်။</string>
+    <string name="version_details_title">Build အသေးစိတ်</string>
+    <string name="version_details_body">Version: %1$s
+Package: %2$s
+Android: %3$d
+Firebase project: %4$s</string>
+    <string name="plan_reminder_title">Unlimited Plan သက်တမ်းကုန်ခါနီးပါပြီ</string>
+    <string name="plan_reminder_body">%1$s တွင် သက်တမ်းကုန်မယ် — Upgrade ထဲမှာ KBZ Pay ဖြင့် သက်တမ်းတိုးပါ။</string>
+    <string name="whats_new_title">%1$s မှာ ပါလာသည်</string>
+    <string name="whats_new_got_it">ရပြီ</string>
+    <string name="payment_card_title">ငွေပေးချေမှု အတည်ပြုချက်</string>
+    <string name="payment_card_desc">KBZ Pay ဖြင့် ငွေပေးခဲ့ပါသလား? ငွေပြေစာပုံ ပို့လိုက်ပါ — team မှ စစ်ဆေးပြီး Plan ဖွင့်ပေးပါမယ်။</string>
+    <string name="payment_phone_label">ငွေလွှဲခဲ့သော KBZ Pay ဖုန်းနံပါတ် (ရွေးချယ်နိုင်)</string>
+    <string name="payment_note_label">Admin ကို စာရေးချင်ရင် (ရွေးချယ်နိုင်)</string>
+    <string name="payment_pick_image">ငွေပြေစာပုံ ထည့်ရန်</string>
+    <string name="payment_submit">ငွေပြေစာ ပို့ပါ</string>
+    <string name="payment_no_image">ငွေပြေစာပုံ အရင်ထည့်ပါ</string>
+    <string name="payment_submitting">ပို့နေသည်…</string>
+    <string name="payment_submit_ok">ပို့ပြီးပါပြီ — Admin စစ်ဆေးပြီး plan ဖွင့်ပေးပါမယ်။</string>
+    <string name="payment_submit_err">ငွေပြေစာပို့မှု မအောင်မြင်ပါ (%1$s)</string>
+    <string name="payment_latest_title">သင့်နောက်ဆုံး ငွေပေးချေမှု</string>
+    <string name="payment_status_pending">စစ်ဆေးနေဆဲ</string>
+    <string name="payment_status_approved">အတည်ပြုပြီး</string>
+    <string name="payment_status_rejected">ငြင်းပယ်ခံရ</string>
+    <string name="payment_plan_amount">%1$s — %2$d Ks</string>
+    <string name="announcement_title">ကြေညာချက်</string>
+    <string name="announcement_dismiss">ကြေညာချက် ဖျောက်ရန်</string>
+    <string name="announcement_got_it">ရပြီ</string>
 </resources>

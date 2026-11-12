@@ -26,6 +26,11 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Update-ready persistent notification must clear once the app is launched.
+        runCatching {
+            this.getSystemService(android.app.NotificationManager::class.java)?.cancel(7701)
+        }
+
         requestNotificationPermission()
         requestLegacyStoragePermission()
 
