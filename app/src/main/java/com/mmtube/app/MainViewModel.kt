@@ -244,6 +244,41 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    /** Add a list of links, one per line, and queue them for sequential download. */
+    fun batchStart(text: String) {
+        val urls = text.lineSequence()
+            .map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .toList()
+        if (urls.isEmpty()) {
+            event(UiEvent.Message(context.getString(R.string.batch_empty)))
+            return
+        }
+        viewModelScope.launch {
+            var queued = 0
+            for (rawUrl in urls) {
+                val normalized = UrlUtils.normalize(rawUrl) ?: continue
+                container.media.probe(normalized).getOrNull()?.let { result ->
+                    val mode = if (result.audioOnly) DownloadMode.MP3 else DownloadMode.MAX
+                    val qualityLabel = if (mode == DownloadMode.MP3) "MP3"
+                        else com.mmtube.app.util.Formatters.qualityLabel(result.maxHeight, result.maxFps)
+                    val request = com.mmtube.app.download.DownloadRequest(
+                        url = result.webpageUrl ?: result.url,
+                        title = result.title,
+                        platform = result.platform,
+                        mode = mode,
+                        thumbnail = result.thumbnail,
+                        durationSeconds = result.durationSeconds,
+                        qualityLabel = qualityLabel
+                    )
+                    DownloadService.start(context, request)
+                    queued += 1
+                }
+            }
+            event(UiEvent.Message(context.getString(R.string.batch_queued, queued)))
+        }
+    }
+
     fun cancelDownload() {
         container.downloads.cancel()
     }

@@ -352,4 +352,9 @@ MP3/အသံအတွက် — ခွဲပြီးကျော်ပါ။ M
     <string name="settings_colorblind_desc">အရောင်မခွဲနိုင်သောသူများအတွက် tab ပြင်ဆင်ချက်</string>
     <string name="settings_dynamic_color">Material You (dynamic color)</string>
     <string name="settings_dynamic_color_desc">ဖုန်း၏ theme အရောင်နဲ့ညီအောင် ပြောင်း</string>
+    <string name="batch_title">Batch Download</string>
+    <string name="batch_hint">Link ကို တစ်ခုပြီး တစ်ခု စာကြောင်းတစ်ကြောင်းစီ ထည့်ပါ။</string>
+    <string name="batch_start">အားလုံး ဒေါင်းမယ်</string>
+    <string name="batch_empty">Link မပါသေးပါ။</string>
+    <string name="batch_queued">%1$d links queued. Planning downloads…</string>
 </resources>

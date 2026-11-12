@@ -352,4 +352,9 @@ MP3 အတွက် — ချက်ချင်း audio tag တွေ့မယ
     <string name="settings_colorblind_desc">အရောင်အားလုံးအတွက် tab တစ်ခုတည်း — အပြာ/အစိမ်း/လိမ္မော် pattern</string>
     <string name="settings_dynamic_color">Material You (dynamic color)</string>
     <string name="settings_dynamic_color_desc">ဖုန်း၏ wallpaper အရောင်အတိုင်း theme ပြောင်း</string>
+    <string name="batch_title">တစ်ပြိုင်နက် ဒေါင်းမည်</string>
+    <string name="batch_hint">Link ကို တစ်ခုပြီး တစ်ခု စာကြောင်းတစ်ကြောင်းစီ ထည့်ပါ။</string>
+    <string name="batch_start">အားလုံး ဒေါင်းမယ်</string>
+    <string name="batch_empty">Link မပါသေးပါ</string>
+    <string name="batch_queued">Link များ တန်းစီ ထည့်သွင်းပြီးပြီ (%1$d)။ ဒေါင်းမယ်…</string>
 </resources>

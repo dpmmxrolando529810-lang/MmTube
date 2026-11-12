@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.HourglassTop
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.rounded.List
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PhoneAndroid
@@ -70,7 +71,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -111,6 +115,8 @@ fun HomeScreen(
     onSettings: () -> Unit
 ) {
     val context = LocalContext.current
+    var showBatch by remember { mutableStateOf(false) }
+    var batchText by remember { mutableStateOf("") }
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -146,13 +152,26 @@ fun HomeScreen(
             }
         }
         item(key = "link") {
-            LinkCard(ui = ui, vm = vm)
+            LinkCard(ui = ui, vm = vm, onBatch = { showBatch = true })
         }
         item(key = "engine") {
             EngineCard(ui = ui, onRetry = vm::retryEngine)
         }
         item(key = "preview") {
             PreviewSection(ui = ui, vm = vm, onUpgrade = onUpgrade)
+        }
+        item(key = "batch_dialog") {
+            BatchPasteDialog(
+                show = showBatch,
+                onDismiss = { showBatch = false },
+                text = batchText,
+                onTextChange = { batchText = it },
+                onStart = {
+                    vm.batchStart(batchText)
+                    batchText = ""
+                    showBatch = false
+                }
+            )
         }
         item(key = "download") {
             DownloadSection(ui = ui, vm = vm)
@@ -203,6 +222,70 @@ private fun Header(ui: MainUiState, onSettings: () -> Unit) {
 }
 
 @Composable
+private fun BatchPasteDialog(
+    show: Boolean,
+    onDismiss: () -> Unit,
+    text: String,
+    onTextChange: (String) -> Unit,
+    onStart: () -> Unit
+) {
+    if (!show) return
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        FrostedCard(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(6.dp)) {
+                Text(
+                    text = LocalContext.current.getString(R.string.batch_title),
+                    style = MmtubeType.TitleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = LocalContext.current.getString(R.string.batch_hint),
+                    style = MmtubeType.BodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                BasicTextField(
+                    value = text,
+                    onValueChange = onTextChange,
+                    textStyle = MmtubeType.BodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = { onStart() }),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .padding(12.dp)
+                        .height(160.dp)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp, androidx.compose.ui.Alignment.End)
+                ) {
+                    androidx.compose.material3.TextButton(onClick = onDismiss) {
+                        Text(
+                            android.R.string.cancel.toString(),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    androidx.compose.material3.Button(
+                        onClick = onStart,
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = MmtubePalette.AquaDeep
+                        )
+                    ) {
+                        Text(LocalContext.current.getString(R.string.batch_start))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun HeroTitle() {
     val context = LocalContext.current
     val dark = LocalMmtubeDark.current
@@ -245,7 +328,7 @@ private fun buildAnnotatedString(
 }
 
 @Composable
-private fun LinkCard(ui: MainUiState, vm: MainViewModel) {
+private fun LinkCard(ui: MainUiState, vm: MainViewModel, onBatch: () -> Unit) {
     val context = LocalContext.current
     val analyzing = ui.probe is ProbeUi.Loading
     FrostedCard(modifier = Modifier.fillMaxWidth()) {
@@ -289,6 +372,13 @@ private fun LinkCard(ui: MainUiState, vm: MainViewModel) {
                 )
             }
             if (ui.link.isBlank()) {
+                IconButton(onClick = onBatch) {
+                    Icon(
+                        Icons.Rounded.List,
+                        contentDescription = context.getString(R.string.batch_title),
+                        tint = MmtubePalette.Blue
+                    )
+                }
                 IconButton(onClick = {
                     val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                     val pasted = clipboard.primaryClip?.let { clip ->
