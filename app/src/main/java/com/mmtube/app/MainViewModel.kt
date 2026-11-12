@@ -213,6 +213,12 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             event(UiEvent.Message(context.getString(R.string.download_queued)))
         }
         viewModelScope.launch {
+            // Space precheck: warn before burning CPU/bandwidth if the disk is full.
+            val estimated = probe.estimatedBytes
+            if (estimated > 0 && appContextFreeBytes() < estimated / 2 + 100L * 1024 * 1024) {
+                event(UiEvent.Message(context.getString(R.string.error_no_space)))
+                return@launch
+            }
             val quota = runCatching { container.quota.current() }.getOrNull()
             _ui.update { it.copy(quota = quota) }
             if (quota == null || !quota.allowed) {
@@ -298,6 +304,15 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 _ui.update { it.copy(quota = quota) }
             }
         }
+    }
+
+    private fun appContextFreeBytes(): Long {
+        return runCatching {
+            val directory = context.getExternalFilesDir(android.os.Environment.DIRECTORY_MOVIES)
+                ?: context.filesDir
+            val stat = android.os.StatFs(directory.absolutePath)
+            stat.availableBytes
+        }.getOrDefault(Long.MAX_VALUE)
     }
 
     // ---------- Account ----------
@@ -552,6 +567,12 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                         _ui.update { it.copy(update = it.update.copy(checking = false)) }
                     } else {
                         _ui.update { it.copy(update = UpdateUi(info = info)) }
+                        // Auto-update: silently download the update in the background.
+                        // Android only allows install after the user taps Install,
+                        // but this removes the need to manually trigger the download.
+                        if (silent && container.settings.snapshot().autoAppUpdate) {
+                            downloadUpdate()
+                        }
                     }
                 }
                 .onFailure { error ->

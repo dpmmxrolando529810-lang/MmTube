@@ -77,7 +77,7 @@ import com.mmtube.admin.AdminViewModel
 import com.mmtube.admin.Plans
 import com.mmtube.admin.R
 
-private val Amber = Color(0xFFFFB84D)
+private val Amber = Color(0xFF4CC4B0)
 private val Aqua = Color(0xFF2FE3C0)
 private val Danger = Color(0xFFFF6B81)
 private val OnDark = Color(0xFFF2F5FF)

@@ -13,8 +13,8 @@ fun envOrProp(name: String, default: String = ""): String {
 fun quoted(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 9
-val appVersionName = (project.findProperty("versionName") as String?) ?: "1.0.9"
+val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 10
+val appVersionName = (project.findProperty("versionName") as String?) ?: "1.0.10"
 val keystorePath = envOrProp("KEYSTORE_PATH", "keystore/mmtube-demo.p12")
 
 android {
@@ -33,7 +33,7 @@ android {
         }
 
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            abiFilters += listOf("arm64-v8a")
         }
 
         buildConfigField("String", "FIREBASE_API_KEY", quoted(envOrProp("FIREBASE_API_KEY")))

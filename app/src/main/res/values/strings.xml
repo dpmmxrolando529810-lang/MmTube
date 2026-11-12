@@ -214,6 +214,7 @@
     <string name="theme_system">System</string>
     <string name="theme_light">Light</string>
     <string name="theme_dark">Dark</string>
+    <string name="theme_amoled">AMOLED</string>
     <string name="settings_language">Language</string>
     <string name="language_system">System</string>
     <string name="language_english">English</string>
@@ -321,4 +322,26 @@
     <string name="history_cleanup_old_confirm">Delete downloaded files and history entries older than 30 days?</string>
     <string name="history_cleanup_old_done">Old files cleaned up</string>
     <string name="queued_banner">Queued next: %1$s</string>
+    <string name="settings_help">Help</string>
+    <string name="help_download_failed">ဒေါင်းလို့မရရင် ဘာလုပ်မလဲ?</string>
+    <string name="help_download_failed_body">ရွေးချယ်စရာများ:
+
+(1) လင့်မှန်/မဟုတ် ပြန်စစ်ပါ — YouTube / Facebook / TikTok link ဖြစ်ရပါမယ်။
+(2) ဗီဒီယိုက Private သို့မဟုတ် Region-locked ဖြစ်ရင် ဒေါင်းလို့မရဘူး — Public video ကိုရွေးပါ။
+(3) အင်တာနက်အမြန်နှုန်း စမ်းကြည့်ပါ — Wi-Fi သို့မဟုတ် ဒေတာချတ်ရင်ပြန်စမ်းပါ။
+(4) အင်ဂျင် (yt-dlp) ကို "Update engine" နှိပ်ပြီး update လုပ်ပေးပါပါ။
+(5) မရသေးဘူးဆိုရင် MMTube Support (@TKA_MTC) ကို ဆက်သွယ်ပေးပါ။</string>
+    <string name="help_no_sound">အသံမထွက်ရင် ဘာလုပ်မလဲ?</string>
+    <string name="help_no_sound_body">ဗီဒီယိုဖိုင်အတွက် — YouTube MKV/MP4 stream တစ်ခုချင်းစီ ဆိုက်နဲ့ အလိုအလျောက် ပေါင်းစပ်သည်။ ExoPlayer/VLC/MX Player ဖြင့် ကြည့်ပါ။
+
+MP3/အသံအတွက် — ခွဲပြီးကျော်ပါ။ MP3 သည် MP3 player အားလုံးနှင့် အသံတူပါ။
+
+တပ်ဆင်နေချိန်မှာ AA/Opus audio error တစ်ခါကြုံတွေ့တတ်ပါတယ် — "နောက်မှ ထပ်စမ်းပါ" ကို တစ်ခေါက်နှိပ်ပြီး ပြန်ကြိုးစားပါ။</string>
+    <string name="help_slow_quality">ဒေါင်းလုဒ် အရည်အသွေး မမြင့်ရင်?</string>
+    <string name="help_slow_quality_body">MMTube သည် Source ကပေးသော အရည်အသွေးအမြင့်ဆုံး (MX 4K / 1440p / 1080p) default-တွေ့သည် — အဲဒါ"မမြင့်မားလျှင်":
+
+• Source ကই အဲဒီ မြင့်မားတဲ့ အရည်အသွေး မရှိနိုင်ပါဘူး (ဥပမာ — အချို့ FB/TikTok ဗီဒီယိုတွေသည် 720p/1080p သာ)
+• ပိတ်ထားတဲ့ YouTube တစ်ခုကိုပဲ ကြည့်ပါ — YouTube က default အရ 480p သာ ပြတယ်ဆိုရင် အဲဒါက default ပါပဲ
+• Turbo mode (aria2c) ဖွင့်ထားပါက ဆက်လက် ဆက်လက်မြန်ဆန်စွာ ဒေါင်းမည်
+• ဖိုင်အရွယ်အစားက အကြမ်းသဘောအရ ကြီးမားမည်ဖြစ်ပါသည် — နေရာလုံလောက်အောင် စစ်ပါ</string>
 </resources>

@@ -100,10 +100,10 @@ fun UpgradeScreen(
 
         Column(Modifier.fillMaxWidth().selectableGroup()) {
             listOf(
-                "1m" to context.getString(R.string.plan_1m),
-                "3m" to context.getString(R.string.plan_3m),
-                "6m" to context.getString(R.string.plan_6m),
-                "12m" to context.getString(R.string.plan_12m)
+                "1m" to "1 Month — 1,000 Ks",
+                "3m" to "3 Months — 2,000 Ks",
+                "6m" to "6 Months — 4,000 Ks",
+                "12m" to "12 Months — 7,000 Ks"
             ).forEach { (key, label) ->
                 PlanRow(
                     label = label,

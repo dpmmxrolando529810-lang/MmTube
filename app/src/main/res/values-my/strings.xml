@@ -214,6 +214,7 @@
     <string name="theme_system">စနစ်</string>
     <string name="theme_light">အလင်း</string>
     <string name="theme_dark">အမှောင်</string>
+    <string name="theme_amoled">AMOLED</string>
     <string name="settings_language">ဘာသာစကား</string>
     <string name="language_system">စနစ်</string>
     <string name="language_english">English</string>
@@ -321,4 +322,26 @@
     <string name="history_cleanup_old_confirm">၃၀ ရက်ထက်ကျော် download များကို ဖျက်မှာလား?</string>
     <string name="history_cleanup_old_done">အဟောင်းဖိုင်များ ဖျက်ပြီးပြီ</string>
     <string name="queued_banner">တန်းစီထားသည်: %1$s</string>
+    <string name="settings_help">အကူအညီ</string>
+    <string name="help_download_failed">ဒေါင်းလို့မရရင် ဘာလုပ်မလဲ?</string>
+    <string name="help_download_failed_body">ဒီလိုပြင်ပါ:
+
+(၁) Link မှန်/မဟုတ် ပြန်စစ်ပါ — YouTube / Facebook / TikTok link ဖြစ်ရပါမယ်
+(၂) ဗီဒီယိုက Private သို့မဟုတ် Region-locked ဆိုရင် ဒေါင်းလို့မရဘူး — Public ကိုရွေးပါ
+(၃) အင်တာနက် အခြေအနေ စစ်ပါ — Wi-Fi/မိုဘိုင်းဒေတာ လှုပ်ရှားနေတယ်ဆိုပါစို့
+(၄) Settings → Engine → "Update engine" နှိပ်ပြီး yt-dlp ကို update လုပ်ပါ
+(၅) မရသေးဘူးဆို Parent (@TKA_MTC) ကို ဆက်သွယ်ပါ</string>
+    <string name="help_no_sound">အသံမထွက်ရင် ဘာလုပ်မလဲ?</string>
+    <string name="help_no_sound_body">ဗီဒီယိုဖိုင်အတွက် — YouTube က video/audio ခွဲပြီး ပေးတယ်။ MMTube က audio+video ကို FFmpeg နဲ့ ပေါင်းစပ်တယ် — ဒါကြောင့် MX Player/VLC/ExoPlayer ဖြင့်ကြည့်ပါ။
+
+MP3 အတွက် — ချက်ချင်း audio tag တွေ့မယ်။
+
+တစ်ခါတစ်လေ Audio codec error ဖြစ်တတ်ပါတယ် — "နောက်မှ ထပ်စမ်းပါ" နှိပ်ပြီး ပြန်ကြိုးစားပါ။</string>
+    <string name="help_slow_quality">ဒေါင်းလုဒ် အရည်အသွေး မမြင့်ရင်?</string>
+    <string name="help_slow_quality_body">MMTube သည် Source က ပေးသော အမြင့်ဆုံး အရည်အသွေးကို အလိုအလျောက် ရယူပါတယ် (4K/1440p/1080p) — အမည်မကြီးမားလျှင်:
+
+• Source က အရည်အသွေး မပြင်းတဲ့ ဗီဒီယိုဖြစ်နိုင်တယ်
+• အချို့ FB/TikTok ဗီဒီယိုတွေသည် 720p/1080p သာ ရှိပါတယ်
+• YouTube က Region အလိုက် အရည်အသွေး ကန့်သတ်ထားတတ်တယ်
+• Android ဖုန်း ဗားရှင်း နှေးတဲ့နေရာ ကြာချိန်</string>
 </resources>

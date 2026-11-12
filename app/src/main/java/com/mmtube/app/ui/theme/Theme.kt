@@ -46,6 +46,37 @@ private val DarkColors = darkColorScheme(
     scrim = Color(0xCC000000)
 )
 
+private val AmoledColors = darkColorScheme(
+    primary = MmtubePalette.Aqua,
+    onPrimary = Color(0xFF03211A),
+    primaryContainer = Color(0xFF0F3B31),
+    onPrimaryContainer = MmtubePalette.Aqua,
+    secondary = MmtubePalette.Blue,
+    onSecondary = Color(0xFF0B1533),
+    secondaryContainer = Color(0xFF1B2B52),
+    onSecondaryContainer = Color(0xFFBCCFFF),
+    tertiary = MmtubePalette.Violet,
+    onTertiary = Color(0xFF241040),
+    tertiaryContainer = Color(0xFF2C2148),
+    onTertiaryContainer = Color(0xFFE3D1FF),
+    error = MmtubePalette.Danger,
+    onError = Color(0xFF3B0A15),
+    errorContainer = Color(0xFF471E28),
+    onErrorContainer = Color(0xFFFFD3DA),
+    background = Color(0xFF000000),
+    onBackground = MmtubePalette.DarkOnBackground,
+    surface = Color(0xFF000000),
+    onSurface = MmtubePalette.DarkOnSurface,
+    surfaceVariant = Color(0xFF12171F),
+    onSurfaceVariant = MmtubePalette.DarkMuted,
+    outline = Color(0xFF2A323E),
+    outlineVariant = Color(0xFF1E242E),
+    inverseSurface = Color(0xFFE7EEFB),
+    inverseOnSurface = Color(0xFF000000),
+    inversePrimary = MmtubePalette.AquaDeep,
+    scrim = Color(0xCC000000)
+)
+
 private val LightColors = lightColorScheme(
     primary = MmtubePalette.AquaDeep,
     onPrimary = Color(0xFFFFFFFF),
@@ -88,8 +119,12 @@ fun MmtubeTheme(
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
         ThemeMode.DARK -> true
+        ThemeMode.AMOLED -> true
     }
-    val colorScheme = if (darkTheme) DarkColors else LightColors
+    val colorScheme = when (themeMode) {
+        ThemeMode.AMOLED -> AmoledColors
+        else -> if (darkTheme) DarkColors else LightColors
+    }
 
     val view = LocalView.current
     if (!view.isInEditMode) {

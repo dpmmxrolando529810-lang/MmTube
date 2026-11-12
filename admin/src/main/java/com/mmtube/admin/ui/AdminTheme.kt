@@ -10,10 +10,10 @@ import androidx.core.view.WindowCompat
 import com.mmtube.admin.util.findActivity
 
 private val AdminColors = darkColorScheme(
-    primary = Color(0xFFFFB84D),
-    onPrimary = Color(0xFF3A2500),
-    primaryContainer = Color(0xFF4A320F),
-    onPrimaryContainer = Color(0xFFFFDFA0),
+    primary = Color(0xFF4CC4B0),
+    onPrimary = Color(0xFF03211A),
+    primaryContainer = Color(0xFF0F3B31),
+    onPrimaryContainer = Color(0xFFA9FFE8),
     secondary = Color(0xFF2FE3C0),
     onSecondary = Color(0xFF03211A),
     secondaryContainer = Color(0xFF0F3B31),

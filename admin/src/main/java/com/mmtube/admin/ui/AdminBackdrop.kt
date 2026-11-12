@@ -66,7 +66,7 @@ fun AdminSectionLabel(text: String, modifier: Modifier = Modifier) {
         fontSize = 11.sp,
         letterSpacing = 1.6.sp,
         fontWeight = FontWeight.Bold,
-        color = Color(0xFFFFB84D),
+        color = Color(0xFF4CC4B0),
         modifier = modifier
     )
 }

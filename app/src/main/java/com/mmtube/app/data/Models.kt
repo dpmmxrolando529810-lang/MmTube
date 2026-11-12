@@ -43,7 +43,8 @@ enum class DownloadMode(val key: String) {
 enum class ThemeMode {
     SYSTEM,
     LIGHT,
-    DARK;
+    DARK,
+    AMOLED;
 
     companion object {
         fun fromKey(key: String?): ThemeMode = entries.firstOrNull { it.name.equals(key, true) } ?: SYSTEM

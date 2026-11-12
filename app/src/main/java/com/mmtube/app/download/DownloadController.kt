@@ -309,6 +309,8 @@ class DownloadController(
 
                 DownloadMode.MP3 -> {
                     addOption("-f", "bestaudio/best")
+                    addOption("--write-thumbnail")
+                    addOption("--embed-thumbnail")
                     addOption("--extract-audio")
                     addOption("--audio-format", "mp3")
                     addOption("--audio-quality", "0")

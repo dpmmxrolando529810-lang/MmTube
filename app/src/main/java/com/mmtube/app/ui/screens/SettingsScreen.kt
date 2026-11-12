@@ -86,6 +86,9 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     var showLanguage by remember { mutableStateOf(false) }
+    var showHelp1 by remember { mutableStateOf(false) }
+    var showHelp2 by remember { mutableStateOf(false) }
+    var showHelp3 by remember { mutableStateOf(false) }
     var showTerms by remember { mutableStateOf(false) }
     var showPrivacy by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
@@ -267,6 +270,26 @@ fun SettingsScreen(
             }
         }
 
+        SettingsGroup(context.getString(R.string.settings_help)) {
+            SettingsClickRow(
+                icon = Icons.Rounded.Info,
+                label = context.getString(R.string.help_download_failed),
+                value = "",
+                onClick = { showHelp1 = true }
+            )
+            SettingsClickRow(
+                icon = Icons.Rounded.Download,
+                label = context.getString(R.string.help_no_sound),
+                value = "",
+                onClick = { showHelp2 = true }
+            )
+            SettingsClickRow(
+                icon = Icons.Rounded.Speed,
+                label = context.getString(R.string.help_slow_quality),
+                value = "",
+                onClick = { showHelp3 = true }
+            )
+        }
         SettingsGroup(context.getString(R.string.settings_about)) {
             SettingsValueRow(
                 icon = Icons.Rounded.PhoneAndroid,
@@ -393,6 +416,27 @@ fun SettingsScreen(
             title = context.getString(R.string.settings_privacy),
             body = context.getString(R.string.settings_privacy_desc),
             onDismiss = { showPrivacy = false }
+        )
+    }
+    if (showHelp1) {
+        SimpleTextDialog(
+            title = context.getString(R.string.help_download_failed),
+            body = context.getString(R.string.help_download_failed_body),
+            onDismiss = { showHelp1 = false }
+        )
+    }
+    if (showHelp2) {
+        SimpleTextDialog(
+            title = context.getString(R.string.help_no_sound),
+            body = context.getString(R.string.help_no_sound_body),
+            onDismiss = { showHelp2 = false }
+        )
+    }
+    if (showHelp3) {
+        SimpleTextDialog(
+            title = context.getString(R.string.help_slow_quality),
+            body = context.getString(R.string.help_slow_quality_body),
+            onDismiss = { showHelp3 = false }
         )
     }
     if (showLicenses) {
@@ -554,7 +598,8 @@ private fun ThemeSelector(selected: ThemeMode, onSelect: (ThemeMode) -> Unit) {
         listOf(
             ThemeMode.SYSTEM to context.getString(R.string.theme_system),
             ThemeMode.LIGHT to context.getString(R.string.theme_light),
-            ThemeMode.DARK to context.getString(R.string.theme_dark)
+            ThemeMode.DARK to context.getString(R.string.theme_dark),
+            ThemeMode.AMOLED to context.getString(R.string.theme_amoled)
         ).forEach { (mode, label) ->
             val isSelected = selected == mode
             Surface(
