@@ -73,6 +73,7 @@ class DownloadController(
         _state.value = DownloadState.Preparing(request.title, request.mode)
         job = scope.launch {
             val startedAt = System.currentTimeMillis()
+            val capturedStartedAt = startedAt
             try {
                 if (!engine.ensureReady()) {
                     throw MmtubeException(ErrorKind.ENGINE, "Engine not ready")
@@ -95,7 +96,8 @@ class DownloadController(
                     durationSeconds = request.durationSeconds,
                     createdAt = System.currentTimeMillis(),
                     mode = request.mode.key,
-                    savedToGallery = exported.savedToGallery
+                    savedToGallery = exported.savedToGallery,
+                    downloadDurationMs = System.currentTimeMillis() - capturedStartedAt
                 )
                 runCatching { historyStore.add(item) }
                     .onFailure { Log.w(TAG, "Could not save history", it) }

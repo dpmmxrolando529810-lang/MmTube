@@ -67,7 +67,8 @@ data class MainUiState(
     val sha1: String = "",
     val engineDiagnostics: String? = null,
     val pendingAutoDownload: Boolean = false,
-    val queuedTitle: String? = null
+    val queuedTitle: String? = null,
+    val storageFullPrompt: Boolean = false
 ) {
     val termsAccepted: Boolean get() = settings.acceptedTerms
 }
@@ -76,6 +77,7 @@ sealed interface UiEvent {
     data class Message(val text: String) : UiEvent
     data class OpenTab(val tab: MainTab) : UiEvent
     data object Exit : UiEvent
+    data object OpenUpgrade : UiEvent
 }
 
 class MainViewModel(private val container: AppContainer) : ViewModel() {
@@ -105,6 +107,13 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     NotificationManager.IMPORTANCE_LOW
                 )
             )
+            mgr?.createNotificationChannel(
+                NotificationChannel(
+                    UPDATE_NOTIFICATION_CHANNEL,
+                    "App updates",
+                    NotificationManager.IMPORTANCE_LOW
+                )
+            )
         }
         viewModelScope.launch {
             container.engine.state.collect { engine ->
@@ -118,8 +127,14 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         }
         viewModelScope.launch {
             container.account.ui.collect { account ->
+                val wasPaid = _ui.value.quota?.paid == true
                 _ui.update { it.copy(account = account) }
                 refreshQuota()
+                // Expiry check: paid -> free transition should notify the user.
+                val nowPaid = _ui.value.quota?.paid == true
+                if (wasPaid && !nowPaid) {
+                    event(UiEvent.Message(context.getString(R.string.expired_plan_message)))
+                }
             }
         }
         viewModelScope.launch {
@@ -235,7 +250,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             // Space precheck: warn before burning CPU/bandwidth if the disk is full.
             val estimated = probe.estimatedBytes
             if (estimated > 0 && appContextFreeBytes() < estimated / 2 + 100L * 1024 * 1024) {
-                event(UiEvent.Message(context.getString(R.string.error_no_space)))
+                _ui.update { it.copy(storageFullPrompt = true) }
                 return@launch
             }
             val quota = runCatching { container.quota.current() }.getOrNull()
@@ -382,6 +397,39 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 }
             }
         }
+    }
+
+    private fun showUpdateReadyNotification() {
+        runCatching {
+            val mgr = context.getSystemService(NotificationManager::class.java) ?: return
+            val intent = Intent(context, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_SINGLE_TOP
+                putExtra(MainActivity.EXTRA_INSTALL_UPDATE, true)
+            }
+            val tap = android.app.PendingIntent.getActivity(
+                context, 7701, intent,
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val text = context.getString(R.string.update_ready_notification)
+            val notif = NotificationCompat.Builder(context, UPDATE_NOTIFICATION_CHANNEL)
+                .setSmallIcon(R.drawable.ic_stat_mmtube)
+                .setContentTitle(context.getString(R.string.settings_updates))
+                .setContentText(text)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setContentIntent(tap)
+                .build()
+            mgr.notify(UPDATE_NOTIFICATION_ID, notif)
+        }
+    }
+
+    fun dismissStorageFullPrompt() {
+        _ui.update { it.copy(storageFullPrompt = false) }
+    }
+
+    fun clearOldFilesFromStoragePrompt() {
+        clearOldHistory()
+        dismissStorageFullPrompt()
     }
 
     fun shareDiagnosticLog() {
@@ -735,6 +783,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 }
             }.onSuccess { file ->
                 _ui.update { it.copy(update = it.update.copy(downloading = false, file = file, progress = 100)) }
+                showUpdateReadyNotification()
                 event(UiEvent.Message(context.getString(R.string.update_ready)))
             }.onFailure { error ->
                 _ui.update { it.copy(update = it.update.copy(downloading = false, error = error.message)) }
@@ -759,6 +808,14 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun dismissUpdate() {
         _ui.update { it.copy(update = it.update.copy(dismissed = true)) }
+    }
+
+    fun requestInstallUpdate() {
+        installUpdate()
+    }
+
+    fun requestOpenUpgrade() {
+        event(UiEvent.OpenUpgrade)
     }
 
     fun openUpdatePage() {
@@ -831,6 +888,8 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     companion object {
         private const val QUEUE_NOTIFICATION_CHANNEL = "mmtube_queue"
         private const val QUEUE_NOTIFICATION_ID = 7700
+        private const val UPDATE_NOTIFICATION_CHANNEL = "mmtube_update"
+        private const val UPDATE_NOTIFICATION_ID = 7701
 
         fun factory(container: AppContainer) = viewModelFactory {
             initializer { MainViewModel(container) }

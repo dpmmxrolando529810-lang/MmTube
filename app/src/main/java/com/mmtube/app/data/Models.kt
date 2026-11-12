@@ -225,7 +225,8 @@ data class HistoryItem(
     val durationSeconds: Int = 0,
     val createdAt: Long,
     val mode: String,
-    val savedToGallery: Boolean = false
+    val savedToGallery: Boolean = false,
+    val downloadDurationMs: Long = 0L
 )
 
 data class SettingsSnapshot(

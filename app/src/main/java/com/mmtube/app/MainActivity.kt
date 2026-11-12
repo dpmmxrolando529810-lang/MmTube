@@ -59,6 +59,14 @@ class MainActivity : AppCompatActivity() {
                 return
             }
         }
+        if (intent?.getBooleanExtra(EXTRA_OPEN_UPGRADE, false) == true) {
+            viewModel.requestOpenUpgrade()
+            return
+        }
+        if (intent?.getBooleanExtra(EXTRA_INSTALL_UPDATE, false) == true) {
+            viewModel.requestInstallUpdate()
+            return
+        }
         when (intent?.action) {
             Intent.ACTION_SEND -> {
                 val text = intent.getStringExtra(Intent.EXTRA_TEXT)
@@ -104,6 +112,8 @@ class MainActivity : AppCompatActivity() {
         const val EXTRA_OPEN_DOWNLOADS = "open_downloads"
         const val EXTRA_OPEN_FILE_URI = "open_file_uri"
         const val EXTRA_OPEN_FILE_MIME = "open_file_mime"
+        const val EXTRA_OPEN_UPGRADE = "open_upgrade"
+        const val EXTRA_INSTALL_UPDATE = "install_update"
         private const val REQUEST_NOTIFICATIONS = 4101
         private const val REQUEST_STORAGE = 4102
     }

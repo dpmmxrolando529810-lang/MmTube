@@ -117,6 +117,8 @@ fun HomeScreen(
     val context = LocalContext.current
     var showBatch by remember { mutableStateOf(false) }
     var batchText by remember { mutableStateOf("") }
+    val storageFull = ui.storageFullPrompt
+    Box(modifier = Modifier.fillMaxSize()) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -189,6 +191,36 @@ fun HomeScreen(
             )
         }
     }
+}
+    if (storageFull) {
+        StorageFullDialog(
+            onDismiss = vm::dismissStorageFullPrompt,
+            onClean = vm::clearOldFilesFromStoragePrompt
+        )
+    }
+}
+
+@Composable
+private fun StorageFullDialog(
+    onDismiss: () -> Unit,
+    onClean: () -> Unit
+) {
+    val context = LocalContext.current
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(context.getString(R.string.error_no_space_title)) },
+        text = { Text(context.getString(R.string.error_no_space_body)) },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = onClean) {
+                Text(context.getString(R.string.storage_full_clean))
+            }
+        },
+        dismissButton = {
+            androidx.compose.material3.TextButton(onClick = onDismiss) {
+                Text(android.R.string.cancel.toString())
+            }
+        }
+    )
 }
 
 @Composable

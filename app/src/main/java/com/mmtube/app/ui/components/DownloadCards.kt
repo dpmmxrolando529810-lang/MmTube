@@ -212,11 +212,12 @@ fun CompletedDownloadCard(
                     maxLines = 2
                 )
                 Text(
-                    text = context.getString(
-                        R.string.download_quality_label,
-                        item.quality,
-                        Formatters.formatBytes(item.sizeBytes)
-                    ),
+                    text = buildString {
+                        append(context.getString(R.string.download_quality_label, item.quality, Formatters.formatBytes(item.sizeBytes)))
+                        if (item.downloadDurationMs > 0) {
+                            append(" · ").append(Formatters.formatEta(item.downloadDurationMs / 1000))
+                        }
+                    },
                     style = MmtubeType.BodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -102,6 +102,9 @@ fun AppRoot(
                         launchSingleTop = true
                         restoreState = true
                     }
+                    UiEvent.OpenUpgrade -> navController.navigate(Routes.UPGRADE) {
+                        launchSingleTop = true
+                    }
                     UiEvent.Exit -> onExit()
                 }
             }

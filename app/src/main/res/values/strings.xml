@@ -362,4 +362,9 @@ MP3/အသံအတွက် — ခွဲပြီးကျော်ပါ။ M
     <string name="partial_deleted">%1$d partial files ဖျက်ပြီး</string>
     <string name="logs_share">ဒေါင်းလုဒ် log မျှဝေခြင်း</string>
     <string name="queue_notification_title">တန်းစီထားသော ဒေါင်းလုဒ်များ</string>
+    <string name="error_no_space_title">နေရာမလုံလောက်ပါ</string>
+    <string name="error_no_space_body">ဒေါင်းလုဒ်ကို ဆက်လုပ်ဖို့ ဖုန်းထဲ နေရာလိုအပ်တယ်။ အဟောင်းဖိုင်များ ဖျက်ပေးမလား?</string>
+    <string name="storage_full_clean">အဟောင်းဖိုင်များ ဖျက်ပါ</string>
+    <string name="update_ready_notification">ဗားရှင်းအသစ် အဆင်သင့်ဖြစ်ပြီ — နှိပ်ပြီး Install လုပ်ပါ</string>
+    <string name="expired_plan_message">Unlimited Plan သက်တမ်းကုန်ပြီ — အခမဲ့သို့ ပြန်ကူးမယ်</string>
 </resources>
