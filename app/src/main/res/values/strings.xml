@@ -367,4 +367,5 @@ MP3/အသံအတွက် — ခွဲပြီးကျော်ပါ။ M
     <string name="storage_full_clean">အဟောင်းဖိုင်များ ဖျက်ပါ</string>
     <string name="update_ready_notification">ဗားရှင်းအသစ် အဆင်သင့်ဖြစ်ပြီ — နှိပ်ပြီး Install လုပ်ပါ</string>
     <string name="expired_plan_message">Unlimited Plan သက်တမ်းကုန်ပြီ — အခမဲ့သို့ ပြန်ကူးမယ်</string>
+    <string name="notification_eta">Time remaining: %1$s</string>
 </resources>

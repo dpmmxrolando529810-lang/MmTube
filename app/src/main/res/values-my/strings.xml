@@ -367,4 +367,5 @@ MP3 အတွက် — ချက်ချင်း audio tag တွေ့မယ
     <string name="storage_full_clean">အဟောင်းဖိုင်များ ဖျက်</string>
     <string name="update_ready_notification">ဗားရှင်းအသစ် အဆင်သင့် — နှိပ်ပြီး Install လုပ်ပါ</string>
     <string name="expired_plan_message">Unlimited Plan သက်တမ်းကုန်ပြီ — အခမဲ့သို့ ပြန်ပြောင်းပါ</string>
+    <string name="notification_eta">ကျန်ချိန်: %1$s</string>
 </resources>

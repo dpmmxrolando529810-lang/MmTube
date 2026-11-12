@@ -138,12 +138,12 @@ class DownloadService : Service() {
                 buildList {
                     add("$percent%")
                     if (state.etaSeconds >= 0) {
-                        add(getString(R.string.download_eta, Formatters.formatEta(state.etaSeconds)))
+                        add("⏱ " + getString(R.string.notification_eta, Formatters.formatEta(state.etaSeconds)))
                     }
                     if (state.speedBytes > 0) {
-                        add(getString(R.string.download_speed, Formatters.formatBytes(state.speedBytes)))
+                        add("⬇ " + getString(R.string.download_speed, Formatters.formatBytes(state.speedBytes)))
                     }
-                }.joinToString(" • ")
+                }.joinToString("  ·  ")
             }
             is DownloadState.Merging -> state.title
             is DownloadState.Saving -> state.title
