@@ -364,7 +364,7 @@ private fun compressImageToBase64(context: android.content.Context, uri: android
             val out = java.io.ByteArrayOutputStream()
             bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, out)
             val arr = out.toByteArray()
-            if (arr.size <= 700_000 || quality <= 35) {
+            if (arr.size <= 500_000 || quality <= 30) {
                 encoded = Base64.encodeToString(arr, Base64.NO_WRAP)
             }
             quality -= 17
