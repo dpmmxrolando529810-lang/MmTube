@@ -118,18 +118,18 @@ fun HomeScreen(
         contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        item {
+        item(key = "header") {
             Header(ui = ui, onSettings = onSettings)
         }
         if (!ui.settings.onboardingSeen) {
-            item {
+            item(key = "onboarding") {
                 OnboardingCard(onDismiss = vm::markOnboardingSeen)
             }
         }
-        item {
+        item(key = "hero") {
             HeroTitle()
         }
-        item {
+        item(key = "quota") {
             QuotaStrip(
                 quota = ui.quota,
                 account = ui.account,
@@ -140,19 +140,24 @@ fun HomeScreen(
                 onRefresh = vm::refreshQuota
             )
         }
-        item {
+        if (ui.quota?.paid != true) {
+            item(key = "upsell") {
+                PremiumUpsellCard(onUpgrade = onUpgrade)
+            }
+        }
+        item(key = "link") {
             LinkCard(ui = ui, vm = vm)
         }
-        item {
+        item(key = "engine") {
             EngineCard(ui = ui, onRetry = vm::retryEngine)
         }
-        item {
+        item(key = "preview") {
             PreviewSection(ui = ui, vm = vm, onUpgrade = onUpgrade)
         }
-        item {
+        item(key = "download") {
             DownloadSection(ui = ui, vm = vm)
         }
-        item {
+        item(key = "recent") {
             RecentSection(history = ui.history, onSeeAll = onSeeAll, onOpen = vm::openHistory)
         }
         item {
@@ -421,6 +426,58 @@ private fun OnboardingCard(onDismiss: () -> Unit) {
             modifier = Modifier.padding(top = 12.dp)
         ) {
             Text(context.getString(R.string.onboarding_got_it))
+        }
+    }
+}
+
+@Composable
+private fun PremiumUpsellCard(onUpgrade: () -> Unit) {
+    val context = LocalContext.current
+    FrostedCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(58.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(
+                        androidx.compose.ui.graphics.Brush.linearGradient(
+                            listOf(MmtubePalette.Aqua, MmtubePalette.Blue)
+                        )
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    Icons.Rounded.Bolt,
+                    contentDescription = null,
+                    tint = androidx.compose.ui.graphics.Color.White,
+                    modifier = Modifier.size(30.dp)
+                )
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = context.getString(R.string.home_premium_title),
+                    style = MmtubeType.TitleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = context.getString(R.string.home_premium_desc),
+                    style = MmtubeType.BodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            androidx.compose.material3.Button(
+                onClick = onUpgrade,
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = MmtubePalette.AquaDeep,
+                    contentColor = androidx.compose.ui.graphics.Color.White
+                )
+            ) {
+                Text(context.getString(R.string.home_premium_cta), style = MmtubeType.LabelLarge)
+            }
         }
     }
 }

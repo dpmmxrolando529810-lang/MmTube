@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Devices
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PrivacyTip
@@ -92,6 +93,7 @@ fun SettingsScreen(
     var showTerms by remember { mutableStateOf(false) }
     var showPrivacy by remember { mutableStateOf(false) }
     var showLicenses by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
     var ownerTaps by remember { mutableIntStateOf(0) }
     val haptic = LocalHapticFeedback.current
 
@@ -125,7 +127,16 @@ fun SettingsScreen(
             }
         }
 
-        SettingsGroup(context.getString(R.string.settings_appearance)) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = { query = it },
+            label = { Text(context.getString(R.string.settings_search)) },
+            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        SettingsGroup(context.getString(R.string.settings_appearance), visibleIf = qMatch(query, listOf("appearance", "theme", "color", "dark", "light", "amoled", "dynamic", "material you", "language", "အရောင်", "အမှောင်", "ဘာသာ", "အရောင်စည်း", "dynamic color"))) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
                 Text(context.getString(R.string.settings_theme), style = MmtubeType.TitleMedium, color = MaterialTheme.colorScheme.onSurface)
                 ThemeSelector(selected = ui.settings.theme, onSelect = vm::setTheme)
@@ -136,9 +147,23 @@ fun SettingsScreen(
                 value = languageLabel(context, ui.settings.language),
                 onClick = { showLanguage = true }
             )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.AutoAwesome,
+                label = context.getString(R.string.settings_dynamic_color),
+                description = context.getString(R.string.settings_dynamic_color_desc),
+                checked = ui.settings.dynamicColor,
+                onChange = vm::setDynamicColor
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Speed,
+                label = context.getString(R.string.settings_colorblind),
+                description = context.getString(R.string.settings_colorblind_desc),
+                checked = ui.settings.colorblindMode,
+                onChange = vm::setColorblindMode
+            )
         }
 
-        SettingsGroup(context.getString(R.string.settings_downloads)) {
+        SettingsGroup(context.getString(R.string.settings_downloads), visibleIf = qMatch(query, listOf("download", "turbo", "မြန်", "မြန်ဆန်", "ဒေါင်း", "အရည်အသွေး", "quality"))) {
             SettingsSwitchRow(
                 icon = Icons.Rounded.Speed,
                 label = context.getString(R.string.settings_turbo),
@@ -153,7 +178,7 @@ fun SettingsScreen(
             )
         }
 
-        SettingsGroup(context.getString(R.string.settings_engine)) {
+        SettingsGroup(context.getString(R.string.settings_engine), visibleIf = qMatch(query, listOf("engine", "yt-dlp", "update", "အင်ဂျင်", "version", "update engine"))) {
             val engineValue = when (val e = ui.engine) {
                 is EngineState.Ready -> e.version ?: context.getString(R.string.settings_engine_ready)
                 is EngineState.Failed -> context.getString(R.string.settings_engine_failed_short)
@@ -196,7 +221,7 @@ fun SettingsScreen(
             )
         }
 
-        SettingsGroup(context.getString(R.string.settings_updates)) {
+        SettingsGroup(context.getString(R.string.settings_updates), visibleIf = qMatch(query, listOf("update", "app update", "auto", "အပ်ဒိတ်", "self update"))) {
             SettingsSwitchRow(
                 icon = Icons.Rounded.SystemUpdate,
                 label = context.getString(R.string.settings_updates),
@@ -270,7 +295,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsGroup(context.getString(R.string.settings_help)) {
+        SettingsGroup(context.getString(R.string.settings_help), visibleIf = qMatch(query, listOf("help", "support", "faq", "ကူညီ", "help me"))) {
             SettingsClickRow(
                 icon = Icons.Rounded.Info,
                 label = context.getString(R.string.help_download_failed),
@@ -290,7 +315,7 @@ fun SettingsScreen(
                 onClick = { showHelp3 = true }
             )
         }
-        SettingsGroup(context.getString(R.string.settings_about)) {
+        SettingsGroup(context.getString(R.string.settings_about), visibleIf = qMatch(query, listOf("about", "version", "ဗားရှင်း", "about mmtube"))) {
             SettingsValueRow(
                 icon = Icons.Rounded.PhoneAndroid,
                 label = context.getString(R.string.settings_about),
@@ -313,7 +338,7 @@ fun SettingsScreen(
             )
         }
 
-        SettingsGroup(context.getString(R.string.settings_diagnostics)) {
+        SettingsGroup(context.getString(R.string.settings_diagnostics), visibleIf = qMatch(query, listOf("diagnostics", "diagnostic", "ffmpeg", "ပြဿနာ", "ပြဿနာစစ်"))) {
             SettingsValueRow(
                 icon = Icons.Rounded.VerifiedUser,
                 label = context.getString(R.string.settings_diagnostics),
@@ -331,7 +356,7 @@ fun SettingsScreen(
             }
         }
 
-        SettingsGroup(context.getString(R.string.settings_legal)) {
+        SettingsGroup(context.getString(R.string.settings_legal), visibleIf = qMatch(query, listOf("legal", "terms", "privacy", "license", "လိုင်စင်", "မူဝါဒ"))) {
             SettingsValueRow(
                 icon = Icons.Rounded.Shield,
                 label = context.getString(R.string.settings_legal),
@@ -462,7 +487,12 @@ private fun languageLabel(context: android.content.Context, tag: String): String
 }
 
 @Composable
-private fun SettingsGroup(title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+private fun SettingsGroup(
+    title: String,
+    visibleIf: Boolean = true,
+    content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit
+) {
+    if (!visibleIf) return
     Column {
         Text(
             text = title.uppercase(),
@@ -726,3 +756,10 @@ private fun SimpleTextDialog(title: String, body: String, onDismiss: () -> Unit)
         containerColor = MaterialTheme.colorScheme.surface
     )
 }
+
+private fun qMatch(query: String, keywords: List<String>): Boolean {
+    val q = query.trim().lowercase()
+    if (q.isEmpty()) return true
+    return keywords.any { it.lowercase().contains(q) }
+}
+

@@ -150,7 +150,27 @@ fun DownloadsScreen(
             }
         }
         item {
-            FilterRow(selected = filter, onSelect = { filter = it })
+            androidx.compose.material3.TabRow(
+                selectedTabIndex = filter,
+                containerColor = Color.Transparent,
+                contentColor = MmtubePalette.Aqua
+            ) {
+                androidx.compose.material3.Tab(
+                    selected = filter == 0,
+                    onClick = { filter = 0 },
+                    text = { Text(context.getString(R.string.downloads_filter_all)) }
+                )
+                androidx.compose.material3.Tab(
+                    selected = filter == 1,
+                    onClick = { filter = 1 },
+                    text = { Text(context.getString(R.string.downloads_filter_video)) }
+                )
+                androidx.compose.material3.Tab(
+                    selected = filter == 2,
+                    onClick = { filter = 2 },
+                    text = { Text(context.getString(R.string.downloads_filter_audio)) }
+                )
+            }
         }
         if (filtered.isEmpty()) {
             item {
@@ -209,33 +229,6 @@ fun DownloadsScreen(
             onDismiss = { pendingDelete = null },
             danger = true
         )
-    }
-}
-
-@Composable
-private fun FilterRow(selected: Int, onSelect: (Int) -> Unit) {
-    val context = LocalContext.current
-    val options = listOf(
-        context.getString(R.string.downloads_filter_all),
-        context.getString(R.string.downloads_filter_video),
-        context.getString(R.string.downloads_filter_audio)
-    )
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        options.forEachIndexed { index, label ->
-            val isSelected = selected == index
-            Surface(
-                onClick = { onSelect(index) },
-                shape = CircleShape,
-                color = if (isSelected) MmtubePalette.AquaDeep else MaterialTheme.colorScheme.surfaceVariant,
-                contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface
-            ) {
-                Text(
-                    text = label,
-                    style = MmtubeType.LabelLarge,
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp)
-                )
-            }
-        }
     }
 }
 

@@ -27,16 +27,22 @@ data class ExportedMedia(
 
 class MediaExporter(private val context: Context) {
 
-    suspend fun export(file: File, mode: DownloadMode): ExportedMedia = withContext(Dispatchers.IO) {
+    suspend fun export(file: File, mode: DownloadMode, platform: Platform? = null): ExportedMedia = withContext(Dispatchers.IO) {
         val mime = mimeType(file, mode)
+        val folder = when (platform) {
+            Platform.YOUTUBE -> "YouTube"
+            Platform.FACEBOOK -> "Facebook"
+            Platform.TIKTOK -> "TikTok"
+            else -> null
+        }
         val size = file.length()
         val audio = mode == DownloadMode.MP3
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            exportToMediaStore(file, mime, audio, size) ?: fallback(file, mime, size)
+            exportToMediaStore(file, mime, audio, size, relativeSub = folder) ?: fallback(file, mime, size, folder)
         } else if (hasStoragePermission()) {
-            exportToPublic(file, mime, audio, size) ?: fallback(file, mime, size)
+            exportToPublic(file, mime, audio, size, folder) ?: fallback(file, mime, size, folder)
         } else {
-            fallback(file, mime, size)
+            fallback(file, mime, size, folder)
         }
     }
 
@@ -57,7 +63,8 @@ class MediaExporter(private val context: Context) {
         file: File,
         mime: String,
         audio: Boolean,
-        size: Long
+        size: Long,
+        relativeSub: String?
     ): ExportedMedia? {
         val resolver = context.contentResolver
         val collection = if (audio) {
@@ -65,7 +72,10 @@ class MediaExporter(private val context: Context) {
         } else {
             MediaStore.Video.Media.EXTERNAL_CONTENT_URI
         }
-        val relative = if (audio) "Music/MMTube" else "Movies/MMTube"
+        val relative = buildString {
+            append(if (audio) "Music/MMTube" else "Movies/MMTube")
+            if (relativeSub != null) append("/").append(relativeSub)
+        }
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, file.name)
             put(MediaStore.MediaColumns.MIME_TYPE, mime)
@@ -100,14 +110,16 @@ class MediaExporter(private val context: Context) {
         file: File,
         mime: String,
         audio: Boolean,
-        size: Long
+        size: Long,
+        folder: String?
     ): ExportedMedia? {
         return runCatching {
             val base = Environment.getExternalStoragePublicDirectory(
                 if (audio) Environment.DIRECTORY_MUSIC else Environment.DIRECTORY_MOVIES
             )
-            val folder = File(base, "MMTube").apply { mkdirs() }
-            val target = uniqueFile(folder, file.name)
+            val baseFolder = if (folder != null) File(File(base, "MMTube"), folder) else File(base, "MMTube")
+            baseFolder.mkdirs()
+            val target = uniqueFile(baseFolder, file.name)
             file.copyTo(target, overwrite = false)
             file.delete()
             MediaScannerConnection.scanFile(
@@ -132,7 +144,7 @@ class MediaExporter(private val context: Context) {
         }.getOrNull()
     }
 
-    private fun fallback(file: File, mime: String, size: Long): ExportedMedia {
+    private fun fallback(file: File, mime: String, size: Long, folder: String? = null): ExportedMedia {
         val uri = FileProvider.getUriForFile(
             context,
             "${context.packageName}.fileprovider",

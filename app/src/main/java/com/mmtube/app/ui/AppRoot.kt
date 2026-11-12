@@ -90,7 +90,7 @@ fun AppRoot(
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
 
-    MmtubeTheme(ui.settings.theme) {
+    MmtubeTheme(ui.settings.theme, ui.settings.colorblindMode, ui.settings.dynamicColor) {
         val snackbarHostState = remember { SnackbarHostState() }
         val navController = rememberNavController()
 

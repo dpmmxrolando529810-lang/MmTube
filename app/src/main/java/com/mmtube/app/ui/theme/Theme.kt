@@ -77,6 +77,69 @@ private val AmoledColors = darkColorScheme(
     scrim = Color(0xCC000000)
 )
 
+// Colorblind-safe palette (Okabe-Ito) — orange / blue / teal-green / vermillion.
+private val ColorblindDark = darkColorScheme(
+    primary = Color(0xFFE69F00),       // orange
+    onPrimary = Color(0xFF2B1B00),
+    primaryContainer = Color(0xFF3D2A00),
+    onPrimaryContainer = Color(0xFFFFE0A2),
+    secondary = Color(0xFF56B4E9),     // sky blue
+    onSecondary = Color(0xFF062A3F),
+    secondaryContainer = Color(0xFF0E2B3F),
+    onSecondaryContainer = Color(0xFFCBE8FF),
+    tertiary = Color(0xFF009E73),      // bluish green
+    onTertiary = Color(0xFF003326),
+    tertiaryContainer = Color(0xFF0F3326),
+    onTertiaryContainer = Color(0xFFA8F0D2),
+    error = Color(0xFFD55E00),         // vermillion
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFF401600),
+    onErrorContainer = Color(0xFFFFCCB8),
+    background = Color(0xFF11161D),
+    onBackground = Color(0xFFF2F5F9),
+    surface = Color(0xFF161E28),
+    onSurface = Color(0xFFE6ECF4),
+    surfaceVariant = Color(0xFF1E2835),
+    onSurfaceVariant = Color(0xFFAEBBCC),
+    outline = Color(0xFF33404F),
+    outlineVariant = Color(0xFF232C38),
+    inverseSurface = Color(0xFFE6ECF4),
+    inverseOnSurface = Color(0xFF11161D),
+    inversePrimary = Color(0xFFE69F00),
+    scrim = Color(0xCC000000)
+)
+
+private val ColorblindLight = lightColorScheme(
+    primary = Color(0xFFB57600),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFFFE1A4),
+    onPrimaryContainer = Color(0xFF3E2A00),
+    secondary = Color(0xFF0072B2),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFD5E8FF),
+    onSecondaryContainer = Color(0xFF062B43),
+    tertiary = Color(0xFF00775B),
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFA8F0D2),
+    onTertiaryContainer = Color(0xFF003326),
+    error = Color(0xFFD55E00),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFDCC4),
+    onErrorContainer = Color(0xFF2F1500),
+    background = Color(0xFFFAFBFD),
+    onBackground = Color(0xFF1B2330),
+    surface = Color(0xFFFFFFFF),
+    onSurface = Color(0xFF1F2734),
+    surfaceVariant = Color(0xFFE8ECF3),
+    onSurfaceVariant = Color(0xFF515E70),
+    outline = Color(0xFFB4BECB),
+    outlineVariant = Color(0xFFDFE4EB),
+    inverseSurface = Color(0xFF1B2330),
+    inverseOnSurface = Color(0xFFF5F7FB),
+    inversePrimary = Color(0xFFFFE1A4),
+    scrim = Color(0x99000000)
+)
+
 private val LightColors = lightColorScheme(
     primary = MmtubePalette.AquaDeep,
     onPrimary = Color(0xFFFFFFFF),
@@ -113,6 +176,8 @@ val LocalMmtubeDark = staticCompositionLocalOf { true }
 @Composable
 fun MmtubeTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
+    colorblindMode: Boolean = false,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val darkTheme = when (themeMode) {
@@ -121,8 +186,13 @@ fun MmtubeTheme(
         ThemeMode.DARK -> true
         ThemeMode.AMOLED -> true
     }
-    val colorScheme = when (themeMode) {
-        ThemeMode.AMOLED -> AmoledColors
+    val colorScheme = if (dynamicColor && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+        val context = androidx.compose.ui.platform.LocalContext.current
+        if (darkTheme) androidx.compose.material3.dynamicDarkColorScheme(context)
+        else androidx.compose.material3.dynamicLightColorScheme(context)
+    } else when {
+        colorblindMode -> if (darkTheme) ColorblindDark else ColorblindLight
+        themeMode == ThemeMode.AMOLED -> AmoledColors
         else -> if (darkTheme) DarkColors else LightColors
     }
 

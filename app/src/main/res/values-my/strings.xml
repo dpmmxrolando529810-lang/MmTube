@@ -344,4 +344,12 @@ MP3 အတွက် — ချက်ချင်း audio tag တွေ့မယ
 • အချို့ FB/TikTok ဗီဒီယိုတွေသည် 720p/1080p သာ ရှိပါတယ်
 • YouTube က Region အလိုက် အရည်အသွေး ကန့်သတ်ထားတတ်တယ်
 • Android ဖုန်း ဗားရှင်း နှေးတဲ့နေရာ ကြာချိန်</string>
+    <string name="home_premium_title">MMTube Unlimited</string>
+    <string name="home_premium_desc">အကန့်အသတ်မရှိ ဒေါင်းပါ · 4K/2K/1080p · တစ်ခါတည်း စျေးနှုန်း</string>
+    <string name="home_premium_cta">အပ်ဂရိတ်</string>
+    <string name="settings_search">Settings ထဲ ရှာရန်</string>
+    <string name="settings_colorblind">အရောင်မခွဲနိုင်သောသူများ (Colorblind)</string>
+    <string name="settings_colorblind_desc">အရောင်အားလုံးအတွက် tab တစ်ခုတည်း — အပြာ/အစိမ်း/လိမ္မော် pattern</string>
+    <string name="settings_dynamic_color">Material You (dynamic color)</string>
+    <string name="settings_dynamic_color_desc">ဖုန်း၏ wallpaper အရောင်အတိုင်း theme ပြောင်း</string>
 </resources>

@@ -81,7 +81,7 @@ class DownloadController(
                 val turbo = settingsStore.snapshot().turbo
                 val file = downloadWithFallback(request, directory, turbo, startedAt)
                 _state.value = DownloadState.Saving(request.title, request.mode)
-                val exported = exporter.export(file, request.mode)
+                val exported = exporter.export(file, request.mode, request.platform)
                 val item = HistoryItem(
                     id = UUID.randomUUID().toString(),
                     title = request.title,
@@ -279,10 +279,13 @@ class DownloadController(
             addOption("--ignore-config")
             addOption("--socket-timeout", "25")
             addOption("--retries", "10")
-            addOption("--fragment-retries", "10")
+            addOption("--fragment-retries", "30")
             addOption("--extractor-retries", "3")
             addOption("--concurrent-fragments", "24")
             addOption("--embed-metadata")
+            addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\([^\(\)]*\)\s*${'$'}""")
+            addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\[[^\[\]]*\]\s*${'$'}""")
+            addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\{[^\{\}]*\}\s*${'$'}""")
             addOption("-o", output)
             if (request.resume) addOption("--continue")
             when (request.mode) {

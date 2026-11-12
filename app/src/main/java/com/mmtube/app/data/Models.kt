@@ -239,5 +239,7 @@ data class SettingsSnapshot(
     val lastEngineUpdate: Long = 0L,
     val lastUpdateCheck: Long = 0L,
     val language: String = "",
-    val onboardingSeen: Boolean = false
+    val onboardingSeen: Boolean = false,
+    val colorblindMode: Boolean = false,
+    val dynamicColor: Boolean = false
 )

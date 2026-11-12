@@ -344,4 +344,12 @@ MP3/အသံအတွက် — ခွဲပြီးကျော်ပါ။ M
 • ပိတ်ထားတဲ့ YouTube တစ်ခုကိုပဲ ကြည့်ပါ — YouTube က default အရ 480p သာ ပြတယ်ဆိုရင် အဲဒါက default ပါပဲ
 • Turbo mode (aria2c) ဖွင့်ထားပါက ဆက်လက် ဆက်လက်မြန်ဆန်စွာ ဒေါင်းမည်
 • ဖိုင်အရွယ်အစားက အကြမ်းသဘောအရ ကြီးမားမည်ဖြစ်ပါသည် — နေရာလုံလောက်အောင် စစ်ပါ</string>
+    <string name="home_premium_title">Unlimited MMTube</string>
+    <string name="home_premium_desc">မကန့်သတ်ဒေါင်းလုဒ် · 4K/2K/1080p · အားလုံးအတွက် တစ်ခါတည်း payment</string>
+    <string name="home_premium_cta">Upgrade</string>
+    <string name="settings_search">Settings list filter ရှာရန်</string>
+    <string name="settings_colorblind">Colorblind-friendly colors</string>
+    <string name="settings_colorblind_desc">အရောင်မခွဲနိုင်သောသူများအတွက် tab ပြင်ဆင်ချက်</string>
+    <string name="settings_dynamic_color">Material You (dynamic color)</string>
+    <string name="settings_dynamic_color_desc">ဖုန်း၏ theme အရောင်နဲ့ညီအောင် ပြောင်း</string>
 </resources>

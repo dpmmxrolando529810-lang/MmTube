@@ -31,6 +31,8 @@ class SettingsStore(private val context: Context) {
         val LAST_UPDATE_CHECK = longPreferencesKey("last_update_check")
         val LANGUAGE = stringPreferencesKey("language")
         val ONBOARDING = booleanPreferencesKey("onboarding_seen")
+        val COLORBLIND = booleanPreferencesKey("colorblind_mode")
+        val DYNAMIC = booleanPreferencesKey("dynamic_color")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -53,7 +55,9 @@ class SettingsStore(private val context: Context) {
         lastEngineUpdate = this[Keys.LAST_ENGINE_UPDATE] ?: 0L,
         lastUpdateCheck = this[Keys.LAST_UPDATE_CHECK] ?: 0L,
         language = this[Keys.LANGUAGE] ?: "",
-        onboardingSeen = this[Keys.ONBOARDING] ?: false
+        onboardingSeen = this[Keys.ONBOARDING] ?: false,
+        colorblindMode = this[Keys.COLORBLIND] ?: false,
+        dynamicColor = this[Keys.DYNAMIC] ?: false
     )
 
     suspend fun setTheme(mode: ThemeMode) {
@@ -101,6 +105,9 @@ class SettingsStore(private val context: Context) {
     suspend fun setLocalNextAllowed(uid: String, value: Long) {
         context.settingsDataStore.edit { it[longPreferencesKey("next_allowed_$uid")] = value }
     }
+
+    suspend fun setColorblindMode(v: Boolean) { context.settingsDataStore.edit { it[Keys.COLORBLIND] = v } }
+    suspend fun setDynamicColor(v: Boolean) { context.settingsDataStore.edit { it[Keys.DYNAMIC] = v } }
 
     suspend fun setOnboardingSeen() {
         context.settingsDataStore.edit { it[Keys.ONBOARDING] = true }

@@ -455,6 +455,9 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    fun setColorblindMode(v: Boolean) { viewModelScope.launch { container.settings.setColorblindMode(v) } }
+    fun setDynamicColor(v: Boolean) { viewModelScope.launch { container.settings.setDynamicColor(v) } }
+
     fun setTurbo(enabled: Boolean) {
         viewModelScope.launch { container.settings.setTurbo(enabled) }
     }
