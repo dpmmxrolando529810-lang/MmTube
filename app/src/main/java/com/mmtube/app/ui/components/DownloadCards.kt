@@ -268,11 +268,23 @@ fun HistoryRow(
 ) {
     val context = LocalContext.current
     val audio = item.mode == "mp3" || item.mimeType.startsWith("audio")
+    val accent = when (item.platform) {
+        "YOUTUBE" -> MmtubePalette.Danger          // red-ish
+        "FACEBOOK" -> MmtubePalette.Blue            // blue
+        "TIKTOK" -> MmtubePalette.Aqua              // teal/black-ish dark accent
+        else -> MmtubePalette.Blue
+    }
     FrostedCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(6.dp, 66.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(accent)
+            )
             Box(
                 modifier = Modifier
                     .size(92.dp, 66.dp)
@@ -316,7 +328,7 @@ fun HistoryRow(
                     maxLines = 1
                 )
                 Text(
-                    text = Formatters.formatDate(item.createdAt),
+                    text = Formatters.formatDateBurmese(item.createdAt),
                     style = MmtubeType.LabelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

@@ -41,6 +41,19 @@ object Formatters {
         return formatDuration(seconds)
     }
 
+    private val myMonths = arrayOf("ဇန်နဝါရီ", "ဖေဖော်ဝါရီ", "မတ်", "ဧပြီ", "မေ", "ဇွန်", "ဇူလိုင်", "သြဂုတ်", "စက်တင်ဘာ", "အောက်တိုဘာ", "နိုဝင်ဘာ", "ဒီဇင်ဘာ")
+    private val myDigits = mapOf('0' to '၀', '1' to '၁', '2' to '၂', '3' to '၃', '4' to '၄', '5' to '၅', '6' to '၆', '7' to '၇', '8' to '၈', '9' to '၉')
+
+    fun formatDateBurmese(millis: Long?): String {
+        if (millis == null || millis <= 0L) return "—"
+        return runCatching {
+            val z = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault())
+            val d = myDigits.entries.fold(z.dayOfMonth.toString()) { acc, (k, v) -> acc.replace(k, v) }
+            val y = myDigits.entries.fold(z.year.toString()) { acc, (k, v) -> acc.replace(k, v) }
+            "$d ${myMonths[z.monthValue - 1]} $y"
+        }.getOrDefault("—")
+    }
+
     fun formatDate(millis: Long?): String {
         if (millis == null || millis <= 0L) return "—"
         return runCatching {

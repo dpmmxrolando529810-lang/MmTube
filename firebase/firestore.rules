@@ -36,7 +36,7 @@ service cloud.firestore {
         && request.resource.data.keys().hasOnly([
             'uid', 'email', 'displayName', 'photoUrl', 'userCode',
             'plan', 'planExpiresAt', 'dailyLimit', 'disabled',
-            'createdAt', 'updatedAt'
+            'createdAt', 'updatedAt', 'trialEndsAt', 'forceSignOutAt', 'anonymous'
           ])
         && request.resource.data.uid == uid
         && request.resource.data.plan == 'free'
@@ -54,7 +54,7 @@ service cloud.firestore {
         || (isSignedIn()
             && request.auth.uid == uid
             && request.resource.data.keys().hasOnly([
-                'lastDownloadAt', 'nextAllowedAt', 'totalDownloads', 'quotaResetAt', 'updatedAt'
+                'lastDownloadAt', 'nextAllowedAt', 'totalDownloads', 'quotaResetAt', 'updatedAt', 'serverNow'
               ]));
 
       allow delete: if isAdmin() || (isSignedIn() && request.auth.uid == uid);
@@ -76,13 +76,17 @@ service cloud.firestore {
         && request.resource.data.imageBase64 is string
         && request.resource.data.imageBase64.size() < 750000;
 
-      // Admins review and set the final outcome. Nobody else can change a payment.
-      allow update: if isAdmin();
-      allow delete: if false;
+      // Admins review and set the final outcome. Owner can cancel their own pending payment.
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && resource.data.uid == request.auth.uid
+            && request.resource.data.status == 'cancelled');
+      allow delete: if isAdmin();
     }
 
     match /activationLog/{logId} {
-      allow read: if isAdmin();
+      allow read: if isAdmin()
+        || (isSignedIn() && resource.data.uid == request.auth.uid);
 
       allow create: if isAdmin()
         && request.resource.data.keys().hasOnly([
@@ -102,8 +106,12 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /sys/{id} {
+      allow read, write: if isSignedIn();
+    }
+
     match /announcements/{docId} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin();
     }
   }

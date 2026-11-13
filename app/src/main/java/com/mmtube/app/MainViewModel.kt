@@ -1,6 +1,7 @@
 package com.mmtube.app
 
 import android.app.Activity
+import android.util.Log
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
@@ -73,7 +74,13 @@ data class MainUiState(
     val announcementId: String? = null,
     val announcementText: String? = null,
     val whatsNewVersion: String? = null,
-    val queue: List<com.mmtube.app.download.DownloadRequest> = emptyList()
+    val queue: List<com.mmtube.app.download.DownloadRequest> = emptyList(),
+    val latestPayment: com.mmtube.app.data.PaymentSummary? = null,
+    val celebratedPaymentId: String? = null,
+    val showTrialBanner: Boolean = false,
+    val freeLimitReached: Boolean = false,
+    val forceUpdate: Boolean = false,
+    val announcementsMuted: Boolean = false
 ) {
     val termsAccepted: Boolean get() = settings.acceptedTerms
 }
@@ -155,7 +162,13 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                             .setUserId(account.profile?.userCode.orEmpty())
                     }
                 }
-                _ui.update { it.copy(account = account) }
+                val trialActive = account.profile?.isTrial == true
+                if (trialActive && account.profile?.trialEndsAt != null) {
+                    _ui.update { it.copy(account = account, showTrialBanner = true) }
+                } else {
+                    _ui.update { it.copy(account = account) }
+                }
+                startPaymentListener()
                 refreshQuota()
                 // Expiry check: paid -> free transition should notify the user.
                 val nowPaid = _ui.value.quota?.paid == true
@@ -184,6 +197,11 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                             context.getString(R.string.download_complete_message)
                         }
                         event(UiEvent.Message(message))
+                        // Show the "this was your free download" nudge for eligible free users.
+                        val quota = _ui.value.quota
+                        if (quota != null && !quota.paid && !quota.trial && !quota.allowed) {
+                            _ui.update { it.copy(freeLimitReached = true) }
+                        }
                     }
                     is DownloadState.Failed -> {
                         recordException(MmtubeException(state.kind, state.detail))
@@ -436,10 +454,26 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             if (!doc.exists()) return@launch
             val text = doc.getString("text").orEmpty().trim()
             val id = doc.getString("id") ?: "latest"
-            if (text.isNotBlank() && id != snap.dismissedAnnouncementId) {
-                _ui.update { it.copy(announcementId = id, announcementText = text) }
+            val minVersion = doc.getLong("minVersionCode") ?: 0L
+            val dryRun = doc.getBoolean("dryRun") ?: false
+            val targetEmail = doc.getString("targetEmail")
+            if (minVersion > BuildConfig.VERSION_CODE) {
+                _ui.update { it.copy(forceUpdate = true) }
+            }
+            val muted = snap.dismissedAnnouncementId == "__all__"
+            if (dryRun) {
+                val myEmail = (authRepositoryEmailOrNull()) ?: return@launch
+                if (targetEmail != null && targetEmail != myEmail) return@launch
+            }
+            if (text.isNotBlank() && id != snap.dismissedAnnouncementId && !muted) {
+                _ui.update { it.copy(announcementId = id, announcementText = text, announcementsMuted = muted) }
             }
         }
+    }
+
+    private fun authRepositoryEmailOrNull(): String? {
+        val profile = _ui.value.account.profile ?: return null
+        return profile.email
     }
 
     fun dismissAnnouncement() {
@@ -496,31 +530,68 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch { container.settings.setChimeEnabled(enabled) }
     }
 
-    fun fetchMyLatestPayment(onDone: (com.mmtube.app.data.PaymentSummary?) -> Unit) {
-        val profile = _ui.value.account.profile ?: run { onDone(null); return }
-        val db = container.firestore ?: run { onDone(null); return }
+    private var paymentListener: com.google.firebase.firestore.ListenerRegistration? = null
+    private var paymentListenerUid: String? = null
+    private var prevPaymentStatus: String? = null
+
+    private fun startPaymentListener() {
+        val uid = _ui.value.account.profile?.uid ?: return
+        if (paymentListenerUid == uid) return
+        val db = container.firestore ?: return
+        paymentListener?.remove()
+        paymentListenerUid = uid
+        paymentListener = db.collection("payments")
+            .whereEqualTo("uid", uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null || snapshot == null) return@addSnapshotListener
+                val latest = snapshot.documents.maxByOrNull { it.getTimestamp("createdAt")?.seconds ?: 0L }
+                val summary = latest?.let {
+                    com.mmtube.app.data.PaymentSummary(
+                        id = it.id,
+                        plan = it.getString("plan") ?: "",
+                        amountKs = it.getLong("amountKs") ?: 0L,
+                        status = it.getString("status") ?: "pending",
+                        adminNote = it.getString("adminNote"),
+                        createdAt = it.getTimestamp("createdAt")?.toDate()?.time ?: 0L
+                    )
+                }
+                val newStatus = summary?.status
+                val wasPending = prevPaymentStatus == "pending"
+                _ui.update { it.copy(latestPayment = summary) }
+                if (wasPending && newStatus == "approved" && summary != null) {
+                    playCompletionChime()
+                    event(UiEvent.Message(context.getString(R.string.payment_approved_chime)))
+                    refreshQuota()
+                } else if (wasPending && newStatus == "rejected") {
+                    event(UiEvent.Message(context.getString(R.string.payment_rejected_notice)))
+                }
+                prevPaymentStatus = newStatus
+            }
+    }
+
+    fun cancelMyPendingPayment() {
+        val summary = _ui.value.latestPayment ?: return
+        val db = container.firestore ?: return
+        if (summary.status != "pending") return
         viewModelScope.launch {
-            val snapshot = runCatching {
-                db.collection("payments").whereEqualTo("uid", profile.uid).get().await()
-            }.getOrNull()
-            val latest = snapshot?.documents?.maxByOrNull {
-                it.getTimestamp("createdAt")?.seconds ?: 0L
+            runCatching {
+                db.collection("payments").document(summary.id)
+                    .set(
+                        mapOf(
+                            "status" to "cancelled",
+                            "reviewedAt" to com.google.firebase.Timestamp.now()
+                        ),
+                        com.google.firebase.firestore.SetOptions.merge()
+                    )
+                    .await()
+            }.onFailure {
+                Log.w("MainViewModel", "Cancel pending payment failed", it)
             }
-            if (latest == null) {
-                onDone(null)
-                return@launch
-            }
-            onDone(
-                com.mmtube.app.data.PaymentSummary(
-                    id = latest.id,
-                    plan = latest.getString("plan") ?: "",
-                    amountKs = latest.getLong("amountKs") ?: 0L,
-                    status = latest.getString("status") ?: "pending",
-                    adminNote = latest.getString("adminNote"),
-                    createdAt = latest.getTimestamp("createdAt")?.toDate()?.time ?: 0L
-                )
-            )
         }
+    }
+
+    fun fetchMyLatestPayment(onDone: (com.mmtube.app.data.PaymentSummary?) -> Unit) {
+        onDone(_ui.value.latestPayment)
     }
 
     fun sendDiagnosticToTelegram() {
@@ -736,6 +807,17 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    fun dismissFreeLimitReached() {
+        _ui.update { it.copy(freeLimitReached = false) }
+    }
+
+    fun setAnnouncementsMuted(muted: Boolean) {
+        viewModelScope.launch {
+            container.settings.setDismissedAnnouncementId(if (muted) "__all__" else "")
+        }
+        _ui.update { it.copy(announcementsMuted = muted) }
+    }
+
     fun moveQueueItem(fromIndex: Int, toIndex: Int) {
         container.downloads.moveQueueItem(fromIndex, toIndex)
     }
@@ -825,6 +907,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             refreshQuota()
             event(UiEvent.Message(context.getString(R.string.action_refresh)))
         }
+    }
+
+    fun loadPurchaseHistory(onResult: (List<com.mmtube.app.data.PurchaseRecord>) -> Unit) {
+        viewModelScope.launch { onResult(container.account.purchaseHistory()) }
     }
 
     fun deleteAccountData() {

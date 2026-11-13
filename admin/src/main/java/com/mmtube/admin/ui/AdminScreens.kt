@@ -4,6 +4,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Base64
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -83,9 +87,13 @@ private fun fmtDateTime(ms: Long?): String = when (ms) {
     }.getOrDefault("—")
 }
 
-private fun decodeBase64Image(value: String): Bitmap? = runCatching {
+private fun decodeBase64Image(value: String, maxDim: Int = 720): Bitmap? = runCatching {
     val bytes = Base64.decode(value, Base64.DEFAULT)
-    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    var sample = 1
+    while (maxOf(bounds.outWidth, bounds.outHeight) / sample > maxDim) sample *= 2
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, BitmapFactory.Options().apply { inSampleSize = sample })
 }.getOrNull()
 
 @Composable
@@ -115,10 +123,44 @@ private fun Panel(
 @Composable
 fun PaymentsTab(ui: AdminUiState, vm: AdminViewModel) {
     Column(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Text("Pending payments — screenshot နဲ့ ငွေပြ ကို စစ်ဆေးပါ", color = OnDark, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Pending payments (${ui.pendingPayments.size})", color = OnDark, fontWeight = FontWeight.Bold, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            androidx.compose.material3.TextButton(onClick = vm::loadPendingPayments) { Text("Refresh", color = Aqua) }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            TodayStatChip("ယနေ့ဝင်ငွေ", "${ui.revenueTodayKs} Ks")
+            TodayStatChip("ယနေ့", "${ui.paymentsTodayCount} ခု")
+            TodayStatChip("လစာ", ui.monthlyRevenue.lastOrNull()?.second?.let { it.toString() + " Ks" } ?: "0 Ks")
+        }
+        MonthlyRevenueChart(ui.monthlyRevenue)
+        OutlinedTextField(
+            value = ui.paymentSearchQuery,
+            onValueChange = vm::updatePaymentSearch,
+            placeholder = { Text("ဖုန်း / User ID ရှာရန်", color = Muted) },
+            singleLine = true,
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Aqua, unfocusedBorderColor = Color(0xFF26354E),
+                focusedTextColor = OnDark, unfocusedTextColor = OnDark,
+                cursorColor = Aqua,
+                focusedContainerColor = FieldFill, unfocusedContainerColor = FieldFill
+            )
+        )
+        if (ui.selectedPaymentIds.isNotEmpty()) {
+            androidx.compose.material3.Button(
+                onClick = vm::approveSelectedPayments,
+                enabled = !ui.busy,
+                modifier = Modifier.fillMaxWidth().height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Aqua, contentColor = Color(0xFF03211A))
+            ) {
+                Text("ရွေးထား ${ui.selectedPaymentIds.size} ခု ကို အတည်ပြုရန်", fontWeight = FontWeight.Bold)
+            }
+        }
         NoteField(
             value = ui.adminNote,
             onValueChange = vm::setAdminNote,
@@ -127,11 +169,71 @@ fun PaymentsTab(ui: AdminUiState, vm: AdminViewModel) {
         if (ui.payingLoading) {
             LinearProgressIndicator(color = Amber, modifier = Modifier.fillMaxWidth())
         }
-        ui.pendingPayments.forEach { payment ->
-            PaymentCard(payment = payment, vm = vm, adminNote = ui.adminNote)
+        val q = ui.paymentSearchQuery.trim().lowercase()
+        val filtered = ui.pendingPayments.filter { payment ->
+            q.isBlank() || listOfNotNull(payment.userCode, payment.buyerPhone, payment.email, payment.plan)
+                .any { it.lowercase().contains(q) }
         }
-        if (!ui.payingLoading && ui.pendingPayments.isEmpty()) {
+        filtered.forEach { payment ->
+            PaymentCard(
+                payment = payment,
+                vm = vm,
+                adminNote = ui.adminNote,
+                selected = payment.id in ui.selectedPaymentIds,
+                onToggleSelected = { vm.togglePaymentSelection(payment.id) }
+            )
+        }
+        if (!ui.payingLoading && filtered.isEmpty()) {
             Text("Pending payment မရှိသေးပါ", color = Muted)
+        }
+    }
+}
+
+@Composable
+private fun TodayStatChip(label: String, value: String, modifier: Modifier = Modifier) {
+    Surface(shape = RoundedCornerShape(10.dp), color = CardFill, modifier = modifier) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Text(label, color = Muted, fontSize = 10.sp)
+            Text(value, color = Aqua, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+        }
+    }
+}
+
+@Composable
+private fun MonthlyRevenueChart(data: List<Pair<String, Long>>) {
+    if (data.isEmpty()) return
+    val maxAmount = data.maxOf { it.second }.coerceAtLeast(1L)
+    val burmeseMonths = listOf("ဇန်", "ဖေ", "မတ်", "ဧပြီ", "မေ", "ဇွန်", "ဇူ", "သြ", "စက်", "အောက်", "နို", "ဒီ")
+    Surface(shape = RoundedCornerShape(14.dp), color = CardFill, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(14.dp)) {
+            Text("လစဉ် ဝင်ငွေ (Ks)", color = Muted, fontSize = 11.sp)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Bottom, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                data.forEach { (key, amount) ->
+                    val monthIndex = key.substringAfter('-').toIntOrNull()?.minus(1) ?: 0
+                    val monthLabel = burmeseMonths.getOrElse(monthIndex.coerceIn(0, 11)) { key.takeLast(2) }
+                    val fraction = (amount.toFloat() / maxAmount).coerceIn(0.05f, 1f)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.weight(1f)) {
+                        Text("${amount / 1000}K", color = Aqua, fontSize = 9.sp)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(84.dp)
+                                .padding(top = 6.dp)
+                                .background(Color(0x66131E33), RoundedCornerShape(6.dp)),
+                            contentAlignment = Alignment.BottomCenter
+                        ) {
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .height((84 * fraction).dp)
+                                    .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                                    .background(Aqua)
+                            )
+                        }
+                        Text(monthLabel, color = Muted, fontSize = 9.sp, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+            }
         }
     }
 }
@@ -162,32 +264,54 @@ private fun NoteField(
 }
 
 @Composable
-private fun PaymentCard(payment: PaymentRequest, vm: AdminViewModel, adminNote: String) {
+private fun PaymentCard(
+    payment: PaymentRequest,
+    vm: AdminViewModel,
+    adminNote: String,
+    selected: Boolean = false,
+    onToggleSelected: (() -> Unit)? = null
+) {
     val context = LocalContext.current
-    val bitmap = remember(payment.imageBase64) { decodeBase64Image(payment.imageBase64) }
+    var showFullImage by remember { mutableStateOf(false) }
+    val bitmap = remember(payment.imageBase64) { decodeBase64Image(payment.imageBase64, maxDim = 720) }
+    val fullBitmap = remember(showFullImage) { if (showFullImage) decodeBase64Image(payment.imageBase64, maxDim = 2000) else null }
+    val expectedKs = planAmountAdmin(payment.plan)
+    val amountOk = payment.amountKs == expectedKs.toLong()
     Panel {
         Row(verticalAlignment = Alignment.CenterVertically) {
+            onToggleSelected?.let {
+                Checkbox(checked = selected, onCheckedChange = { it() })
+            }
             Text(payment.userCode, color = OnDark, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             Text(Plans.label(payment.plan), color = Aqua, fontWeight = FontWeight.Bold)
         }
         Text(formatDateTimeMs(payment.createdAt), color = Muted, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
         Text("Email: ${payment.email ?: "—"}", color = Muted, fontSize = 11.sp)
         Text("KBZ Pay sender: ${payment.buyerPhone ?: "—"}", color = Muted, fontSize = 11.sp)
-        Text("Amount: ${payment.amountKs} Ks", color = OnDark, fontSize = 12.sp)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Amount: ${payment.amountKs} Ks", color = OnDark, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            Text(
+                if (amountOk) "✓ ${expectedKs} Ks — matches" else "✗ Mismatch (${expectedKs} Ks)",
+                color = if (amountOk) Color(0xFF58E0A8) else Danger,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
         payment.note?.let { note ->
             Text("Note: $note", color = Aqua, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
         }
         bitmap?.let { bmp ->
-            androidx.compose.foundation.Image(
+            Image(
                 bitmap = bmp.asImageBitmap(),
                 contentDescription = "Payment screenshot",
                 contentScale = ContentScale.Fit,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(240.dp)
+                    .height(220.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFF0C1322))
                     .padding(top = 8.dp)
+                    .clickable { showFullImage = true }
             )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
@@ -205,6 +329,30 @@ private fun PaymentCard(payment: PaymentRequest, vm: AdminViewModel, adminNote: 
             ) { Text("Reject", fontWeight = FontWeight.Bold) }
         }
     }
+    if (showFullImage && fullBitmap != null) {
+        AlertDialog(
+            onDismissRequest = { showFullImage = false },
+            containerColor = Color(0xFF05070D),
+            confirmButton = { TextButton(onClick = { showFullImage = false }) { Text("ပိတ်ရန်", color = Aqua) } },
+            title = { Text("သက်သေပုံ — ${payment.userCode}", color = OnDark) },
+            text = {
+                Image(
+                    bitmap = fullBitmap.asImageBitmap(),
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxWidth().height(420.dp)
+                )
+            }
+        )
+    }
+}
+
+private fun planAmountAdmin(plan: String): Int = when (plan) {
+    "1m" -> 1000
+    "3m" -> 2000
+    "6m" -> 4000
+    "12m" -> 7000
+    else -> 0
 }
 
 private fun formatDateTimeMs(ms: Long): String = runCatching {
@@ -322,8 +470,13 @@ private fun LogRow(log: ActivationLog, vm: AdminViewModel) {
                 )
                 log.note?.let { Text("Note: $it", color = Muted, fontSize = 10.sp) }
             }
-            if (log.undoneAt == null) {
-                TextButton(onClick = { vm.undoActivation(log) }) { Text("Undo", color = Amber, fontSize = 12.sp) }
+            Row {
+                if (log.source == "payment" && log.undoneAt == null) {
+                    TextButton(onClick = { vm.refundFromLog(log) }) { Text("↩ ပြန်အမ်း", color = Danger, fontSize = 12.sp) }
+                }
+                if (log.undoneAt == null) {
+                    TextButton(onClick = { vm.undoActivation(log) }) { Text("Undo", color = Amber, fontSize = 12.sp) }
+                }
             }
         }
     }
@@ -360,15 +513,30 @@ fun BroadcastTab(ui: AdminUiState, vm: AdminViewModel) {
                 ),
                 shape = RoundedCornerShape(12.dp)
             )
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                androidx.compose.material3.Switch(
+                    checked = ui.announcementDryRun,
+                    onCheckedChange = vm::setAnnouncementDryRun
+                )
+                Text(
+                    "Dry-run (ကိုယ့်ကိုပဲ အစမ်းမြင်ရန်)",
+                    color = Muted,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(start = 10.dp).weight(1f)
+                )
+            }
             androidx.compose.material3.Button(
                 onClick = vm::publishAnnouncement,
                 enabled = !ui.announcementSaving && ui.announcementText.isNotBlank(),
-                modifier = Modifier.fillMaxWidth().padding(top = 12.dp).height(46.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp).height(46.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Aqua, contentColor = Color(0xFF03211A))
             ) {
                 Icon(Icons.Rounded.Send, contentDescription = null, modifier = Modifier.size(16.dp))
-                Text("  ကြေညာချက် ပို့ပါ", fontWeight = FontWeight.Bold)
+                Text(if (ui.announcementDryRun) "  ကိုယ်ပိုင်အစမ်းပို့ပါ" else "  ကြေညာချက် ပို့ပါ", fontWeight = FontWeight.Bold)
             }
         }
     }

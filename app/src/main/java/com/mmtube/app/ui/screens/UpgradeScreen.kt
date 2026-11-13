@@ -32,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -128,21 +129,6 @@ fun UpgradeScreen(
         UserIdCard(ui = ui, vm = vm)
         PaymentCard()
         PaymentProofCard(ui = ui, vm = vm, selected = selected, isActive = isActive)
-        StepsCard()
-
-        GradientButton(
-            text = context.getString(R.string.upgrade_contact),
-            onClick = vm::openSupport,
-            modifier = Modifier.fillMaxWidth(),
-            icon = Icons.Rounded.Bolt
-        )
-        Text(
-            text = context.getString(R.string.upgrade_no_payment) + "\n" + context.getString(R.string.upgrade_price_note),
-            style = MmtubeType.LabelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 24.dp)
-        )
     }
 }
 
@@ -386,14 +372,9 @@ private fun PaymentProofCard(
     var imageBase64 by remember { mutableStateOf<String?>(null) }
     var imageAttached by remember { mutableStateOf(false) }
     var submitting by remember { mutableStateOf(false) }
-    var latest by remember { mutableStateOf<PaymentSummary?>(null) }
+    var confirmSubmit by remember { mutableStateOf(false) }
     val signedIn = ui.account.profile != null
-
-    LaunchedEffect(ui.account.profile) {
-        if (ui.account.profile != null) {
-            vm.fetchMyLatestPayment { latest = it }
-        }
-    }
+    val latest = ui.latestPayment
 
     val pickImage = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -489,19 +470,7 @@ private fun PaymentProofCard(
                     Toast.makeText(context, context.getString(R.string.payment_no_image), Toast.LENGTH_SHORT).show()
                     return@Button
                 }
-                submitting = true
-                vm.submitPayment(selected, phone, note, payload) { ok, error ->
-                    submitting = false
-                    if (ok) {
-                        Toast.makeText(context, context.getString(R.string.payment_submit_ok), Toast.LENGTH_LONG).show()
-                        imageBase64 = null
-                        imageAttached = false
-                        note = ""
-                        vm.fetchMyLatestPayment { latest = it }
-                    } else {
-                        Toast.makeText(context, context.getString(R.string.payment_submit_err, error ?: "?"), Toast.LENGTH_LONG).show()
-                    }
-                }
+                confirmSubmit = true
             },
             enabled = !submitting && signedIn,
             shape = RoundedCornerShape(14.dp),
@@ -515,6 +484,43 @@ private fun PaymentProofCard(
             )
         }
 
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { confirmSubmit = false },
+            title = { Text(context.getString(R.string.payment_confirm_title)) },
+            text = { Text(context.getString(R.string.payment_confirm_body, planLabel(selected), planAmountKs(selected))) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    confirmSubmit = false
+                    val payload = imageBase64 ?: return@TextButton
+                    submitting = true
+                    vm.submitPayment(selected, phone, note, payload) { ok, error ->
+                        submitting = false
+                        if (ok) {
+                            Toast.makeText(context, context.getString(R.string.payment_submit_ok), Toast.LENGTH_LONG).show()
+                            imageBase64 = null
+                            imageAttached = false
+                            note = ""
+                        } else {
+                            Toast.makeText(context, context.getString(R.string.payment_submit_err, error ?: "?"), Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }) { Text(context.getString(R.string.payment_confirm_yes)) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { confirmSubmit = false }) {
+                    Text(context.getString(android.R.string.cancel))
+                }
+            }
+        )
+
+        if (latest?.status == "pending") {
+            TextButton(
+                onClick = { vm.cancelMyPendingPayment() },
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+            ) {
+                Text(context.getString(R.string.payment_cancel_submit), color = MmtubePalette.Danger)
+            }
+        }
         latest?.let { p ->
             val (label, color) = when (p.status) {
                 "approved" -> context.getString(R.string.payment_status_approved) to MmtubePalette.Success

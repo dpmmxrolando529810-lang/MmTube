@@ -36,6 +36,8 @@ class AuthRepository(
         val user = firebaseAuth.currentUser
         _state.value = if (user == null) {
             AuthState.SignedOut
+        } else if (user.isAnonymous) {
+            AuthState.Anonymous(user.uid)
         } else {
             AuthState.SignedIn(
                 uid = user.uid,
@@ -48,6 +50,23 @@ class AuthRepository(
 
     init {
         auth?.addAuthStateListener(listener)
+        // Guests get a silent anonymous session so server-side quota is enforceable.
+        auth?.let { firebaseAuth ->
+            if (firebaseAuth.currentUser == null) {
+                runCatching {
+                    firebaseAuth.signInAnonymously().addOnSuccessListener { result ->
+                        _state.value = AuthState.Anonymous(result.user?.uid ?: "")
+                    }
+                }
+            } else if (firebaseAuth.currentUser?.isAnonymous == true) {
+                _state.value = AuthState.Anonymous(firebaseAuth.currentUser?.uid.orEmpty())
+            }
+        }
+    }
+
+    suspend fun signInAnonymously(): Boolean {
+        val firebaseAuth = auth ?: return false
+        return runCatching { firebaseAuth.signInAnonymously().await() }.isSuccess
     }
 
     val currentUid: String?
@@ -148,5 +167,19 @@ class AuthRepository(
     fun signOut() {
         auth?.signOut()
         _state.value = AuthState.SignedOut
+    }
+
+    suspend fun deleteAuthAccount(): Result<Unit> {
+        val firebaseAuth = auth ?: return Result.failure(MmtubeException(ErrorKind.FIREBASE, "Cloud not configured"))
+        return runCatching {
+            firebaseAuth.currentUser?.delete()?.await()
+                ?: throw MmtubeException(ErrorKind.FIREBASE, "Not signed in")
+            _state.value = AuthState.SignedOut
+        }.recoverCatching { error ->
+            if (error is com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException) {
+                throw MmtubeException(ErrorKind.FIREBASE, "Security reasons: ပြန်လည်ဝင်ရောက်ပြီး ခေတ္တခဏ စောင့်ပါ — နောက်တစ်ကြိမ် ကြိုးစားပါ", error)
+            }
+            throw MmtubeException(ErrorKind.FIREBASE, error.message, error)
+        }.map { Unit }
     }
 }

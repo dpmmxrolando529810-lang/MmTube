@@ -86,15 +86,31 @@ data class UserProfile(
     val planExpiresAt: Long?,
     val dailyLimit: Int,
     val disabled: Boolean,
-    val createdAt: Long?
+    val createdAt: Long?,
+    val trialEndsAt: Long? = null,
+    val anonymous: Boolean = false,
+    val forceSignOutAt: Long? = null
 ) {
     val isPaid: Boolean
         get() = !disabled &&
             Plans.isPaid(plan) &&
             (planExpiresAt ?: 0L) > System.currentTimeMillis()
 
+    val isTrial: Boolean
+        get() = !disabled && (trialEndsAt ?: 0L) > System.currentTimeMillis()
+
+    /** Paid or within the 7-day trial. */
+    val hasFullAccess: Boolean
+        get() = isPaid || isTrial
+
+    /** Grace: keep access for 2 days after expiry so users can renew in peace. */
+    val inGracePeriod: Boolean
+        get() = Plans.isPaid(plan) &&
+            (planExpiresAt ?: 0L) <= System.currentTimeMillis() &&
+            (planExpiresAt ?: 0L) > System.currentTimeMillis() - 2L * 24 * 3600 * 1000
+
     val isExpired: Boolean
-        get() = Plans.isPaid(plan) && (planExpiresAt ?: 0L) <= System.currentTimeMillis()
+        get() = Plans.isPaid(plan) && (planExpiresAt ?: 0L) <= System.currentTimeMillis() - 2L * 24 * 3600 * 1000
 }
 
 data class UsageInfo(
@@ -107,6 +123,8 @@ data class UsageInfo(
 sealed interface AuthState {
     data object Loading : AuthState
     data object SignedOut : AuthState
+    /** Anonymous Firebase session (guest) — used to enforce the free daily quota server-side. */
+    data class Anonymous(val uid: String) : AuthState
     data class SignedIn(
         val uid: String,
         val email: String?,
@@ -125,7 +143,8 @@ data class AccountUi(
     val error: String? = null
 ) {
     val isSignedIn: Boolean get() = auth is AuthState.SignedIn
-    val isGuest: Boolean get() = auth is AuthState.SignedOut
+    val isGuest: Boolean get() = auth is AuthState.SignedOut || auth is AuthState.Anonymous
+    val isAnonymous: Boolean get() = auth is AuthState.Anonymous
 }
 
 data class QuotaState(
@@ -135,7 +154,8 @@ data class QuotaState(
     val nextAllowedAt: Long? = null,
     val totalDownloads: Int = 0,
     val disabled: Boolean = false,
-    val reason: String? = null
+    val reason: String? = null,
+    val trial: Boolean = false
 ) {
     fun remainingMs(now: Long = System.currentTimeMillis()): Long =
         ((nextAllowedAt ?: 0L) - now).coerceAtLeast(0L)
@@ -229,6 +249,14 @@ data class HistoryItem(
     val downloadDurationMs: Long = 0L
 )
 
+data class PurchaseRecord(
+    val plan: String,
+    val months: Int,
+    val amountKs: Long,
+    val createdAt: Long,
+    val source: String
+)
+
 data class PaymentSummary(
     val id: String,
     val plan: String,
@@ -255,5 +283,6 @@ data class SettingsSnapshot(
     val chimeEnabled: Boolean = true,
     val lastSeenVersion: String = "",
     val dismissedAnnouncementId: String = "",
-    val lastPlanReminderAt: Long = 0L
+    val lastPlanReminderAt: Long = 0L,
+    val lastForceSignOutSeen: Long = 0L
 )

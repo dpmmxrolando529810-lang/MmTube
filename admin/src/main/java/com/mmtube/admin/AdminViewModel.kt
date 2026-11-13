@@ -29,6 +29,8 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
     private val auth: FirebaseAuth? = container.auth
     private val firestore: FirebaseFirestore? = container.firestore
 
+    private var autoRejectRan = false
+
     private val _ui = MutableStateFlow(
         AdminUiState(auth = if (auth == null) AdminAuthState.NotConfigured else AdminAuthState.Loading)
     )
@@ -181,6 +183,17 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
         viewModelScope.launch { reloadUser(uid) }
     }
 
+    private fun addMonthsClamped(base: Long, months: Int): Long {
+        val calendar = Calendar.getInstance().apply {
+            timeInMillis = base
+            val day = get(Calendar.DAY_OF_MONTH)
+            set(Calendar.DAY_OF_MONTH, 1)
+            add(Calendar.MONTH, months)
+            set(Calendar.DAY_OF_MONTH, minOf(day, getActualMaximum(Calendar.DAY_OF_MONTH)))
+        }
+        return calendar.timeInMillis
+    }
+
     fun activatePlan(plan: String) {
         val user = _ui.value.user ?: return
         if (!Plans.isPaid(plan)) return
@@ -195,11 +208,7 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
                 } else {
                     now
                 }
-                val calendar = Calendar.getInstance().apply {
-                    timeInMillis = base
-                    add(Calendar.MONTH, months)
-                }
-                val expires = calendar.timeInMillis
+                val expires = addMonthsClamped(base, months)
                 db.collection("users").document(user.uid).set(
                     mapOf(
                         "plan" to plan,
@@ -312,7 +321,7 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
     fun setTab(tab: AdminTab) {
         _ui.update { it.copy(tab = tab, message = null) }
         when (tab) {
-            AdminTab.PAYMENTS -> loadPendingPayments()
+            AdminTab.PAYMENTS -> { loadPendingPayments(); loadTodayAndMonthlyRevenue() }
             AdminTab.EXPIRING -> loadExpiringUsers()
             AdminTab.LOGS -> loadLogs()
             else -> Unit
@@ -338,28 +347,104 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
             _ui.update { it.copy(message = "ကြေညာချက်စာသား ရေးပါ") }
             return
         }
+        val dryRun = _ui.value.announcementDryRun
+        val adminEmail = auth?.currentUser?.email ?: "unknown@admin"
         _ui.update { it.copy(announcementSaving = true) }
         viewModelScope.launch {
             val result = runCatching {
                 val id = "ann_" + System.currentTimeMillis()
-                db.collection("announcements").document("latest").set(
-                    mapOf(
-                        "text" to text,
-                        "id" to id,
-                        "createdAt" to Timestamp(Date())
-                    )
-                ).await()
+                val payload = mutableMapOf<String, Any>(
+                    "text" to text,
+                    "id" to id,
+                    "createdAt" to Timestamp(Date())
+                )
+                if (dryRun) {
+                    payload["dryRun"] = true
+                    payload["targetEmail"] = adminEmail
+                }
+                db.collection("announcements").document("latest").set(payload).await()
                 id
             }
             result
                 .onSuccess {
-                    logAction("✦ ကြေညာချက် ပို့ပြီးပါပြီ")
-                    _ui.update { it.copy(announcementSaving = false, announcementText = "", message = "ကြေညာချက် ပို့ပြီးပါပြီ") }
+                    logAction(if (dryRun) "✦ Dry-run ကြေညာချက် ပို့ပြီး" else "✦ ကြေညာချက် ပို့ပြီးပါပြီ")
+                    _ui.update { it.copy(announcementSaving = false, announcementText = "", message = if (dryRun) "Admin သာမြင်မည် (dry-run)" else "ကြေညာချက် ပို့ပြီးပါပြီ") }
                 }
                 .onFailure { error ->
                     _ui.update { it.copy(announcementSaving = false, message = "Error (${error.message})") }
                 }
         }
+    }
+
+    fun refundFromLog(log: ActivationLog) {
+        val db = firestore ?: return
+        val paymentId = log.paymentId ?: return
+        _ui.update { it.copy(busy = true) }
+        viewModelScope.launch {
+            val result = runCatching {
+                val paymentSnap = db.collection("payments").document(paymentId).get().await()
+                val payment = if (paymentSnap.exists()) paymentSnap.toPaymentRequest() else null
+                if (payment != null) {
+                    refundOneNow(payment, "ငွေပြန်အမ်း (မှတ်တမ်းမှ)")
+                } else {
+                    // Fallback: at least flip the user to free
+                    db.collection("users").document(log.uid).set(
+                        mapOf(
+                            "plan" to Plans.FREE,
+                            "planExpiresAt" to null,
+                            "updatedAt" to FieldValue.serverTimestamp()
+                        ),
+                        SetOptions.merge()
+                    ).await()
+                }
+            }
+            result
+                .onSuccess {
+                    logAction("↩ ${log.userCode} — refund")
+                    _ui.update { it.copy(busy = false, message = "${log.userCode} — ငွေပြန်အမ်းပြီး") }
+                    loadLogs()
+                }
+                .onFailure { error ->
+                    _ui.update { it.copy(busy = false, message = "Error (${error.message})") }
+                }
+        }
+    }
+
+    private suspend fun refundOneNow(payment: PaymentRequest, note: String) {
+        val db = firestore ?: error("Firestore not configured")
+        db.collection("users").document(payment.uid).set(
+            mapOf(
+                "plan" to Plans.FREE,
+                "planExpiresAt" to null,
+                "disabled" to false,
+                "updatedAt" to FieldValue.serverTimestamp()
+            ),
+            SetOptions.merge()
+        ).await()
+        db.collection("payments").document(payment.id).set(
+            mapOf(
+                "status" to "refunded",
+                "reviewedAt" to FieldValue.serverTimestamp(),
+                "adminNote" to note,
+                "imageBase64" to ""
+            ),
+            SetOptions.merge()
+        ).await()
+        writeActivationLog(
+            db = db,
+            uid = payment.uid,
+            userCode = payment.userCode,
+            plan = Plans.FREE,
+            months = 0,
+            prevPlan = payment.plan,
+            prevExpiresAt = null,
+            newExpiresAt = null,
+            source = "refund",
+            paymentId = payment.id,
+            amountKs = payment.amountKs,
+            buyerPhone = payment.buyerPhone,
+            note = note
+        )
     }
 
     fun loadPendingPayments() {
@@ -373,11 +458,61 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
                 .onSuccess { snap ->
                     val list = snap.documents.mapNotNull { it.toPaymentRequest() }.sortedByDescending { it.createdAt }
                     _ui.update { it.copy(payingLoading = false, pendingPayments = list) }
+                    if (!autoRejectRan) {
+                        autoRejectRan = true
+                        autoRejectStale()
+                    }
                 }
                 .onFailure { error ->
                     _ui.update { it.copy(payingLoading = false, message = "Error (${error.message})") }
                 }
         }
+    }
+
+    private suspend fun approveOneNow(payment: PaymentRequest, note: String): Long {
+        val db = firestore ?: error("Firestore not configured")
+        val paymentRef = db.collection("payments").document(payment.id)
+        val userDoc = db.collection("users").document(payment.uid).get().await()
+        val prevPlan = userDoc.getString("plan") ?: Plans.FREE
+        val prevExpires = userDoc.getTimestamp("planExpiresAt")?.toDate()?.time
+        val now = System.currentTimeMillis()
+        val base = if (Plans.isPaid(prevPlan) && (prevExpires ?: 0L) > now) prevExpires!! else now
+        val expires = addMonthsClamped(base, payment.planMonths)
+        db.collection("users").document(payment.uid).set(
+            mapOf(
+                "plan" to payment.plan,
+                "planExpiresAt" to Timestamp(Date(expires)),
+                "dailyLimit" to 1,
+                "disabled" to false,
+                "updatedAt" to FieldValue.serverTimestamp()
+            ),
+            SetOptions.merge()
+        ).await()
+        paymentRef.set(
+            mapOf(
+                "status" to "approved",
+                "reviewedAt" to FieldValue.serverTimestamp(),
+                "adminNote" to note.ifBlank { null },
+                "imageBase64" to ""
+            ),
+            SetOptions.merge()
+        ).await()
+        writeActivationLog(
+            db = db,
+            uid = payment.uid,
+            userCode = payment.userCode,
+            plan = payment.plan,
+            months = payment.planMonths,
+            prevPlan = prevPlan,
+            prevExpiresAt = prevExpires,
+            newExpiresAt = expires,
+            source = "payment",
+            paymentId = payment.id,
+            amountKs = payment.amountKs,
+            buyerPhone = payment.buyerPhone,
+            note = note.ifBlank { payment.note }
+        )
+        return expires
     }
 
     fun approvePayment(payment: PaymentRequest) {
@@ -387,51 +522,7 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
         val note = _ui.value.adminNote.trim()
         viewModelScope.launch {
             val result = runCatching {
-                val paymentRef = db.collection("payments").document(payment.id)
-                val paymentDoc = paymentRef.get().await()
-                val prevPlan = paymentDoc.getString("plan") ?: Plans.FREE
-                val prevExpires = paymentDoc.getTimestamp("planExpiresAt")?.toDate()?.time
-                val now = System.currentTimeMillis()
-                val base = if (Plans.isPaid(prevPlan) && (prevExpires ?: 0L) > now) prevExpires!! else now
-                val calendar = Calendar.getInstance().apply {
-                    timeInMillis = base
-                    add(Calendar.MONTH, payment.planMonths)
-                }
-                val expires = calendar.timeInMillis
-                db.collection("users").document(payment.uid).set(
-                    mapOf(
-                        "plan" to payment.plan,
-                        "planExpiresAt" to Timestamp(Date(expires)),
-                        "dailyLimit" to 1,
-                        "disabled" to false,
-                        "updatedAt" to FieldValue.serverTimestamp()
-                    ),
-                    SetOptions.merge()
-                ).await()
-                paymentRef.set(
-                    mapOf(
-                        "status" to "approved",
-                        "reviewedAt" to FieldValue.serverTimestamp(),
-                        "adminNote" to note.ifBlank { null }
-                    ),
-                    SetOptions.merge()
-                ).await()
-                writeActivationLog(
-                    db = db,
-                    uid = payment.uid,
-                    userCode = payment.userCode,
-                    plan = payment.plan,
-                    months = payment.planMonths,
-                    prevPlan = prevPlan,
-                    prevExpiresAt = prevExpires,
-                    newExpiresAt = expires,
-                    source = "payment",
-                    paymentId = payment.id,
-                    amountKs = payment.amountKs,
-                    buyerPhone = payment.buyerPhone,
-                    note = note.ifBlank { payment.note }
-                )
-                expires
+                approveOneNow(payment, note)
             }
             result
                 .onSuccess { expires ->
@@ -441,7 +532,8 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
                             busy = false,
                             message = context.getString(R.string.admin_success),
                             adminNote = "",
-                            approvalTemplate = buildApprovalMessage(payment.userCode, payment.plan, expires)
+                            approvalTemplate = buildApprovalMessage(payment.userCode, payment.plan, expires),
+                            selectedPaymentIds = emptySet()
                         )
                     }
                     loadPendingPayments()
@@ -449,6 +541,190 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
                 }
                 .onFailure { error ->
                     _ui.update { it.copy(busy = false, message = context.getString(R.string.admin_error) + " (${error.message})") }
+                }
+        }
+    }
+
+    fun approveSelectedPayments() {
+        val db = firestore ?: return
+        if (_ui.value.busy) return
+        val selected = _ui.value.selectedPaymentIds
+        if (selected.isEmpty()) return
+        val payments = _ui.value.pendingPayments.filter { it.id in selected }
+        if (payments.isEmpty()) return
+        _ui.update { it.copy(busy = true) }
+        val note = _ui.value.adminNote.trim()
+        viewModelScope.launch {
+            var ok = 0
+            var fail = 0
+            for (payment in payments) {
+                runCatching { approveOneNow(payment, note) }
+                    .onSuccess { ok++ }
+                    .onFailure { fail++ }
+            }
+            logAction("✓ ${ok} ခု အတည်ပြု (${fail} fail)")
+            _ui.update {
+                it.copy(
+                    busy = false,
+                    message = if (fail == 0) "ငွေပေးချေမှု ${ok} ခု အတည်ပြုပြီး" else "${ok} အောင်မြင်, ${fail} ပျက်",
+                    adminNote = "",
+                    selectedPaymentIds = emptySet()
+                )
+            }
+            loadPendingPayments()
+            loadLogs()
+        }
+    }
+
+    fun togglePaymentSelection(paymentId: String) {
+        _ui.update {
+            val next = it.selectedPaymentIds.toMutableSet()
+            if (next.contains(paymentId)) next.remove(paymentId) else next.add(paymentId)
+            it.copy(selectedPaymentIds = next)
+        }
+    }
+
+    fun updatePaymentSearch(value: String) {
+        _ui.update { it.copy(paymentSearchQuery = value) }
+    }
+
+    private fun autoRejectStale() {
+        val db = firestore ?: return
+        val cutoff = System.currentTimeMillis() - 5L * 24 * 3600 * 1000
+        val stale = _ui.value.pendingPayments.filter { it.createdAt in 1 until cutoff }
+        if (stale.isEmpty()) return
+        viewModelScope.launch {
+            stale.forEach { payment ->
+                runCatching {
+                    db.collection("payments").document(payment.id).set(
+                        mapOf(
+                            "status" to "rejected",
+                            "reviewedAt" to FieldValue.serverTimestamp(),
+                            "adminNote" to "၅ ရက်ကျော်သွား — auto ငြင်းပယ်",
+                            "imageBase64" to ""
+                        ),
+                        SetOptions.merge()
+                    ).await()
+                }
+            }
+            loadPendingPayments()
+        }
+    }
+
+    fun loadTodayAndMonthlyRevenue() {
+        val db = firestore ?: return
+        viewModelScope.launch {
+            val result = runCatching {
+                db.collection("payments")
+                    .whereEqualTo("status", "approved")
+                    .get()
+                    .await()
+            }
+            result.onSuccess { snap ->
+                val calendar = Calendar.getInstance()
+                val today = Calendar.getInstance().apply { timeInMillis = System.currentTimeMillis() }
+                var todayCount = 0
+                var todayKs = 0L
+                val monthly = mutableMapOf<String, Long>()
+                for (doc in snap.documents) {
+                    val time = doc.getTimestamp("reviewedAt")?.toDate()?.time
+                        ?: doc.getTimestamp("createdAt")?.toDate()?.time ?: continue
+                    val amount = doc.getLong("amountKs") ?: 0L
+                    val c = Calendar.getInstance().apply { this.timeInMillis = time }
+                    if (c.get(Calendar.YEAR) == today.get(Calendar.YEAR) &&
+                        c.get(Calendar.DAY_OF_YEAR) == today.get(Calendar.DAY_OF_YEAR)
+                    ) {
+                        todayCount += 1
+                        todayKs += amount
+                    }
+                    val key = String.format(java.util.Locale.US, "%04d-%02d", c.get(Calendar.YEAR), c.get(Calendar.MONTH) + 1)
+                    monthly[key] = (monthly[key] ?: 0L) + amount
+                }
+                val sorted = monthly.entries.sortedBy { it.key }.takeLast(6).map { it.key to it.value }
+                _ui.update { it.copy(paymentsTodayCount = todayCount, revenueTodayKs = todayKs, monthlyRevenue = sorted) }
+            }
+        }
+    }
+
+    fun refundPayment(payment: PaymentRequest) {
+        if (_ui.value.busy) return
+        val note = _ui.value.adminNote.takeIf { it.isNotBlank() } ?: "Refunded by admin"
+        _ui.update { it.copy(busy = true) }
+        viewModelScope.launch {
+            val result = runCatching { refundOneNow(payment, note) }
+            result
+                .onSuccess {
+                    logAction("↩ ${payment.userCode} — refund")
+                    _ui.update { it.copy(busy = false, message = "${payment.userCode} — ငွေပြန်အမ်းပြီး", adminNote = "") }
+                    loadPendingPayments()
+                    loadLogs()
+                }
+                .onFailure { error ->
+                    _ui.update { it.copy(busy = false, message = context.getString(R.string.admin_error) + " (${error.message})") }
+                }
+        }
+    }
+
+    fun confirmExtendWithWarning() {
+        val user = _ui.value.pendingExtendConfirmation ?: return
+        _ui.update { it.copy(pendingExtendConfirmation = null) }
+        activatePlanFor(user, "1m", "+1 လ အမြန်တိုး")
+    }
+
+    fun cancelExtendWarning() {
+        _ui.update { it.copy(pendingExtendConfirmation = null) }
+    }
+
+    fun setAnnouncementDryRun(value: Boolean) {
+        _ui.update { it.copy(announcementDryRun = value) }
+    }
+
+    fun quickExtendChecked(user: AdminUser) {
+        val remaining = (user.planExpiresAt ?: 0L) - System.currentTimeMillis()
+        if (Plans.isPaid(user.plan) && remaining > 14L * 24 * 3600 * 1000) {
+            _ui.update { it.copy(pendingExtendConfirmation = user) }
+            return
+        }
+        activatePlanFor(user, "1m", "+1 လ အမြန်တိုး")
+    }
+
+    fun forceSignOutUser(user: AdminUser) {
+        val db = firestore ?: return
+        if (_ui.value.busy) return
+        _ui.update { it.copy(busy = true) }
+        viewModelScope.launch {
+            val result = runCatching {
+                db.collection("users").document(user.uid).set(
+                    mapOf(
+                        "forceSignOutAt" to Timestamp(Date()),
+                        "updatedAt" to FieldValue.serverTimestamp()
+                    ),
+                    SetOptions.merge()
+                ).await()
+                writeActivationLog(
+                    db = db,
+                    uid = user.uid,
+                    userCode = user.userCode,
+                    plan = user.plan,
+                    months = 0,
+                    prevPlan = user.plan,
+                    prevExpiresAt = user.planExpiresAt,
+                    newExpiresAt = user.planExpiresAt,
+                    source = "force_sign_out",
+                    paymentId = null,
+                    amountKs = null,
+                    buyerPhone = null,
+                    note = "Admin မှ အတင်း sign-out"
+                )
+            }
+            result
+                .onSuccess {
+                    logAction("⎋ ${user.userCode} — sign out")
+                    _ui.update { it.copy(busy = false, message = "${user.userCode} ကို sign-out လုပ်ပြီး") }
+                    reloadUser(user.uid)
+                }
+                .onFailure { error ->
+                    _ui.update { it.copy(busy = false, message = "Error (${error.message})") }
                 }
         }
     }
@@ -464,7 +740,8 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
                     mapOf(
                         "status" to "rejected",
                         "reviewedAt" to FieldValue.serverTimestamp(),
-                        "adminNote" to note.ifBlank { "Rejected by admin" }
+                        "adminNote" to note.ifBlank { "Rejected by admin" },
+                        "imageBase64" to ""
                     ),
                     SetOptions.merge()
                 ).await()
@@ -501,8 +778,7 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
     }
 
     fun quickExtend(user: AdminUser) {
-        if (_ui.value.busy) return
-        activatePlanFor(user, "1m", "+1 လ အမြန်တိုး")
+        quickExtendChecked(user)
     }
 
     private fun activatePlanFor(user: AdminUser, plan: String, note: String) {
@@ -517,11 +793,7 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
                 } else {
                     now
                 }
-                val calendar = Calendar.getInstance().apply {
-                    timeInMillis = base
-                    add(Calendar.MONTH, months)
-                }
-                val expires = calendar.timeInMillis
+                val expires = addMonthsClamped(base, months)
                 db.collection("users").document(user.uid).set(
                     mapOf(
                         "plan" to plan,
@@ -709,6 +981,7 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
             prevPlan = getString("prevPlan"),
             prevExpiresAt = getTimestamp("prevExpiresAt")?.toDate()?.time,
             source = getString("source") ?: "direct",
+        paymentId = getString("paymentId"),
             amountKs = getLong("amountKs"),
             buyerPhone = getString("buyerPhone"),
             note = getString("note"),

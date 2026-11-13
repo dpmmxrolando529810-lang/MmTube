@@ -97,7 +97,7 @@
 
     <string name="quota_free_title">Free plan</string>
     <string name="quota_free_desc">1 download every 24 hours</string>
-    <string name="quota_paid_title">Unlimited plan</string>
+    <string name="quota_paid_title">Premium plan</string>
     <string name="quota_paid_desc">Active until %1$s</string>
     <string name="quota_guest_title">Guest mode</string>
     <string name="quota_guest_desc">Local 1/24h limit on this device</string>
@@ -168,7 +168,7 @@
     <string name="account_user_id_note">Send this ID to support to activate or renew a plan. It is safer than sending your Gmail.</string>
     <string name="account_plan">Plan</string>
     <string name="account_plan_free">Free</string>
-    <string name="account_plan_unlimited">Unlimited</string>
+    <string name="account_plan_unlimited">Premium</string>
     <string name="account_plan_expires">Expires %1$s</string>
     <string name="account_plan_no_expiry">No expiry</string>
     <string name="account_member_since">Member since %1$s</string>
@@ -184,13 +184,13 @@
     <string name="account_deleted">Account data deleted</string>
     <string name="account_error">Could not load your account</string>
 
-    <string name="upgrade_title">Go Unlimited</string>
+    <string name="upgrade_title">Go Premium</string>
     <string name="upgrade_subtitle">One plan. Every download. No daily wait.</string>
     <string name="plan_1m">1 Month</string>
     <string name="plan_3m">3 Months</string>
     <string name="plan_6m">6 Months</string>
     <string name="plan_12m">12 Months</string>
-    <string name="plan_unlimited">Unlimited downloads</string>
+    <string name="plan_unlimited">Premium downloads</string>
     <string name="plan_max_quality">Maximum quality downloads</string>
     <string name="plan_no_watermark">TikTok without watermark</string>
     <string name="plan_all_devices">Same account on all your devices</string>
@@ -299,11 +299,11 @@
 
     <string name="yes">Yes</string>
     <string name="no">No</string>
-    <string name="unlimited">Unlimited</string>
+    <string name="unlimited">Premium</string>
     <string name="per_day">1 / 24h</string>
     <string name="check_again">Check again</string>
     <string name="onboarding_title">Welcome to MMTube</string>
-    <string name="onboarding_body">Paste a link → Analyze → Download at the source’s highest quality (4K + best audio). Free users get 1 download per 24h. Unlimited plans: 1 / 3 / 6 / 12 months — see Account → Upgrade.</string>
+    <string name="onboarding_body">Paste a link → Analyze → Download at the source’s highest quality (4K + best audio). Free users get 1 download per 24h. Premium plans: 1 / 3 / 6 / 12 months — see Account → Upgrade.</string>
     <string name="onboarding_got_it">Got it</string>
     <string name="action_history_cleared">Download history cleared</string>
     <string name="history_storage_used">Storage used</string>
@@ -344,7 +344,7 @@ MP3/အသံအတွက် — ခွဲပြီးကျော်ပါ။ M
 • ပိတ်ထားတဲ့ YouTube တစ်ခုကိုပဲ ကြည့်ပါ — YouTube က default အရ 480p သာ ပြတယ်ဆိုရင် အဲဒါက default ပါပဲ
 • Turbo mode (aria2c) ဖွင့်ထားပါက ဆက်လက် ဆက်လက်မြန်ဆန်စွာ ဒေါင်းမည်
 • ဖိုင်အရွယ်အစားက အကြမ်းသဘောအရ ကြီးမားမည်ဖြစ်ပါသည် — နေရာလုံလောက်အောင် စစ်ပါ</string>
-    <string name="home_premium_title">Unlimited MMTube</string>
+    <string name="home_premium_title">Premium MMTube</string>
     <string name="home_premium_desc">မကန့်သတ်ဒေါင်းလုဒ် · 4K/2K/1080p · အားလုံးအတွက် တစ်ခါတည်း payment</string>
     <string name="home_premium_cta">Upgrade</string>
     <string name="settings_search">Settings list filter ရှာရန်</string>
@@ -366,7 +366,7 @@ MP3/အသံအတွက် — ခွဲပြီးကျော်ပါ။ M
     <string name="error_no_space_body">ဒေါင်းလုဒ်ကို ဆက်လုပ်ဖို့ ဖုန်းထဲ နေရာလိုအပ်တယ်။ အဟောင်းဖိုင်များ ဖျက်ပေးမလား?</string>
     <string name="storage_full_clean">အဟောင်းဖိုင်များ ဖျက်ပါ</string>
     <string name="update_ready_notification">ဗားရှင်းအသစ် အဆင်သင့်ဖြစ်ပြီ — နှိပ်ပြီး Install လုပ်ပါ</string>
-    <string name="expired_plan_message">Unlimited Plan သက်တမ်းကုန်ပြီ — အခမဲ့သို့ ပြန်ကူးမယ်</string>
+    <string name="expired_plan_message">Premium Plan သက်တမ်းကုန်ပြီ — အခမဲ့သို့ ပြန်ကူးမယ်</string>
     <string name="notification_eta">Time remaining: %1$s</string>
 
     <string name="settings_notifications">Notifications</string>
@@ -384,7 +384,7 @@ MP3/အသံအတွက် — ခွဲပြီးကျော်ပါ။ M
 Package: %2$s
 Android: %3$d
 Firebase project: %4$s</string>
-    <string name="plan_reminder_title">Unlimited plan expiring soon</string>
+    <string name="plan_reminder_title">Premium plan expiring soon</string>
     <string name="plan_reminder_body">Your plan expires on %1$s — renew in Upgrade with KBZ Pay.</string>
     <string name="whats_new_title">What’s new in %1$s</string>
     <string name="whats_new_got_it">Got it</string>
@@ -413,6 +413,22 @@ Firebase project: %4$s</string>
     <string name="queue_remove">တန်းစီမှ ဖယ်ရန်</string>
     <string name="queue_notification_count">%1$d တန်းစီထား — %2$s</string>
     <string name="quota_block_notification_title">ယနေ့ဒေါင်းလုဒ်ပြည့်သွားပြီ</string>
-    <string name="quota_block_notification_body">Unlimited သို့ ပြောင်းပြီး အကန့်အသတ်မရှိ ဒေါင်းပါ</string>
-    <string name="quota_block_notification_action">Upgrade to Unlimited</string>
+    <string name="quota_block_notification_body">Premium သို့ ပြောင်းပြီး အကန့်အသတ်မရှိ ဒေါင်းပါ</string>
+    <string name="quota_block_notification_action">Upgrade to Premium</string>
+
+    <string name="payment_confirm_title">ငွေပေးချေမှု အတည်ပြုပါ</string>
+    <string name="payment_confirm_body">%1$s — %2$d Ks ပေးချေမှာ မဟုတ်ပါလား? Submit လုပ်ပြီး Admin အတည်ပြုနဲ့ စောင့်ပါ။</string>
+    <string name="payment_confirm_yes">Submit လုပ်မယ်</string>
+    <string name="payment_cancel_submit">ငွေပေးချေမှု ပယ်ဖျက်ရန်</string>
+    <string name="payment_approved_chime">ငွေပေးချေမှု အတည်ပြုပြီးပါပြီ — Premium Plan ဖွင့်ပြီးပါပြီ 🎉</string>
+    <string name="payment_rejected_notice">ငွေပေးချေမှု ငြင်းပယ်ခံရပါပြီ — Admin မှတ်ချက်ကိုအောက်မှာကြည့်ပါ</string>
+    <string name="account_upgrade_trial">Trial ကျန်: %1$d ရက်</string>
+    <string name="settings_delete_account">အကောင့်ဖျက်ရန်</string>
+    <string name="account_delete_done">အကောင့်ဖျက်ပြီးပါပြီ</string>
+    <string name="purchase_history_title">ဝယ်ယူမှုမှတ်တမ်း</string>
+    <string name="purchase_history_empty">ဝယ်ယူမှုမှတ်တမ်း မရှိသေးပါ။</string>
+    <string name="trial_banner_text">%1$d ရက် Trial ကျန်နေသည် — ပြီးနောက် Free ၁/day အသုံးပြုရမည်</string>
+    <string name="trial_banner_go">Premium ဝင်မယ်</string>
+    <string name="free_limit_text">ဒီနေ့အတွက် အခမဲ့ ဒေါင်းလုဒ် ကုန်သွားပြီ — Premium ပြောင်းလိုက်ရင် အကန့်အသတ်မရှိ</string>
+    <string name="free_limit_go">Upgrade</string>
 </resources>

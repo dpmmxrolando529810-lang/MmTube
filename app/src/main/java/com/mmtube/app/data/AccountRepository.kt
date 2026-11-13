@@ -2,6 +2,8 @@ package com.mmtube.app.data
 
 import android.app.Activity
 import android.util.Log
+import com.google.firebase.Timestamp
+import java.util.Date
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
@@ -18,7 +20,8 @@ import kotlinx.coroutines.tasks.await
 class AccountRepository(
     private val authRepository: AuthRepository,
     private val firestore: FirebaseFirestore?,
-    private val scope: CoroutineScope
+    private val scope: CoroutineScope,
+    private val settings: SettingsStore? = null
 ) {
 
     private val _ui = MutableStateFlow(AccountUi(auth = authRepository.state.value))
@@ -33,7 +36,8 @@ class AccountRepository(
             authRepository.state.collect { state ->
                 detach()
                 when (state) {
-                    is AuthState.SignedIn -> loadProfile(state)
+                    is AuthState.SignedIn -> loadProfile(state, anonymous = false)
+                    is AuthState.Anonymous -> loadProfile(AuthState.SignedIn(state.uid, null, null, null), anonymous = true)
                     else -> {
                         currentUid = null
                         _ui.value = AccountUi(auth = state)
@@ -87,6 +91,8 @@ class AccountRepository(
         val db = firestore
             ?: return Result.failure(MmtubeException(ErrorKind.FIREBASE, "Cloud not configured"))
         return runCatching {
+            // Best effort: delete Firebase Auth user too (requires recent login).
+            runCatching { authRepository.deleteAuthAccount().getOrNull() }
             db.collection("usage").document(state.uid).delete().await()
             db.collection("users").document(state.uid).delete().await()
             signOut()
@@ -96,7 +102,7 @@ class AccountRepository(
         }
     }
 
-    private suspend fun loadProfile(state: AuthState.SignedIn) {
+    private suspend fun loadProfile(state: AuthState.SignedIn, anonymous: Boolean = false) {
         val db = firestore
         if (db == null) {
             _ui.value = AccountUi(
@@ -122,6 +128,8 @@ class AccountRepository(
                     "planExpiresAt" to null,
                     "dailyLimit" to 1,
                     "disabled" to false,
+                    "anonymous" to anonymous,
+                    "trialEndsAt" to if (anonymous) null else Timestamp(Date(System.currentTimeMillis() + 7L * 24 * 3600 * 1000)),
                     "createdAt" to FieldValue.serverTimestamp(),
                     "updatedAt" to FieldValue.serverTimestamp()
                 )
@@ -134,6 +142,28 @@ class AccountRepository(
                     return@addSnapshotListener
                 }
                 if (doc != null && doc.exists()) {
+                    // Admin room: "Sign out user" — if the flag is newer than our last-seen marker, sign out.
+                    val forcedAt = doc.getTimestamp("forceSignOutAt")?.toDate()?.time ?: 0L
+                    if (settings != null) {
+                        scope.launch {
+                            val seen = settings.snapshot().lastForceSignOutSeen
+                            if (forcedAt > seen) {
+                                settings.setLastForceSignOutSeen(forcedAt)
+                                detach()
+                                authRepository.signOut()
+                                _ui.value = AccountUi(auth = AuthState.SignedOut)
+                            }
+                        }
+                        // Update UI optimistically; the sign-out path will wipe it.
+                        _ui.update {
+                            it.copy(
+                                profile = doc.toProfile(),
+                                loading = false,
+                                error = null
+                            )
+                        }
+                        return@addSnapshotListener
+                    }
                     _ui.update {
                         it.copy(
                             profile = doc.toProfile(),
@@ -164,6 +194,22 @@ class AccountRepository(
         }
     }
 
+    suspend fun purchaseHistory(): List<PurchaseRecord> {
+        val state = authRepository.state.value as? AuthState.SignedIn ?: return emptyList()
+        val db = firestore ?: return emptyList()
+        return runCatching {
+            db.collection("activationLog").whereEqualTo("uid", state.uid).get().await()
+                .documents.mapNotNull { doc ->
+                    val at = doc.getTimestamp("createdAt")?.toDate()?.time ?: 0L
+                    val plan = doc.getString("plan") ?: return@mapNotNull null
+                    val months = doc.getLong("months")?.toInt() ?: 0
+                    val source = doc.getString("source") ?: "admin"
+                    PurchaseRecord(plan = plan, months = months, amountKs = doc.getLong("amountKs") ?: 0L, createdAt = at, source = source)
+                }
+                .sortedByDescending { it.createdAt }
+        }.getOrDefault(emptyList())
+    }
+
     private fun detach() {
         userListener?.remove()
         usageListener?.remove()
@@ -183,7 +229,10 @@ class AccountRepository(
             planExpiresAt = getTimestamp("planExpiresAt")?.toDate()?.time,
             dailyLimit = getLong("dailyLimit")?.toInt() ?: 1,
             disabled = getBoolean("disabled") ?: false,
-            createdAt = getTimestamp("createdAt")?.toDate()?.time
+            createdAt = getTimestamp("createdAt")?.toDate()?.time,
+            trialEndsAt = getTimestamp("trialEndsAt")?.toDate()?.time,
+            anonymous = getBoolean("anonymous") ?: false,
+            forceSignOutAt = getTimestamp("forceSignOutAt")?.toDate()?.time
         )
     }
 

@@ -29,7 +29,7 @@
     <string name="admin_next_download">Next free download</string>
     <string name="admin_total_downloads">Total downloads</string>
     <string name="admin_plan_free">Free</string>
-    <string name="admin_plan_unlimited">Unlimited</string>
+    <string name="admin_plan_unlimited">Premium</string>
     <string name="admin_plan_1m">1 Month</string>
     <string name="admin_plan_3m">3 Months</string>
     <string name="admin_plan_6m">6 Months</string>
@@ -60,7 +60,7 @@
     <string name="admin_plan_expired">Expired</string>
     <string name="admin_no_expiry">No expiry</string>
     <string name="admin_free_limit">1 / 24h</string>
-    <string name="admin_unlimited">Unlimited</string>
+    <string name="admin_unlimited">Premium</string>
     <string name="admin_unknown">Unknown</string>
     <string name="admin_badge">ADMIN</string>
     <string name="admin_secure_note">Admin actions are written directly to Firestore and protected by security rules.</string>

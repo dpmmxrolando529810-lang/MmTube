@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.DeleteOutline
@@ -39,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -106,7 +108,7 @@ fun AccountScreen(
 
         when (val auth = ui.account.auth) {
             is AuthState.Loading -> LoadingProfile()
-            AuthState.SignedOut -> GuestAccountCard(
+            AuthState.SignedOut, is AuthState.Anonymous -> GuestAccountCard(
                 busy = ui.accountBusy,
                 firebaseConfigured = FirebaseConfig.isConfigured,
                 email = emailSignInEmail,
@@ -465,6 +467,53 @@ private fun SignedInCard(
                 modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
                 icon = Icons.Rounded.Bolt
             )
+        }
+        PurchaseHistorySection(vm = vm)
+    }
+}
+
+@Composable
+private fun PurchaseHistorySection(vm: MainViewModel) {
+    val context = LocalContext.current
+    var records by remember { mutableStateOf<List<com.mmtube.app.data.PurchaseRecord>?>(null) }
+    LaunchedEffect(Unit) {
+        vm.loadPurchaseHistory { records = it }
+    }
+    Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+        Text(
+            text = context.getString(R.string.purchase_history_title),
+            style = MmtubeType.TitleMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        if (records == null) {
+            Text(context.getString(R.string.loading), style = MmtubeType.BodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else if (records.orEmpty().isEmpty()) {
+            Text(context.getString(R.string.purchase_history_empty), style = MmtubeType.BodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 8.dp)) {
+                records.orEmpty().take(6).forEach { record ->
+                    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.WorkspacePremium, contentDescription = null, tint = MmtubePalette.Amber, modifier = Modifier.size(18.dp))
+                        Text(
+                            text = when (record.plan) {
+                                Plans.M1 -> "1 Month"
+                                Plans.M3 -> "3 Months"
+                                Plans.M6 -> "6 Months"
+                                Plans.M12 -> "12 Months"
+                                else -> "Free"
+                            },
+                            style = MmtubeType.BodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.padding(start = 8.dp).weight(1f)
+                        )
+                        Text(
+                            text = Formatters.formatDateBurmese(record.createdAt),
+                            style = MmtubeType.LabelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
         }
     }
 }

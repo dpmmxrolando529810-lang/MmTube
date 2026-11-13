@@ -48,6 +48,7 @@ import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -153,6 +154,27 @@ fun HomeScreen(
         if (ui.quota?.paid != true && (ui.quota?.totalDownloads ?: 0) >= 3) {
             item(key = "upsell") {
                 PremiumUpsellCard(onUpgrade = onUpgrade)
+            }
+        }
+        if (ui.showTrialBanner) {
+            item(key = "trial_banner") {
+                SimpleBanner(
+                    text = context.getString(R.string.trial_banner_text, daysLeft(ui.account.profile?.trialEndsAt)),
+                    actionLabel = context.getString(R.string.trial_banner_go),
+                    onAction = onUpgrade
+                )
+            }
+        }
+        if (ui.freeLimitReached) {
+            item(key = "free_limit") {
+                SimpleBanner(
+                    text = context.getString(R.string.free_limit_text),
+                    actionLabel = context.getString(R.string.free_limit_go),
+                    onAction = {
+                        vm.dismissFreeLimitReached()
+                        onUpgrade()
+                    }
+                )
             }
         }
         if (ui.announcementText != null) {
@@ -261,6 +283,33 @@ private fun AnnouncementBanner(text: String, onDismiss: () -> Unit) {
             )
             IconButton(onClick = onDismiss, modifier = Modifier.size(28.dp)) {
                 Icon(Icons.Rounded.Close, contentDescription = context.getString(R.string.announcement_dismiss), tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+}
+
+private fun daysLeft(trialEndsAt: Long?): Int {
+    if (trialEndsAt == null || trialEndsAt <= 0L) return 0
+    return ((trialEndsAt - System.currentTimeMillis()) / 86_400_000L).toInt().coerceAtLeast(0)
+}
+
+@Composable
+private fun SimpleBanner(text: String, actionLabel: String, onAction: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = MmtubePalette.Amber.copy(alpha = 0.16f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MmtubePalette.Amber.copy(alpha = 0.5f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Icon(Icons.Rounded.WorkspacePremium, contentDescription = null, tint = MmtubePalette.Amber, modifier = Modifier.size(22.dp))
+            Text(text, style = MmtubeType.BodyMedium, color = MaterialTheme.colorScheme.onSurface, modifier = Modifier.weight(1f))
+            androidx.compose.material3.TextButton(onClick = onAction) {
+                Text(actionLabel, color = MmtubePalette.Amber)
             }
         }
     }

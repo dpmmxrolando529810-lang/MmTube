@@ -39,7 +39,7 @@ class AppContainer(context: Context) {
     }
 
     val authRepository = AuthRepository(appContext, auth)
-    val account = AccountRepository(authRepository, firestore, scope)
+    val account = AccountRepository(authRepository, firestore, scope, settings)
     val quota = QuotaManager(authRepository, account, settings, firestore)
     val media = MediaRepository(appContext, engine)
     val exporter = MediaExporter(appContext)

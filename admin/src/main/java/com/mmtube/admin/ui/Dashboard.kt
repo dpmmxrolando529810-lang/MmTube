@@ -2,6 +2,7 @@ package com.mmtube.admin.ui
 
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -86,6 +87,7 @@ private sealed interface ConfirmAction {
     data object Free : ConfirmAction
     data object Reset : ConfirmAction
     data class Disabled(val value: Boolean) : ConfirmAction
+    data class ForceSignOut(val user: AdminUser) : ConfirmAction
 }
 
 @Composable
@@ -104,6 +106,14 @@ fun Dashboard(ui: AdminUiState, vm: AdminViewModel) {
         ) {
             item { HeaderRow(email = adminEmail, onSignOut = vm::signOut) }
             item { AdminTabRow(current = ui.tab, onSelect = vm::setTab) }
+            if (ui.pendingPayments.isNotEmpty() && ui.tab != AdminTab.PAYMENTS) {
+                item {
+                    PendingPaymentsBanner(
+                        count = ui.pendingPayments.size,
+                        onOpen = { vm.setTab(AdminTab.PAYMENTS) }
+                    )
+                }
+            }
             if (ui.tab == AdminTab.SEARCH) {
                 item { SearchCard(ui = ui, vm = vm) }
                 item {
@@ -119,7 +129,8 @@ fun Dashboard(ui: AdminUiState, vm: AdminViewModel) {
                             onReset = { confirm = ConfirmAction.Reset },
                             onDisabled = { confirm = ConfirmAction.Disabled(it) },
                             adminNote = ui.adminNote,
-                            onAdminNote = vm::setAdminNote
+                            onAdminNote = vm::setAdminNote,
+                            onForceSignOut = { ui.user?.let { u -> confirm = ConfirmAction.ForceSignOut(u) } }
                         )
                         ui.searched -> NotFoundCard()
                         else -> Unit
@@ -175,6 +186,27 @@ fun Dashboard(ui: AdminUiState, vm: AdminViewModel) {
         )
     }
 
+    val extendUser = ui.pendingExtendConfirmation
+    if (extendUser != null) {
+        val daysLeft = ((extendUser.planExpiresAt ?: 0L) - System.currentTimeMillis()) / 86_400_000L
+        AlertDialog(
+            onDismissRequest = { vm.cancelExtendWarning() },
+            title = { Text("ဝင်ငွေ သတိပေးချက်", color = OnDark, fontWeight = FontWeight.Bold) },
+            text = { Text("${extendUser.userCode} မှာ ${daysLeft.toInt()} ရက်ကျန်နေပါသေးတယ် — ဆက်တိုးမယ်လား?", color = Muted) },
+            confirmButton = {
+                TextButton(onClick = { vm.confirmExtendWithWarning() }) {
+                    Text("တိုးမယ်", color = Aqua, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { vm.cancelExtendWarning() }) {
+                    Text("မတိုးဘူး", color = Muted)
+                }
+            },
+            containerColor = Color(0xFF141E33)
+        )
+    }
+
     confirm?.let { action ->
         val user = ui.user
         val body = when (action) {
@@ -186,6 +218,7 @@ fun Dashboard(ui: AdminUiState, vm: AdminViewModel) {
             } else {
                 context.getString(R.string.admin_confirm_enable, user?.userCode ?: "")
             }
+            is ConfirmAction.ForceSignOut -> "${action.user.userCode} ကို app ထဲမှ sign-out ခိုင်းမှာ အမှန်ပဲလား?"
         }
         AlertDialog(
             onDismissRequest = { confirm = null },
@@ -198,6 +231,7 @@ fun Dashboard(ui: AdminUiState, vm: AdminViewModel) {
                         ConfirmAction.Free -> vm.setFree()
                         ConfirmAction.Reset -> vm.resetCooldown()
                         is ConfirmAction.Disabled -> vm.setDisabled(action.value)
+                        is ConfirmAction.ForceSignOut -> vm.forceSignOutUser(action.user)
                     }
                     confirm = null
                 }) {
@@ -260,6 +294,30 @@ private fun HeaderRow(email: String?, onSignOut: () -> Unit) {
         }
         IconButton(onClick = onSignOut) {
             Icon(Icons.Rounded.Logout, contentDescription = context.getString(R.string.admin_sign_out), tint = Muted)
+        }
+    }
+}
+
+@Composable
+private fun PendingPaymentsBanner(count: Int, onOpen: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(18.dp),
+        color = Color(0x33FFB84D),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Amber),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .clickable { onOpen() }
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(androidx.compose.material.icons.Icons.Rounded.HourglassTop, contentDescription = null, tint = Amber, modifier = Modifier.size(26.dp))
+            Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
+                Text("ငွေပေးချေမှု ${count} ခု စစ်ဆေးရန် ကျန်နေပါသည်", color = Amber, fontWeight = FontWeight.Bold)
+                Text("နှိပ်ပြီး Payments tab သို့ ရောက်မယ်", color = Muted, fontSize = 11.sp)
+            }
+            Text("↓", color = Amber, fontSize = 18.sp, fontWeight = FontWeight.ExtraBold)
         }
     }
 }
@@ -407,6 +465,7 @@ private fun UserDetailCard(
     busy: Boolean,
     adminNote: String = "",
     onAdminNote: (String) -> Unit = {},
+    onForceSignOut: () -> Unit = {},
     onRefresh: () -> Unit,
     onCopyCode: () -> Unit,
     onActivate: (String) -> Unit,
@@ -593,6 +652,12 @@ private fun UserDetailCard(
             accent = if (user.disabled) Aqua else Danger,
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             onClick = { onDisabled(!user.disabled) }
+        )
+        ActionButton(
+            label = "Force sign-out",
+            accent = Danger,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            onClick = onForceSignOut
         )
     }
 }

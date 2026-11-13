@@ -206,6 +206,18 @@ fun AppRoot(
                 }
             }
 
+            if (ui.forceUpdate) {
+                AlertDialog(
+                    onDismissRequest = { /* blocking */ },
+                    title = { Text("Update required") },
+                    text = { Text("ဒီ version က အဟောင်းဖြစ်သွားပြီ — အသစ် update အဆင်မပြေရင် app အသုံးမပြုနိုင်တော့ပါ။ GitHub releases မှ နောက်ဆုံးဗားရှင်းကို ဒေါင်းလုဒ်လုပ်ပါ။") },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.openUpdatePage() }) {
+                            Text("Update လုပ်ရန်", color = MmtubePalette.Aqua)
+                        }
+                    }
+                )
+            }
             val whatsNew = ui.whatsNewVersion
             if (whatsNew != null) {
                 WhatsNewDialog(version = whatsNew, onDismiss = viewModel::dismissWhatsNew)

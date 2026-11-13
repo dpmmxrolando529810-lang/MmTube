@@ -37,6 +37,7 @@ class SettingsStore(private val context: Context) {
         val LAST_SEEN_VERSION = stringPreferencesKey("last_seen_version")
         val DISMISSED_ANNOUNCEMENT = stringPreferencesKey("dismissed_announcement")
         val LAST_PLAN_REMINDER = longPreferencesKey("last_plan_reminder")
+        val LAST_FORCE_SIGNOUT_SEEN = longPreferencesKey("last_force_signout_seen")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -65,7 +66,8 @@ class SettingsStore(private val context: Context) {
         chimeEnabled = this[Keys.CHIME] ?: true,
         lastSeenVersion = this[Keys.LAST_SEEN_VERSION] ?: "",
         dismissedAnnouncementId = this[Keys.DISMISSED_ANNOUNCEMENT] ?: "",
-        lastPlanReminderAt = this[Keys.LAST_PLAN_REMINDER] ?: 0L
+        lastPlanReminderAt = this[Keys.LAST_PLAN_REMINDER] ?: 0L,
+        lastForceSignOutSeen = this[Keys.LAST_FORCE_SIGNOUT_SEEN] ?: 0L
     )
 
     suspend fun setTheme(mode: ThemeMode) {
@@ -124,6 +126,8 @@ class SettingsStore(private val context: Context) {
     suspend fun setDismissedAnnouncementId(v: String) { context.settingsDataStore.edit { it[Keys.DISMISSED_ANNOUNCEMENT] = v } }
 
     suspend fun setLastPlanReminderAt(v: Long) { context.settingsDataStore.edit { it[Keys.LAST_PLAN_REMINDER] = v } }
+
+    suspend fun setLastForceSignOutSeen(v: Long) { context.settingsDataStore.edit { it[Keys.LAST_FORCE_SIGNOUT_SEEN] = v } }
 
     suspend fun setOnboardingSeen() {
         context.settingsDataStore.edit { it[Keys.ONBOARDING] = true }
