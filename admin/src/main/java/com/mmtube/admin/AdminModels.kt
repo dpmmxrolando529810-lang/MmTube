@@ -118,9 +118,20 @@ data class AdminAction(
     val at: Long
 )
 
+data class AdminUpdateState(
+    val checking: Boolean = false,
+    val downloading: Boolean = false,
+    val progress: Int = 0,
+    val info: AdminUpdateInfo? = null,
+    val file: java.io.File? = null,
+    val error: String? = null,
+    val dismissed: Boolean = false
+)
+
 data class AdminUiState(
     val auth: AdminAuthState = AdminAuthState.Loading,
     val adminPhoto: String? = null,
+    val update: AdminUpdateState = AdminUpdateState(),
     val query: String = "",
     val searching: Boolean = false,
     val searched: Boolean = false,

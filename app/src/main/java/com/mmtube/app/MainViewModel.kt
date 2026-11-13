@@ -1266,10 +1266,17 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     } else {
                         _ui.update { it.copy(update = UpdateUi(info = info)) }
                         // Auto-update: silently download the update in the background.
-                        // Android only allows install after the user taps Install,
-                        // but this removes the need to manually trigger the download.
+                        // Android only allows install after the user confirms in the
+                        // system installer, but this removes the need to manually
+                        // trigger the download — or even the installer launch.
                         if (silent && container.settings.snapshot().autoAppUpdate) {
-                            downloadUpdate()
+                            val downloaded = container.updater.findDownloaded(info)
+                            if (downloaded != null) {
+                                _ui.update { it.copy(update = UpdateUi(info = info, file = downloaded, progress = 100)) }
+                                showUpdateReadyNotification()
+                            } else {
+                                downloadUpdate(autoInstall = true)
+                            }
                         }
                     }
                 }
@@ -1284,16 +1291,14 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun maybeCheckForUpdate(silent: Boolean = true) {
         viewModelScope.launch {
-            val snapshot = container.settings.snapshot()
-            if (!snapshot.autoAppUpdate) return@launch
-            val stale = System.currentTimeMillis() - snapshot.lastUpdateCheck > 6 * 60 * 60 * 1000L
-            if (stale) {
-                checkForUpdates(silent = silent)
-            }
+            if (!container.settings.snapshot().autoAppUpdate) return@launch
+            // Check on every app entry (silent) — the user asked for updates to
+            // be found and applied automatically as soon as the app is opened.
+            checkForUpdates(silent = silent)
         }
     }
 
-    fun downloadUpdate() {
+    fun downloadUpdate(autoInstall: Boolean = false) {
         val info = _ui.value.update.info ?: return
         if (_ui.value.update.downloading) return
         _ui.update { it.copy(update = it.update.copy(downloading = true, progress = 0, error = null)) }
@@ -1310,6 +1315,11 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 _ui.update { it.copy(update = it.update.copy(downloading = false, file = file, progress = 100)) }
                 showUpdateReadyNotification()
                 event(UiEvent.Message(context.getString(R.string.update_ready)))
+                if (autoInstall && !_ui.value.update.dismissed) {
+                    // Launch the system installer straight away — the user only
+                    // needs to tap Install. This is as automatic as Android allows.
+                    installUpdate()
+                }
             }.onFailure { error ->
                 _ui.update { it.copy(update = it.update.copy(downloading = false, error = error.message)) }
                 event(UiEvent.Message(context.getString(R.string.update_failed_title)))

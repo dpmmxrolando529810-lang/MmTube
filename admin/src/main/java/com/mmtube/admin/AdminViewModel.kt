@@ -28,6 +28,7 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
     private val context: Context = container.appContext
     private val auth: FirebaseAuth? = container.auth
     private val firestore: FirebaseFirestore? = container.firestore
+    private val updater = UpdateRepository(container.appContext)
 
     private var autoRejectRan = false
 
@@ -47,6 +48,8 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
 
     init {
         auth?.addAuthStateListener(authListener)
+        // Auto-check for an app update on entry — and download it silently.
+        maybeCheckForUpdate()
     }
 
     override fun onCleared() {
@@ -692,6 +695,128 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
 
     fun cancelExtendWarning() {
         _ui.update { it.copy(pendingExtendConfirmation = null) }
+    }
+
+    // ---------- Auto update ----------
+
+    private val updateChannel = "mmtube_admin_update"
+    private val updateNotificationId = 7801
+
+    /** Silent entry-time check — downloads and then launches the system installer automatically. */
+    fun maybeCheckForUpdate() {
+        viewModelScope.launch {
+            checkForUpdates(silent = true)
+        }
+    }
+
+    fun checkForUpdates(silent: Boolean = true) {
+        if (_ui.value.update.checking) return
+        _ui.update { it.copy(update = it.update.copy(checking = true, error = null)) }
+        viewModelScope.launch {
+            updater.checkForUpdate()
+                .onSuccess { info ->
+                    if (info == null) {
+                        _ui.update { it.copy(update = it.update.copy(checking = false)) }
+                        if (!silent) {
+                            _ui.update { state -> state.copy(message = "You are on the latest version") }
+                        }
+                    } else {
+                        _ui.update { it.copy(update = it.update.copy(checking = false, info = info)) }
+                        val downloaded = updater.findDownloaded(info)
+                        if (downloaded != null) {
+                            _ui.update { state ->
+                                state.copy(update = state.update.copy(file = downloaded, progress = 100))
+                            }
+                            showUpdateReadyNotification(info.version)
+                            if (silent && !_ui.value.update.dismissed) installUpdate()
+                        } else {
+                            downloadUpdate(autoInstall = silent)
+                        }
+                    }
+                }
+                .onFailure { error ->
+                    _ui.update { it.copy(update = it.update.copy(checking = false, error = error.message)) }
+                    if (!silent) {
+                        _ui.update { state -> state.copy(message = error.message ?: "Update check failed") }
+                    }
+                }
+        }
+    }
+
+    fun downloadUpdate(autoInstall: Boolean = false) {
+        val info = _ui.value.update.info ?: return
+        if (_ui.value.update.downloading) return
+        _ui.update { it.copy(update = it.update.copy(downloading = true, progress = 0, error = null)) }
+        viewModelScope.launch {
+            updater.download(info) { progress ->
+                _ui.update { current ->
+                    if (current.update.downloading) {
+                        current.copy(update = current.update.copy(progress = progress))
+                    } else {
+                        current
+                    }
+                }
+            }.onSuccess { file ->
+                _ui.update { it.copy(update = it.update.copy(downloading = false, file = file, progress = 100)) }
+                showUpdateReadyNotification(info.version)
+                // The user asked for hands-free updates: launch the system
+                // installer right away. Android still needs one Install tap.
+                if (autoInstall && !_ui.value.update.dismissed) {
+                    installUpdate()
+                }
+            }.onFailure { error ->
+                _ui.update { it.copy(update = it.update.copy(downloading = false, error = error.message)) }
+                _ui.update { state -> state.copy(message = error.message ?: "Update download failed") }
+            }
+        }
+    }
+
+    fun installUpdate() {
+        val file = _ui.value.update.file ?: return
+        updater.install(file)
+            .onFailure { error ->
+                val text = error.message ?: context.getString(R.string.admin_error)
+                _ui.update { state -> state.copy(message = text) }
+                // No unknown-sources permission yet — send the admin straight to the toggle.
+                if (text.contains("permission", true)) {
+                    updater.openInstallSettings()
+                }
+            }
+    }
+
+    fun dismissUpdate() {
+        _ui.update { it.copy(update = it.update.copy(dismissed = true)) }
+    }
+
+    private fun showUpdateReadyNotification(version: String) {
+        runCatching {
+            val mgr = context.getSystemService(android.app.NotificationManager::class.java) ?: return@runCatching
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                mgr.createNotificationChannel(
+                    android.app.NotificationChannel(
+                        updateChannel,
+                        "MMTube Admin updates",
+                        android.app.NotificationManager.IMPORTANCE_DEFAULT
+                    )
+                )
+            }
+            val tap = android.app.PendingIntent.getActivity(
+                context, updateNotificationId,
+                android.content.Intent(context, AdminActivity::class.java).apply {
+                    flags = android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+                },
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val notif = androidx.core.app.NotificationCompat.Builder(context, updateChannel)
+                .setSmallIcon(R.drawable.ic_stat_mmtube)
+                .setContentTitle("Update ready — MMTube Admin v$version")
+                .setContentText("Tap Install to update MMTube Admin.")
+                .setOnlyAlertOnce(true)
+                .setOngoing(true)
+                .setContentIntent(tap)
+                .build()
+            mgr.notify(updateNotificationId, notif)
+        }
     }
 
     private val badgeChannel = "mmtube_admin_badge"

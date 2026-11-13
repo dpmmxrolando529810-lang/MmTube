@@ -52,8 +52,8 @@ fun envOrProp(name: String, default: String = ""): String {
 fun quoted(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 23
-val appVersionName = (project.findProperty("versionName") as String?) ?: "1.6.1"
+val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 24
+val appVersionName = (project.findProperty("versionName") as String?) ?: "1.7.0"
 val keystorePath = envOrProp("KEYSTORE_PATH", "keystore/mmtube-demo.p12")
 
 android {
@@ -80,7 +80,7 @@ android {
         buildConfigField("String", "FIREBASE_PROJECT_ID", quoted(envOrProp("FIREBASE_PROJECT_ID")))
         buildConfigField("String", "FIREBASE_SENDER_ID", quoted(envOrProp("FIREBASE_SENDER_ID")))
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", quoted(envOrProp("GOOGLE_WEB_CLIENT_ID")))
-        buildConfigField("String", "UPDATE_REPO", quoted(envOrProp("UPDATE_REPO")))
+        buildConfigField("String", "UPDATE_REPO", quoted(envOrProp("UPDATE_REPO", "dpmmxrolando529810-lang/MmTube")))
         buildConfigField(
             "String",
             "SUPPORT_CONTACT",

@@ -87,6 +87,24 @@ class UpdateRepository(private val context: Context) {
         }
     }
 
+    /**
+     * Returns an already-downloaded update APK for [info] if one exists on disk.
+     * Used so entering the app while an update is pending does not re-download
+     * ~90 MB every single time.
+     */
+    fun findDownloaded(info: UpdateInfo): File? {
+        val directory = File(
+            context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
+            "updates"
+        )
+        if (!directory.isDirectory) return null
+        return runCatching {
+            directory.listFiles()
+                ?.filter { it.isFile && it.extension == "apk" }
+                ?.firstOrNull { it.name.equals(info.assetName, ignoreCase = true) }
+        }.getOrNull()
+    }
+
     suspend fun download(
         info: UpdateInfo,
         onProgress: (Int) -> Unit

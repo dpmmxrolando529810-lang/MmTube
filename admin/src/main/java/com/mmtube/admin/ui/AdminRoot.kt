@@ -122,6 +122,61 @@ fun AdminRoot(viewModel: AdminViewModel) {
                 )
                 is AdminAuthState.Ready -> Dashboard(ui = ui, vm = viewModel)
             }
+
+            // Update-downloading pill — small amber line across the very top.
+            if (ui.update.downloading) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .statusBarsPadding()
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = "Update downloading v${ui.update.info?.version.orEmpty()} — ${ui.update.progress}%",
+                            color = OnDark,
+                            fontSize = 12.sp
+                        )
+                        LinearProgressIndicator(
+                            progress = { ui.update.progress / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            color = Amber,
+                            trackColor = Muted,
+                        )
+                    }
+                }
+            }
+
+            // Update ready → one-tap install (auto-launched too).
+            val updateFile = ui.update.file
+            if (updateFile != null && !ui.update.dismissed) {
+                androidx.compose.material3.AlertDialog(
+                    onDismissRequest = { viewModel.dismissUpdate() },
+                    containerColor = Color(0xFF05070D),
+                    confirmButton = {
+                        androidx.compose.material3.TextButton(onClick = { viewModel.installUpdate() }) {
+                            Text("Install now", color = Amber)
+                        }
+                    },
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(onClick = { viewModel.dismissUpdate() }) {
+                            Text("Later", color = Muted)
+                        }
+                    },
+                    title = { Text("Update ready", color = OnDark, fontWeight = FontWeight.Bold) },
+                    text = {
+                        Text(
+                            text = "MMTube Admin version ${ui.update.info?.version.orEmpty()} finished downloading. Android requires one tap on Install to complete.",
+                            color = OnDark
+                        )
+                    }
+                )
+            }
         }
     }
 }

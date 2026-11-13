@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 fun envOrProp(name: String, default: String = ""): String {
@@ -12,8 +13,8 @@ fun envOrProp(name: String, default: String = ""): String {
 fun quoted(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 22
-val appVersionName = (project.findProperty("versionName") as String?) ?: "1.6.0"
+val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 23
+val appVersionName = (project.findProperty("versionName") as String?) ?: "1.7.0"
 val keystorePath = envOrProp("KEYSTORE_PATH", "keystore/mmtube-demo.p12")
 
 android {
@@ -36,6 +37,7 @@ android {
         buildConfigField("String", "FIREBASE_PROJECT_ID", quoted(envOrProp("FIREBASE_PROJECT_ID")))
         buildConfigField("String", "FIREBASE_SENDER_ID", quoted(envOrProp("FIREBASE_SENDER_ID")))
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", quoted(envOrProp("GOOGLE_WEB_CLIENT_ID")))
+        buildConfigField("String", "UPDATE_REPO", quoted(envOrProp("UPDATE_REPO", "dpmmxrolando529810-lang/MmTube")))
     }
 
     signingConfigs {
@@ -120,6 +122,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
 
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")
