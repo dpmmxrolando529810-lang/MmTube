@@ -135,12 +135,21 @@ fun ActiveDownloadCard(
                     maxLines = 1
                 )
                 if (state is DownloadState.Running) {
-                    val meta = buildList {
-                        if (state.etaSeconds >= 0) add(context.getString(R.string.download_eta, Formatters.formatEta(state.etaSeconds)))
-                        if (state.speedBytes > 0) add(context.getString(R.string.download_speed, Formatters.formatBytes(state.speedBytes)))
-                        if (state.totalBytes > 0) add("/ ${Formatters.formatBytes(state.totalBytes)}")
-                    }.joinToString("  •  ")
-                    Text(meta, style = MmtubeType.BodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                    val meta = if (state.reconnecting) {
+                        context.getString(R.string.download_reconnecting)
+                    } else {
+                        buildList {
+                            if (state.etaSeconds >= 0) add(context.getString(R.string.download_eta, Formatters.formatEta(state.etaSeconds)))
+                            if (state.speedBytes > 0) add(context.getString(R.string.download_speed, Formatters.formatBytes(state.speedBytes)))
+                            if (state.totalBytes > 0) add("/ ${Formatters.formatBytes(state.totalBytes)}")
+                        }.joinToString("  •  ")
+                    }
+                    Text(
+                        meta,
+                        style = MmtubeType.BodyMedium,
+                        color = if (state.reconnecting) MmtubePalette.Amber else MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
                 }
             }
             if (isPaused) {

@@ -121,7 +121,7 @@ class DownloadService : Service() {
 
         val title = when (state) {
             is DownloadState.Preparing -> getString(R.string.notification_connecting) + " — " + state.title
-            is DownloadState.Running -> getString(R.string.notification_downloading, state.title)
+            is DownloadState.Running -> (if (state.reconnecting) getString(R.string.download_reconnecting) else getString(R.string.notification_downloading, state.title))
             is DownloadState.Merging -> getString(R.string.download_status_merging)
             is DownloadState.Saving -> getString(R.string.download_status_saving)
             is DownloadState.Completed -> getString(R.string.notification_complete)

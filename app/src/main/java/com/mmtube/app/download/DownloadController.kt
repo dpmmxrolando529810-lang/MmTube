@@ -56,9 +56,11 @@ class DownloadController(
     val state: StateFlow<DownloadState> = _state.asStateFlow()
 
     private var job: Job? = null
+    private var watchdog: Job? = null
     private var processId: String? = null
     private var currentRequest: DownloadRequest? = null
     private var lastProgressUpdate = 0L
+    private var lastRawLineAt: Long = 0L
 
     /** Snapshot of the paused request so the UI can offer Resume. */
     var pausedRequest: DownloadRequest? = null
@@ -107,6 +109,7 @@ class DownloadController(
                 if (!engine.ensureReady()) {
                     throw MmtubeException(ErrorKind.ENGINE, "Engine not ready")
                 }
+                startWatchdog()
                 val directory = downloadDirectory().apply { mkdirs() }
                 val turbo = settingsStore.snapshot().turbo
                 val file = downloadWithFallback(request, directory, turbo, startedAt)
@@ -186,6 +189,7 @@ class DownloadController(
         if (id != null) {
             runCatching { YoutubeDL.getInstance().destroyProcessById(id) }
         }
+        watchdog?.cancel()
         job?.cancel()
         pausedRequest = null
         _state.value = DownloadState.Cancelled
@@ -198,6 +202,7 @@ class DownloadController(
         if (id != null) {
             runCatching { YoutubeDL.getInstance().destroyProcessById(id) }
         }
+        watchdog?.cancel()
         job?.cancel()
         val progress = (state as? DownloadState.Running)?.progress ?: 0f
         pausedRequest = request
@@ -208,6 +213,23 @@ class DownloadController(
         val request = pausedRequest ?: return
         pausedRequest = null
         start(request.copy(resume = true))
+    }
+
+    private fun startWatchdog() {
+        watchdog?.cancel()
+        watchdog = scope.launch {
+            while (true) {
+                kotlinx.coroutines.delay(2_000L)
+                val current = _state.value
+                if (current !is DownloadState.Running) break
+                val ageMs = System.currentTimeMillis() - lastRawLineAt
+                if (ageMs > 6_000L && !current.reconnecting) {
+                    _state.value = current.copy(reconnecting = true)
+                } else if (ageMs <= 6_000L && current.reconnecting) {
+                    _state.value = current.copy(reconnecting = false)
+                }
+            }
+        }
     }
 
     /** Consumes (clears) the paused snapshot and returns it, if any. */
@@ -277,6 +299,8 @@ class DownloadController(
                 processId = processId,
                 redirectErrorStream = false
             ) { progress, eta, rawLine ->
+                val now = System.currentTimeMillis()
+                lastRawLineAt = now
                 val line = rawLine
                     .replace(Regex("\u001B\\[[;\\d]*m"), "")
                     .trim()
@@ -302,7 +326,8 @@ class DownloadController(
                                 etaSeconds = eta,
                                 speedBytes = speed,
                                 totalBytes = total,
-                                line = line.take(180)
+                                line = line.take(180),
+                                reconnecting = false
                             )
                         }
                     }

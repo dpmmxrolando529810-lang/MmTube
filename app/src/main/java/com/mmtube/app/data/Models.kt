@@ -220,7 +220,8 @@ sealed interface DownloadState {
         val etaSeconds: Long,
         val speedBytes: Long,
         val totalBytes: Long,
-        val line: String
+        val line: String,
+        val reconnecting: Boolean = false
     ) : DownloadState
 
     data class Merging(val title: String, val mode: DownloadMode) : DownloadState
