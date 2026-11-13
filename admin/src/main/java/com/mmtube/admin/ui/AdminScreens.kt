@@ -166,6 +166,18 @@ fun PaymentsTab(ui: AdminUiState, vm: AdminViewModel) {
             onValueChange = vm::setAdminNote,
             placeholder = "မှတ်ချက် (optional)"
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+            listOf("ငွေမမြင်ရသေး", "ပမာဏ မှား", "ပုံမရှင်း", "နောက်တစ်ကြိမ် ထပ်ပို့ပါ").forEach { reason ->
+                Surface(
+                    onClick = { vm.setAdminNote(reason) },
+                    shape = RoundedCornerShape(999.dp),
+                    color = Color(0x66131E33),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Aqua)
+                ) {
+                    Text(reason, color = Aqua, fontSize = 10.sp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp))
+                }
+            }
+        }
         if (ui.payingLoading) {
             LinearProgressIndicator(color = Amber, modifier = Modifier.fillMaxWidth())
         }

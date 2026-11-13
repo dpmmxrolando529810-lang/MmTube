@@ -80,7 +80,12 @@ data class MainUiState(
     val showTrialBanner: Boolean = false,
     val freeLimitReached: Boolean = false,
     val forceUpdate: Boolean = false,
-    val announcementsMuted: Boolean = false
+    val announcementsMuted: Boolean = false,
+    val crashReportsEnabled: Boolean = true,
+    val inboxAnnouncements: List<com.mmtube.app.data.AnnouncementRecord> = emptyList(),
+    val unreadAnnouncements: Int = 0,
+    val showInbox: Boolean = false,
+    val showCelebration: Boolean = false
 ) {
     val termsAccepted: Boolean get() = settings.acceptedTerms
 }
@@ -139,12 +144,47 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 _ui.update { it.copy(engine = engine) }
             }
         }
+        // Weekly recap: post a Sunday-evening summary once per week.
+        viewModelScope.launch {
+            runCatching {
+                val snap = container.settings.snapshot()
+                if (snap.lastRecapAt > 0L) {
+                    val cal = java.util.Calendar.getInstance()
+                    val monday = java.util.Calendar.getInstance().apply {
+                        timeInMillis = snap.lastRecapAt
+                        set(java.util.Calendar.DAY_OF_WEEK, java.util.Calendar.MONDAY)
+                        set(java.util.Calendar.HOUR_OF_DAY, 0)
+                        set(java.util.Calendar.MINUTE, 0)
+                        set(java.util.Calendar.SECOND, 0)
+                        set(java.util.Calendar.MILLISECOND, 0)
+                    }
+                    val now = cal.timeInMillis
+                    if (now - monday.timeInMillis >= 7L * 24 * 3600 * 1000L) {
+                        postWeeklyRecap()
+                    }
+                } else {
+                    postWeeklyRecap()
+                }
+            }
+        }
+
         // What's New: show once per version upgrade.
         viewModelScope.launch {
             val snap = container.settings.snapshot()
             val version = BuildConfig.VERSION_NAME
             if (snap.lastSeenVersion != version) {
                 _ui.update { it.copy(whatsNewVersion = version) }
+            }
+        }
+        // Crash reporting preference (startup)
+        viewModelScope.launch {
+            runCatching {
+                val enabled = container.settings.snapshot().crashReports
+                if (com.mmtube.app.data.FirebaseConfig.isConfigured) {
+                    com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance()
+                        .setCrashlyticsCollectionEnabled(enabled)
+                }
+                _ui.update { it.copy(crashReportsEnabled = enabled) }
             }
         }
         refreshAnnouncement()
@@ -174,6 +214,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 val nowPaid = _ui.value.quota?.paid == true
                 if (wasPaid && !nowPaid) {
                     event(UiEvent.Message(context.getString(R.string.expired_plan_message)))
+                }
+                if (!wasPaid && nowPaid) {
+                    playCompletionChime()
+                    _ui.update { it.copy(showCelebration = true) }
                 }
             }
         }
@@ -460,6 +504,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             if (minVersion > BuildConfig.VERSION_CODE) {
                 _ui.update { it.copy(forceUpdate = true) }
             }
+            if (snap.announcementsMuted) return@launch
             val muted = snap.dismissedAnnouncementId == "__all__"
             if (dryRun) {
                 val myEmail = (authRepositoryEmailOrNull()) ?: return@launch
@@ -560,6 +605,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 _ui.update { it.copy(latestPayment = summary) }
                 if (wasPending && newStatus == "approved" && summary != null) {
                     playCompletionChime()
+                    _ui.update { it.copy(showCelebration = true) }
                     event(UiEvent.Message(context.getString(R.string.payment_approved_chime)))
                     refreshQuota()
                 } else if (wasPending && newStatus == "rejected") {
@@ -609,6 +655,108 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 }
                 context.startActivity(web)
             }
+        }
+    }
+
+    private fun postWeeklyRecap() {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val history = container.history.snapshot()
+                val weekAgo = System.currentTimeMillis() - 7L * 24 * 3600 * 1000
+                val recent = history.filter { it.createdAt >= weekAgo }
+                if (recent.isNotEmpty()) {
+                    val bytes = recent.sumOf { it.sizeBytes }
+                    val mgr = context.getSystemService(NotificationManager::class.java)
+                    val channel = NotificationChannel(
+                        "mmtube_recap",
+                        "Weekly recap",
+                        NotificationManager.IMPORTANCE_DEFAULT
+                    )
+                    mgr?.createNotificationChannel(channel)
+                    val text = context.getString(R.string.recap_notification_body, recent.size, Formatters.formatBytes(bytes))
+                    val intent = Intent(context, MainActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_SINGLE_TOP }
+                    val tap = android.app.PendingIntent.getActivity(
+                        context, 7710, intent,
+                        android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+                    )
+                    val notif = NotificationCompat.Builder(context, "mmtube_recap")
+                        .setSmallIcon(R.drawable.ic_stat_mmtube)
+                        .setContentTitle(context.getString(R.string.recap_notification_title))
+                        .setContentText(text)
+                        .setAutoCancel(true)
+                        .setContentIntent(tap)
+                        .build()
+                    mgr?.notify(7710, notif)
+                    container.settings.setLastRecapAt(System.currentTimeMillis())
+                }
+            }
+        }
+    }
+
+    fun markInboxShown() {
+        viewModelScope.launch { container.settings.setDismissedAnnouncementId(_ui.value.inboxAnnouncements.firstOrNull()?.id ?: "") }
+        _ui.update { it.copy(unreadAnnouncements = 0, showInbox = false) }
+    }
+
+    fun dismissInbox() {
+        _ui.update { it.copy(showInbox = false) }
+    }
+
+    fun openInbox() {
+        viewModelScope.launch {
+            val db = container.firestore ?: run { _ui.update { it.copy(showInbox = true) }; return@launch }
+            val result = runCatching {
+                db.collection("announcements").get().await().documents.mapNotNull {
+                    val id = it.getString("id") ?: it.id
+                    val text = it.getString("text") ?: return@mapNotNull null
+                    val at = it.getTimestamp("createdAt")?.toDate()?.time ?: 0L
+                    com.mmtube.app.data.AnnouncementRecord(id, text, at)
+                }.sortedByDescending { it.createdAt }.take(15)
+            }.getOrDefault(emptyList())
+            val lastSeen = container.settings.snapshot().dismissedAnnouncementId
+            val unseen = if (lastSeen.isBlank()) result.size else result.count { it.id != lastSeen }
+            _ui.update { it.copy(inboxAnnouncements = result, unreadAnnouncements = unseen, showInbox = true) }
+        }
+    }
+
+    fun fetchRecentAnnouncements(onDone: (List<com.mmtube.app.data.AnnouncementRecord>) -> Unit) {
+        viewModelScope.launch {
+            val db = container.firestore ?: run { onDone(emptyList()); return@launch }
+            val result = runCatching {
+                db.collection("announcements").get().await().documents.mapNotNull {
+                    val id = it.getString("id") ?: it.id
+                    val text = it.getString("text") ?: return@mapNotNull null
+                    val at = it.getTimestamp("createdAt")?.toDate()?.time ?: 0L
+                    com.mmtube.app.data.AnnouncementRecord(id, text, at)
+                }.sortedByDescending { it.createdAt }.take(15)
+            }.getOrDefault(emptyList())
+            onDone(result)
+        }
+    }
+
+    fun setCrashReportsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            container.settings.setCrashReports(enabled)
+            if (com.mmtube.app.data.FirebaseConfig.isConfigured) {
+                com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance()
+                    .setCrashlyticsCollectionEnabled(enabled)
+            }
+            _ui.update { it.copy(crashReportsEnabled = enabled) }
+        }
+    }
+
+    fun setAnnouncementsMuted(muted: Boolean) {
+        viewModelScope.launch {
+            container.settings.setAnnouncementsMuted(muted)
+            _ui.update { it.copy(announcementsMuted = muted) }
+        }
+    }
+
+    fun resetAppData() {
+        viewModelScope.launch {
+            container.settings.clearAll()
+            container.history.clear()
+            event(UiEvent.Message(context.getString(R.string.reset_app_data_done)))
         }
     }
 
@@ -807,15 +955,12 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun dismissFreeLimitReached() {
-        _ui.update { it.copy(freeLimitReached = false) }
+    fun dismissCelebration() {
+        _ui.update { it.copy(showCelebration = false) }
     }
 
-    fun setAnnouncementsMuted(muted: Boolean) {
-        viewModelScope.launch {
-            container.settings.setDismissedAnnouncementId(if (muted) "__all__" else "")
-        }
-        _ui.update { it.copy(announcementsMuted = muted) }
+    fun dismissFreeLimitReached() {
+        _ui.update { it.copy(freeLimitReached = false) }
     }
 
     fun moveQueueItem(fromIndex: Int, toIndex: Int) {

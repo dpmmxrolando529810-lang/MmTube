@@ -431,4 +431,20 @@ Firebase project: %4$s</string>
     <string name="trial_banner_go">Premium ဝင်မယ်</string>
     <string name="free_limit_text">ဒီနေ့အတွက် အခမဲ့ ဒေါင်းလုဒ် ကုန်သွားပြီ — Premium ပြောင်းလိုက်ရင် အကန့်အသတ်မရှိ</string>
     <string name="free_limit_go">Upgrade</string>
+
+    <string name="recap_notification_title">ဒီအပတ် သုံးသပ်ချက်</string>
+    <string name="recap_notification_body">ဒီအပတ် %1$d downloads — %2$s ဒေါင်းပြီးပါပြီ</string>
+    <string name="reset_app_data_done">App data အားလုံး ဖျက်ပြီးပါပြီ</string>
+    <string name="inbox_title">သတင်းအချက်အလက်များ</string>
+    <string name="inbox_mark_read">အကုန်ဖတ်ပြီးပြီ</string>
+    <string name="inbox_empty">သတင်းအချက်အလက် မရှိသေးပါ။</string>
+    <string name="settings_announcements">Owner ကြေညာချက် ရယူပါ</string>
+    <string name="settings_announcements_desc">ကြေညာချက်ကို လက်မခံချင်ရင် ပိတ်ထားပါ</string>
+    <string name="settings_crash_reports">Crash report ပို့ပါ</string>
+    <string name="settings_crash_reports_desc">အက်ပ်တွဲကျရင် အချက်အလက် ပို့ပေးမယ်</string>
+    <string name="settings_reset_app_data">App data အားလုံးဖျက်ရန်</string>
+    <string name="settings_reset_app_data_desc">မှတ်တမ်း နှင့် ချိန်ညှိချက်များ ဖျက်မယ်</string>
+    <string name="celebration_title">Premium အသုံးချပါ! 🎉</string>
+    <string name="celebration_body">ငွေပေးချေမှု အတည်ပြုပြီးပါပြီ — ယခုမှ အကန့်အသတ်မရှိ ဒေါင်းလုပ်ခဏ်းစားခွင့် ရပါပြီ</string>
+    <string name="week_chart_title">ဒီအပတ် downloads</string>
 </resources>

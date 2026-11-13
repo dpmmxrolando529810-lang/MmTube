@@ -321,7 +321,7 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
     fun setTab(tab: AdminTab) {
         _ui.update { it.copy(tab = tab, message = null) }
         when (tab) {
-            AdminTab.PAYMENTS -> { loadPendingPayments(); loadTodayAndMonthlyRevenue() }
+            AdminTab.PAYMENTS -> { loadPendingPayments(); loadTodayAndMonthlyRevenue(); autoPurgeOldRejected() }
             AdminTab.EXPIRING -> loadExpiringUsers()
             AdminTab.LOGS -> loadLogs()
             else -> Unit
@@ -445,6 +445,24 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
             buyerPhone = payment.buyerPhone,
             note = note
         )
+    }
+
+    fun autoPurgeOldRejected() {
+        val db = firestore ?: return
+        viewModelScope.launch {
+            val cutoff = System.currentTimeMillis() - 30L * 24 * 3600 * 1000
+            runCatching {
+                db.collection("payments")
+                    .whereEqualTo("status", "rejected")
+                    .get()
+                    .await()
+                    .documents
+                    .filter { (it.getTimestamp("createdAt")?.toDate()?.time ?: Long.MAX_VALUE) < cutoff }
+                    .forEach { doc ->
+                        runCatching { doc.reference.delete().await() }
+                    }
+            }
+        }
     }
 
     fun loadPendingPayments() {

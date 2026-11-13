@@ -382,6 +382,36 @@ private fun SignedInCard(
     val photo = profile?.photoUrl ?: auth?.photoUrl
 
     FrostedCard(modifier = Modifier.fillMaxWidth()) {
+        ui.latestPayment?.let { p ->
+            val (label, color) = when (p.status) {
+                "approved" -> context.getString(R.string.payment_status_approved) to MmtubePalette.Success
+                "rejected" -> context.getString(R.string.payment_status_rejected) to MmtubePalette.Danger
+                "cancelled" -> "Cancelled" to MmtubePalette.Danger
+                else -> context.getString(R.string.payment_status_pending) to MmtubePalette.Amber
+            }
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = color.copy(alpha = 0.16f),
+                border = androidx.compose.foundation.BorderStroke(1.dp, color.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+            ) {
+                Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(color))
+                    Text(
+                        text = "ငွေပေးချေမှု: " + when (p.plan) {
+                            "1m" -> "1 Month"
+                            "3m" -> "3 Months"
+                            "6m" -> "6 Months"
+                            "12m" -> "12 Months"
+                            else -> p.plan
+                        } + " — " + label + " (" + p.amountKs.toString() + " Ks)",
+                        style = MmtubeType.BodyMedium,
+                        color = color,
+                        modifier = Modifier.padding(start = 10.dp)
+                    )
+                }
+            }
+        }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(
                 modifier = Modifier

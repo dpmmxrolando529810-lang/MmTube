@@ -36,6 +36,8 @@ import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.BatteryAlert
 import androidx.compose.material.icons.rounded.Send
+import androidx.compose.material.icons.rounded.Campaign
+import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.PhoneAndroid
 import androidx.compose.material.icons.rounded.PrivacyTip
 import androidx.compose.material.icons.rounded.Shield
@@ -100,6 +102,7 @@ fun SettingsScreen(
     var showLicenses by remember { mutableStateOf(false) }
     var showAutostart by remember { mutableStateOf(false) }
     var showVersionDetails by remember { mutableStateOf(false) }
+    var showResetConfirm by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var ownerTaps by remember { mutableIntStateOf(0) }
     val haptic = LocalHapticFeedback.current
@@ -304,7 +307,7 @@ fun SettingsScreen(
 
         SettingsGroup(context.getString(R.string.settings_notifications), visibleIf = qMatch(query, listOf("notification", "notifications", "chime", "sound", "alert", "notify", "အကြောင်းကြား", "အသံ"))) {
             SettingsSwitchRow(
-                icon = Icons.Rounded.Notifications,
+                icon = Icons.Rounded.Campaign,
                 label = context.getString(R.string.notification_chime),
                 description = context.getString(R.string.notification_chime_desc),
                 checked = ui.settings.chimeEnabled,
@@ -321,6 +324,20 @@ fun SettingsScreen(
                     }
                     runCatching { context.startActivity(intent) }
                 }
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Notifications,
+                label = context.getString(R.string.settings_announcements),
+                description = context.getString(R.string.settings_announcements_desc),
+                checked = !ui.announcementsMuted,
+                onChange = { vm.setAnnouncementsMuted(!it) }
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.BugReport,
+                label = context.getString(R.string.settings_crash_reports),
+                description = context.getString(R.string.settings_crash_reports_desc),
+                checked = ui.crashReportsEnabled,
+                onChange = vm::setCrashReportsEnabled
             )
         }
         SettingsGroup(context.getString(R.string.settings_help), visibleIf = qMatch(query, listOf("help", "support", "faq", "ကူညီ", "help me", "autostart", "rom", "custom rom"))) {
@@ -390,6 +407,12 @@ fun SettingsScreen(
                 label = context.getString(R.string.diagnostics_telegram),
                 value = "",
                 onClick = vm::sendDiagnosticToTelegram
+            )
+            SettingsClickRow(
+                icon = Icons.Rounded.DeleteOutline,
+                label = context.getString(R.string.settings_reset_app_data),
+                value = "",
+                onClick = { showResetConfirm = true }
             )
             SettingsClickRow(
                 icon = Icons.Rounded.DeleteOutline,
@@ -476,6 +499,26 @@ fun SettingsScreen(
         )
     }
 
+    if (showResetConfirm) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showResetConfirm = false },
+            title = { Text(context.getString(R.string.settings_reset_app_data)) },
+            text = { Text(context.getString(R.string.settings_reset_app_data_desc)) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    vm.resetAppData()
+                    showResetConfirm = false
+                }) {
+                    Text(context.getString(R.string.storage_full_clean), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showResetConfirm = false }) {
+                    Text(android.R.string.cancel.toString(), color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
     if (showAutostart) {
         SimpleTextDialog(
             title = context.getString(R.string.help_autostart),

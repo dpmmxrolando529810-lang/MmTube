@@ -257,6 +257,12 @@ data class PurchaseRecord(
     val source: String
 )
 
+data class AnnouncementRecord(
+    val id: String,
+    val text: String,
+    val createdAt: Long
+)
+
 data class PaymentSummary(
     val id: String,
     val plan: String,
@@ -284,5 +290,9 @@ data class SettingsSnapshot(
     val lastSeenVersion: String = "",
     val dismissedAnnouncementId: String = "",
     val lastPlanReminderAt: Long = 0L,
-    val lastForceSignOutSeen: Long = 0L
+    val lastForceSignOutSeen: Long = 0L,
+    val crashReports: Boolean = true,
+    val announcementsMuted: Boolean = false,
+    val lastRecapAt: Long = 0L,
+    val onboardingSplashSeen: Boolean = false
 )

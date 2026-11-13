@@ -38,6 +38,10 @@ class SettingsStore(private val context: Context) {
         val DISMISSED_ANNOUNCEMENT = stringPreferencesKey("dismissed_announcement")
         val LAST_PLAN_REMINDER = longPreferencesKey("last_plan_reminder")
         val LAST_FORCE_SIGNOUT_SEEN = longPreferencesKey("last_force_signout_seen")
+        val CRASH_REPORTS = booleanPreferencesKey("crash_reports")
+        val ANNOUNCEMENTS_MUTED = booleanPreferencesKey("announcements_muted")
+        val LAST_RECAP_AT = longPreferencesKey("last_recap_at")
+        val ONBOARDING_SPLASH = booleanPreferencesKey("onboarding_splash_v3")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -67,7 +71,11 @@ class SettingsStore(private val context: Context) {
         lastSeenVersion = this[Keys.LAST_SEEN_VERSION] ?: "",
         dismissedAnnouncementId = this[Keys.DISMISSED_ANNOUNCEMENT] ?: "",
         lastPlanReminderAt = this[Keys.LAST_PLAN_REMINDER] ?: 0L,
-        lastForceSignOutSeen = this[Keys.LAST_FORCE_SIGNOUT_SEEN] ?: 0L
+        lastForceSignOutSeen = this[Keys.LAST_FORCE_SIGNOUT_SEEN] ?: 0L,
+        crashReports = this[Keys.CRASH_REPORTS] ?: true,
+        announcementsMuted = this[Keys.ANNOUNCEMENTS_MUTED] ?: false,
+        lastRecapAt = this[Keys.LAST_RECAP_AT] ?: 0L,
+        onboardingSplashSeen = this[Keys.ONBOARDING_SPLASH] ?: false
     )
 
     suspend fun setTheme(mode: ThemeMode) {
@@ -128,6 +136,16 @@ class SettingsStore(private val context: Context) {
     suspend fun setLastPlanReminderAt(v: Long) { context.settingsDataStore.edit { it[Keys.LAST_PLAN_REMINDER] = v } }
 
     suspend fun setLastForceSignOutSeen(v: Long) { context.settingsDataStore.edit { it[Keys.LAST_FORCE_SIGNOUT_SEEN] = v } }
+
+    suspend fun setCrashReports(v: Boolean) { context.settingsDataStore.edit { it[Keys.CRASH_REPORTS] = v } }
+
+    suspend fun setAnnouncementsMuted(v: Boolean) { context.settingsDataStore.edit { it[Keys.ANNOUNCEMENTS_MUTED] = v } }
+
+    suspend fun setLastRecapAt(v: Long) { context.settingsDataStore.edit { it[Keys.LAST_RECAP_AT] = v } }
+
+    suspend fun clearAll() {
+        context.settingsDataStore.edit { it.clear() }
+    }
 
     suspend fun setOnboardingSeen() {
         context.settingsDataStore.edit { it[Keys.ONBOARDING] = true }

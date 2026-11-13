@@ -218,6 +218,20 @@ fun AppRoot(
                     }
                 )
             }
+            if (ui.showCelebration) {
+                val celebrationContext = androidx.compose.ui.platform.LocalContext.current
+                AlertDialog(
+                    onDismissRequest = { viewModel.dismissCelebration() },
+                    title = { Text(celebrationContext.getString(R.string.celebration_title)) },
+                    text = { Text(celebrationContext.getString(R.string.celebration_body)) },
+                    confirmButton = {
+                        TextButton(onClick = { viewModel.dismissCelebration() }) {
+                            Text("ရပြီ", color = MmtubePalette.Aqua)
+                        }
+                    },
+                    containerColor = Color(0xFF0C3B2F)
+                )
+            }
             val whatsNew = ui.whatsNewVersion
             if (whatsNew != null) {
                 WhatsNewDialog(version = whatsNew, onDismiss = viewModel::dismissWhatsNew)

@@ -3,6 +3,8 @@ package com.mmtube.app.ui.screens
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -163,6 +165,11 @@ fun DownloadsScreen(
                         }
                     }
                 }
+            }
+        }
+        item {
+            if (ui.history.isNotEmpty()) {
+                WeeklyBarChart(history = ui.history)
             }
         }
         item {
@@ -335,6 +342,50 @@ private fun QueueRow(
                     contentDescription = context.getString(R.string.queue_remove),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeeklyBarChart(history: List<HistoryItem>) {
+    val context = LocalContext.current
+    val days = remember {
+        (0..6).map { offset ->
+            val dayStart = java.util.Calendar.getInstance().apply {
+                timeInMillis = System.currentTimeMillis() - offset * 24L * 3600 * 1000
+                set(java.util.Calendar.HOUR_OF_DAY, 0)
+                set(java.util.Calendar.MINUTE, 0)
+                set(java.util.Calendar.SECOND, 0)
+                set(java.util.Calendar.MILLISECOND, 0)
+            }
+            dayStart
+        }.reversed()
+    }
+    val counts = days.map { day -> history.count { item ->
+        val c = java.util.Calendar.getInstance().apply { timeInMillis = item.createdAt }
+        c.get(java.util.Calendar.YEAR) == day.get(java.util.Calendar.YEAR) &&
+            c.get(java.util.Calendar.DAY_OF_YEAR) == day.get(java.util.Calendar.DAY_OF_YEAR)
+    } }
+    val maxCount = (counts.maxOrNull() ?: 0).coerceAtLeast(1)
+    val burmeseDays = listOf("တနင်္ဂ", "စနေ", "သောကြာ", "ကြာသပ", "ဗုဒ္ဓ", "အင်္ဂါ", "တနင်္လာ")
+    FrostedCard(modifier = Modifier.fillMaxWidth()) {
+        Text(context.getString(R.string.week_chart_title), style = MmtubeType.LabelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
+        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxWidth().height(84.dp)) {
+            val slotW = size.width / counts.size
+            counts.forEachIndexed { index, count ->
+                val barH = (count.toFloat() / maxCount) * (size.height - 12f)
+                val x = index * slotW + slotW * 0.25f
+                drawRect(
+                    color = androidx.compose.ui.graphics.Color(0xFF2FE3C0),
+                    topLeft = androidx.compose.ui.geometry.Offset(x, size.height - barH),
+                    size = androidx.compose.ui.geometry.Size(slotW * 0.5f, barH)
+                )
+            }
+        }
+        Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+            days.forEach { day ->
+                Text(burmeseDays[(day.get(java.util.Calendar.DAY_OF_WEEK) + 4) % 7], style = MmtubeType.LabelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }

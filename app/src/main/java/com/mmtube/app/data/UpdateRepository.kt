@@ -2,7 +2,10 @@ package com.mmtube.app.data
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import androidx.core.content.FileProvider
 import com.mmtube.app.BuildConfig
@@ -125,6 +128,10 @@ class UpdateRepository(private val context: Context) {
                     temp.copyTo(target, overwrite = true)
                     temp.delete()
                 }
+                if (!verifyApkSignature(target)) {
+                    target.delete()
+                    throw MmtubeException(ErrorKind.DOWNLOAD, "Update APK signature does not match — refusing to install a different app")
+                }
                 target
             }
         }.recoverCatching { error ->
@@ -166,6 +173,35 @@ class UpdateRepository(private val context: Context) {
             )
         }
     }
+
+    private fun verifyApkSignature(apk: File): Boolean {
+        return runCatching {
+            val flags = if (Build.VERSION.SDK_INT >= 28) {
+                PackageManager.GET_SIGNING_CERTIFICATES
+            } else {
+                @Suppress("DEPRECATION")
+                PackageManager.GET_SIGNATURES
+            }
+            val myInfo = context.packageManager.getPackageInfo(context.packageName, flags)
+            val archiveInfo = context.packageManager.getPackageArchiveInfo(apk.absolutePath, flags)
+            val mySha = signerSha256(myInfo)
+            val archiveSha = signerSha256(archiveInfo)
+            mySha != null && archiveSha != null && mySha == archiveSha
+        }.getOrDefault(false)
+    }
+
+    private fun signerSha256(info: PackageInfo?): String? = runCatching {
+        val bytes: ByteArray? = if (Build.VERSION.SDK_INT >= 28) {
+            info?.signingInfo?.apkContentsSigners?.firstOrNull()?.toByteArray()
+        } else {
+            @Suppress("DEPRECATION")
+            info?.signatures?.firstOrNull()?.toByteArray()
+        }
+        bytes ?: return@runCatching null
+        val digest = java.security.MessageDigest.getInstance("SHA-256")
+        digest.update(bytes)
+        digest.digest().joinToString("") { "%02x".format(it) }
+    }.getOrNull()
 
     private fun isNewer(remote: String, current: String): Boolean {
         val remoteParts = remote.substringBefore('-').split('.').map {

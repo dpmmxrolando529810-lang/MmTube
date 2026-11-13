@@ -39,6 +39,7 @@ import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.HourglassTop
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.List
@@ -130,7 +131,7 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(18.dp)
     ) {
         item(key = "header") {
-            Header(ui = ui, onSettings = onSettings)
+            Header(ui = ui, onSettings = onSettings, onOpenInbox = vm::openInbox)
         }
         if (!ui.settings.onboardingSeen) {
             item(key = "onboarding") {
@@ -224,12 +225,53 @@ fun HomeScreen(
         }
     }
 }
+    if (ui.showInbox) {
+        InboxDialog(ui = ui, vm = vm, onDismiss = vm::dismissInbox)
+    }
     if (storageFull) {
         StorageFullDialog(
             onDismiss = vm::dismissStorageFullPrompt,
             onClean = vm::clearOldFilesFromStoragePrompt
         )
     }
+}
+
+@Composable
+private fun InboxDialog(ui: MainUiState, vm: MainViewModel, onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(context.getString(R.string.inbox_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (ui.inboxAnnouncements.isEmpty()) {
+                    Text(context.getString(R.string.inbox_empty), style = MmtubeType.BodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } else {
+                    ui.inboxAnnouncements.take(10).forEach { item ->
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .padding(10.dp)
+                        ) {
+                            Text(item.text, style = MmtubeType.BodyMedium, color = MaterialTheme.colorScheme.onSurface)
+                            Text(
+                                Formatters.formatDateBurmese(item.createdAt),
+                                style = MmtubeType.LabelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = { vm.markInboxShown() }) {
+                Text(context.getString(R.string.inbox_mark_read), color = MmtubePalette.Aqua)
+            }
+        }
+    )
 }
 
 @Composable
@@ -316,7 +358,7 @@ private fun SimpleBanner(text: String, actionLabel: String, onAction: () -> Unit
 }
 
 @Composable
-private fun Header(ui: MainUiState, onSettings: () -> Unit) {
+private fun Header(ui: MainUiState, onSettings: () -> Unit, onOpenInbox: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -335,6 +377,30 @@ private fun Header(ui: MainUiState, onSettings: () -> Unit) {
             )
         }
         Box(Modifier.weight(1f))
+        Box {
+            IconButton(onClick = onOpenInbox) {
+                Icon(
+                    Icons.Rounded.Notifications,
+                    contentDescription = androidx.compose.ui.platform.LocalContext.current.getString(R.string.inbox_title),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+            if (ui.unreadAnnouncements > 0) {
+                Surface(
+                    shape = CircleShape,
+                    color = MmtubePalette.Danger,
+                    modifier = Modifier.size(18.dp).align(Alignment.TopEnd).padding(top = 4.dp, end = 2.dp)
+                ) {
+                    Text(
+                        "${ui.unreadAnnouncements}",
+                        color = Color.White,
+                        style = MmtubeType.LabelSmall.copy(fontSize = 10.sp, fontWeight = FontWeight.Bold),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
         IconButton(onClick = onSettings) {
             Icon(
                 Icons.Rounded.Settings,
