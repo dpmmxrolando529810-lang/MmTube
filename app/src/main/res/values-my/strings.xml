@@ -460,4 +460,5 @@ Firebase project: %4$s</string>
     <string name="settings_reduce_motion">Motion လျှော့ချမယ်</string>
     <string name="settings_reduce_motion_desc">အניམေးရှင်းများ လျှော့ချပြီး app ကိုပိုပေါ့ပါးအောင်လုပ်မယ်</string>
     <string name="diagnostics_export_csv">History CSV ထုတ်ယူရန်</string>
+    <string name="celebration_ok">ရပြီ</string>
 </resources>

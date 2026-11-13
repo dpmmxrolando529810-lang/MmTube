@@ -226,6 +226,9 @@ fun HomeScreen(
         }
     }
 }
+    if (ui.showCelebration) {
+        ConfettiBurst(onDismiss = vm::dismissCelebration)
+    }
     if (ui.showInbox) {
         InboxDialog(ui = ui, vm = vm, onDismiss = vm::dismissInbox)
     }
@@ -335,6 +338,87 @@ private fun AnnouncementBanner(text: String, onDismiss: () -> Unit) {
 private fun daysLeft(trialEndsAt: Long?): Int {
     if (trialEndsAt == null || trialEndsAt <= 0L) return 0
     return ((trialEndsAt - System.currentTimeMillis()) / 86_400_000L).toInt().coerceAtLeast(0)
+}
+
+private data class ConfettiParticle(
+    val xRatio: Float,
+    val yStart: Float,
+    val vx: Float,
+    val vy: Float,
+    val size: Float,
+    val color: androidx.compose.ui.graphics.Color
+)
+
+@Composable
+private fun ConfettiBurst(onDismiss: () -> Unit) {
+    val context = LocalContext.current
+    val particles = remember {
+        val rng = java.util.Random(42)
+        val colors = listOf(
+            androidx.compose.ui.graphics.Color(0xFFFF4D6D),
+            androidx.compose.ui.graphics.Color(0xFF2FE3C0),
+            androidx.compose.ui.graphics.Color(0xFFFFB84D),
+            androidx.compose.ui.graphics.Color(0xFF8AB4FF),
+            androidx.compose.ui.graphics.Color(0xFF58E0A8),
+            androidx.compose.ui.graphics.Color(0xFFD8A95F)
+        )
+        List(64) { ConfettiParticle(
+            xRatio = rng.nextFloat(),
+            yStart = rng.nextFloat() * 0.3f + 0.1f,
+            vx = (rng.nextFloat() - 0.5f) * 380f,
+            vy = rng.nextFloat() * 450f + 150f,
+            size = rng.nextFloat() * 7f + 4f,
+            color = colors[rng.nextInt(colors.size)]
+        ) }
+    }
+    val progress = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) {
+        progress.animateTo(1f, androidx.compose.animation.core.tween(durationMillis = 2600))
+        onDismiss()
+    }
+    val t = progress.value
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding(),
+        contentAlignment = Alignment.Center
+    ) {
+        androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
+            particles.forEach { p ->
+                val gravity = 1500f * t * t
+                val x = p.xRatio * size.width + p.vx * t
+                val y = p.yStart * size.height + p.vy * t + gravity
+                val alpha = (1f - t).coerceIn(0f, 1f)
+                drawCircle(
+                    color = p.color.copy(alpha = alpha),
+                    radius = p.size,
+                    center = androidx.compose.ui.geometry.Offset(x, y)
+                )
+            }
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "🎉",
+                fontSize = 96.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            )
+            Text(
+                text = context.getString(R.string.celebration_title),
+                style = MmtubeType.HeadlineMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            androidx.compose.material3.Button(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(16.dp),
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = MmtubePalette.Aqua,
+                    contentColor = Color(0xFF03211A)
+                )
+            ) {
+                Text(context.getString(R.string.celebration_ok), fontWeight = FontWeight.Bold)
+            }
+        }
+    }
 }
 
 @Composable

@@ -475,6 +475,7 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
             result
                 .onSuccess { snap ->
                     val list = snap.documents.mapNotNull { it.toPaymentRequest() }.sortedByDescending { it.createdAt }
+                    updateLauncherBadge(list.size)
                     _ui.update { it.copy(payingLoading = false, pendingPayments = list) }
                     if (!autoRejectRan) {
                         autoRejectRan = true
@@ -691,6 +692,47 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
 
     fun cancelExtendWarning() {
         _ui.update { it.copy(pendingExtendConfirmation = null) }
+    }
+
+    private val badgeChannel = "mmtube_admin_badge"
+    private val badgeNotificationId = 6901
+
+    private fun updateLauncherBadge(count: Int) {
+        runCatching {
+            val mgr = context.getSystemService(android.app.NotificationManager::class.java) ?: return@runCatching
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                mgr.createNotificationChannel(
+                    android.app.NotificationChannel(
+                        badgeChannel,
+                        "Payment review badge",
+                        android.app.NotificationManager.IMPORTANCE_LOW
+                    ).apply { setShowBadge(true) }
+                )
+            }
+            if (count <= 0) {
+                mgr.cancel(badgeNotificationId)
+                return@runCatching
+            }
+            val tap = android.app.PendingIntent.getActivity(
+                context, 6901,
+                android.content.Intent(context, AdminActivity::class.java).apply {
+                    flags = android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
+                },
+                android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+            )
+            val notif = androidx.core.app.NotificationCompat.Builder(context, badgeChannel)
+                .setSmallIcon(R.drawable.ic_stat_mmtube)
+                .setContentTitle(context.getString(R.string.admin_app_name))
+                .setContentText("ငွေပေးချေမှု ${count} ခု စစ်ဆေးရန် ကျန်နေပါသည်")
+                .setNumber(count)
+                .setOnlyAlertOnce(true)
+                .setShowWhen(false)
+                .setAutoCancel(true)
+                .setContentIntent(tap)
+                .setBadgeIconType(androidx.core.app.NotificationCompat.BADGE_ICON_SMALL)
+                .build()
+            mgr.notify(badgeNotificationId, notif)
+        }
     }
 
     fun setAnnouncementDryRun(value: Boolean) {
