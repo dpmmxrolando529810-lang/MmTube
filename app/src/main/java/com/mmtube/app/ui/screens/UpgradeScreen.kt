@@ -169,14 +169,14 @@ private fun HeroCard(isActive: Boolean, expiresAt: Long?) {
                 )
             }
             Text(
-                text = if (isActive) context.getString(R.string.upgrade_plan_active) else context.getString(R.string.upgrade_title),
+                text = if (isActive) context.getString(R.string.upgrade_renew_title) else context.getString(R.string.upgrade_title),
                 style = MmtubeType.DisplaySmall.copy(fontSize = 26.sp),
                 color = Color(0xFFF6F8FF),
                 modifier = Modifier.padding(top = 14.dp)
             )
             Text(
                 text = if (isActive && expiresAt != null) {
-                    context.getString(R.string.quota_paid_desc, Formatters.formatDate(expiresAt))
+                    context.getString(R.string.upgrade_renew_subtitle, Formatters.formatDate(expiresAt))
                 } else {
                     context.getString(R.string.upgrade_subtitle)
                 },

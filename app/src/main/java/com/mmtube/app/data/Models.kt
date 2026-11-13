@@ -293,6 +293,7 @@ data class SettingsSnapshot(
     val lastForceSignOutSeen: Long = 0L,
     val crashReports: Boolean = true,
     val announcementsMuted: Boolean = false,
+    val reduceMotion: Boolean = false,
     val lastRecapAt: Long = 0L,
     val onboardingSplashSeen: Boolean = false
 )

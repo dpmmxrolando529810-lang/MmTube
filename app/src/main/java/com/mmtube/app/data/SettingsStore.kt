@@ -40,6 +40,7 @@ class SettingsStore(private val context: Context) {
         val LAST_FORCE_SIGNOUT_SEEN = longPreferencesKey("last_force_signout_seen")
         val CRASH_REPORTS = booleanPreferencesKey("crash_reports")
         val ANNOUNCEMENTS_MUTED = booleanPreferencesKey("announcements_muted")
+        val REDUCE_MOTION = booleanPreferencesKey("reduce_motion")
         val LAST_RECAP_AT = longPreferencesKey("last_recap_at")
         val ONBOARDING_SPLASH = booleanPreferencesKey("onboarding_splash_v3")
     }
@@ -74,6 +75,7 @@ class SettingsStore(private val context: Context) {
         lastForceSignOutSeen = this[Keys.LAST_FORCE_SIGNOUT_SEEN] ?: 0L,
         crashReports = this[Keys.CRASH_REPORTS] ?: true,
         announcementsMuted = this[Keys.ANNOUNCEMENTS_MUTED] ?: false,
+        reduceMotion = this[Keys.REDUCE_MOTION] ?: false,
         lastRecapAt = this[Keys.LAST_RECAP_AT] ?: 0L,
         onboardingSplashSeen = this[Keys.ONBOARDING_SPLASH] ?: false
     )
@@ -140,6 +142,8 @@ class SettingsStore(private val context: Context) {
     suspend fun setCrashReports(v: Boolean) { context.settingsDataStore.edit { it[Keys.CRASH_REPORTS] = v } }
 
     suspend fun setAnnouncementsMuted(v: Boolean) { context.settingsDataStore.edit { it[Keys.ANNOUNCEMENTS_MUTED] = v } }
+
+    suspend fun setReduceMotion(v: Boolean) { context.settingsDataStore.edit { it[Keys.REDUCE_MOTION] = v } }
 
     suspend fun setLastRecapAt(v: Long) { context.settingsDataStore.edit { it[Keys.LAST_RECAP_AT] = v } }
 

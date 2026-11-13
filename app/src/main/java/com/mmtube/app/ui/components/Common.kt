@@ -351,12 +351,24 @@ fun StatChip(
     }
 }
 
+val LocalReduceMotion = androidx.compose.runtime.compositionLocalOf { false }
+
 @Composable
 fun PulsingDot(
     color: Color,
     modifier: Modifier = Modifier,
     size: Dp = 9.dp
 ) {
+    val appReduce = LocalReduceMotion.current
+    if (appReduce) {
+        Box(
+            modifier = modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.75f))
+        )
+        return
+    }
     val transition = rememberInfiniteTransition(label = "pulse")
     val alpha by transition.animateFloat(
         initialValue = 0.35f,

@@ -295,6 +295,14 @@ private fun PaymentCard(
                 Checkbox(checked = selected, onCheckedChange = { it() })
             }
             Text(payment.userCode, color = OnDark, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            if (payment.createdAt > 0 && System.currentTimeMillis() - payment.createdAt > 24L * 3600 * 1000) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFF3A2410)
+                ) {
+                    Text("နောက်ကျ", color = Amber, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                }
+            }
             Text(Plans.label(payment.plan), color = Aqua, fontWeight = FontWeight.Bold)
         }
         Text(formatDateTimeMs(payment.createdAt), color = Muted, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))

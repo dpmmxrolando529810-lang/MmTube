@@ -123,6 +123,7 @@ fun HomeScreen(
     var batchText by remember { mutableStateOf("") }
     val storageFull = ui.storageFullPrompt
     Box(modifier = Modifier.fillMaxSize()) {
+    androidx.compose.runtime.CompositionLocalProvider(com.mmtube.app.ui.components.LocalReduceMotion provides ui.reduceMotion) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -227,6 +228,7 @@ fun HomeScreen(
 }
     if (ui.showInbox) {
         InboxDialog(ui = ui, vm = vm, onDismiss = vm::dismissInbox)
+    }
     }
     if (storageFull) {
         StorageFullDialog(

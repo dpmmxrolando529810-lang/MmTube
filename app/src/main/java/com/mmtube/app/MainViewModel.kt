@@ -85,6 +85,7 @@ data class MainUiState(
     val inboxAnnouncements: List<com.mmtube.app.data.AnnouncementRecord> = emptyList(),
     val unreadAnnouncements: Int = 0,
     val showInbox: Boolean = false,
+    val reduceMotion: Boolean = false,
     val showCelebration: Boolean = false
 ) {
     val termsAccepted: Boolean get() = settings.acceptedTerms
@@ -168,6 +169,11 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             }
         }
 
+        // Populate reduceMotion from settings snapshot.
+        viewModelScope.launch {
+            val snap = container.settings.snapshot()
+            _ui.update { it.copy(reduceMotion = snap.reduceMotion) }
+        }
         // What's New: show once per version upgrade.
         viewModelScope.launch {
             val snap = container.settings.snapshot()
@@ -951,6 +957,35 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         runCatching {
             if (com.mmtube.app.data.FirebaseConfig.isConfigured) {
                 com.google.firebase.crashlytics.FirebaseCrashlytics.getInstance().recordException(error)
+            }
+        }
+    }
+
+    fun setReduceMotion(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setReduceMotion(enabled) }
+        _ui.update { it.copy(reduceMotion = enabled) }
+    }
+
+    fun exportHistoryCsv() {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                val history = container.history.snapshot()
+                val sb = StringBuilder()
+                sb.appendLine("title,platform,quality,size_bytes,mode,date")
+                for (item in history) {
+                    val title = item.title.replace("\"", "").replace(',', ';')
+                    sb.appendLine("\"$title\",${item.platform},${item.quality},${item.sizeBytes},${item.mode},${item.createdAt}")
+                }
+                val file = java.io.File(context.cacheDir, "mmtube_history.csv")
+                file.writeText(sb.toString())
+                val uri = androidx.core.content.FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+                val share = Intent(Intent.ACTION_SEND).apply {
+                    type = "text/csv"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                runCatching { context.startActivity(Intent.createChooser(share, "Export history").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             }
         }
     }

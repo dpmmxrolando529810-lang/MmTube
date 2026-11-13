@@ -447,4 +447,17 @@ Firebase project: %4$s</string>
     <string name="celebration_title">Premium အသုံးချပါ! 🎉</string>
     <string name="celebration_body">ငွေပေးချေမှု အတည်ပြုပြီးပါပြီ — ယခုမှ အကန့်အသတ်မရှိ ဒေါင်းလုပ်ခဏ်းစားခွင့် ရပါပြီ</string>
     <string name="week_chart_title">ဒီအပတ် downloads</string>
+
+    <string name="upgrade_renew_title">Premium သက်တမ်းတိုးမယ်</string>
+    <string name="upgrade_renew_subtitle">Premium ဝင်ပြီတိုးဖို့ plan တစ်ခုရွေးပြီး KBZ Pay သို့ money send လုပ်ပါ</string>
+
+    <string name="plan_expired_title">Premium သက်တမ်းကုန်ပြီ</string>
+    <string name="plan_expired_body">ဒီ App ကို Premium ပြန်ဝင်ပြီး ဆက်လက်အသုံးချပါ</string>
+    <string name="notification_connecting">ဆက်သွယ်နေပါသည်…</string>
+
+    <string name="quota_paid_days_left">%1$d ရက် ကျန်နေသေးသည်</string>
+
+    <string name="settings_reduce_motion">Motion လျှော့ချမယ်</string>
+    <string name="settings_reduce_motion_desc">အניམေးရှင်းများ လျှော့ချပြီး app ကိုပိုပေါ့ပါးအောင်လုပ်မယ်</string>
+    <string name="diagnostics_export_csv">History CSV ထုတ်ယူရန်</string>
 </resources>

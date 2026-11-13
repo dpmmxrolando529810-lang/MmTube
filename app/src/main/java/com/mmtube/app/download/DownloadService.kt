@@ -120,7 +120,7 @@ class DownloadService : Service() {
         val paused = state is DownloadState.Paused
 
         val title = when (state) {
-            is DownloadState.Preparing -> getString(R.string.notification_downloading, state.title)
+            is DownloadState.Preparing -> getString(R.string.notification_connecting) + " — " + state.title
             is DownloadState.Running -> getString(R.string.notification_downloading, state.title)
             is DownloadState.Merging -> getString(R.string.download_status_merging)
             is DownloadState.Saving -> getString(R.string.download_status_saving)

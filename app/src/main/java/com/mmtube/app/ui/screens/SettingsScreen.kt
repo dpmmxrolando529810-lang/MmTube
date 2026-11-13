@@ -36,6 +36,8 @@ import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsActive
 import androidx.compose.material.icons.rounded.BatteryAlert
 import androidx.compose.material.icons.rounded.Send
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.Campaign
 import androidx.compose.material.icons.rounded.BugReport
 import androidx.compose.material.icons.rounded.PhoneAndroid
@@ -146,7 +148,7 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        SettingsGroup(context.getString(R.string.settings_appearance), visibleIf = qMatch(query, listOf("appearance", "theme", "color", "dark", "light", "amoled", "dynamic", "material you", "language", "အရောင်", "အမှောင်", "ဘာသာ", "အရောင်စည်း", "dynamic color"))) {
+        SettingsGroup(context.getString(R.string.settings_appearance), visibleIf = qMatch(query, listOf("appearance", "theme", "color", "dark", "light", "amoled", "dynamic", "material you", "language", "motion", "အရောင်", "အမှောင်", "ဘာသာ", "အရောင်စည်း", "dynamic color", "လှုပ်ရှား"))) {
             Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
                 Text(context.getString(R.string.settings_theme), style = MmtubeType.TitleMedium, color = MaterialTheme.colorScheme.onSurface)
                 ThemeSelector(selected = ui.settings.theme, onSelect = vm::setTheme)
@@ -156,6 +158,13 @@ fun SettingsScreen(
                 label = context.getString(R.string.settings_language),
                 value = languageLabel(context, ui.settings.language),
                 onClick = { showLanguage = true }
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Stop,
+                label = context.getString(R.string.settings_reduce_motion),
+                description = context.getString(R.string.settings_reduce_motion_desc),
+                checked = ui.reduceMotion,
+                onChange = vm::setReduceMotion
             )
             SettingsSwitchRow(
                 icon = Icons.Rounded.AutoAwesome,
@@ -407,6 +416,12 @@ fun SettingsScreen(
                 label = context.getString(R.string.diagnostics_telegram),
                 value = "",
                 onClick = vm::sendDiagnosticToTelegram
+            )
+            SettingsClickRow(
+                icon = Icons.Rounded.Share,
+                label = context.getString(R.string.diagnostics_export_csv),
+                value = "",
+                onClick = vm::exportHistoryCsv
             )
             SettingsClickRow(
                 icon = Icons.Rounded.DeleteOutline,

@@ -1,7 +1,6 @@
 package com.mmtube.app.bot
 
 import android.content.Context
-import android.net.wifi.WifiManager
 import android.os.PowerManager
 import android.util.Log
 import com.mmtube.app.MMTubeApp
@@ -256,13 +255,8 @@ class BotRunner(private val context: Context) {
         mode: DownloadMode
     ) = coroutineScope {
         val power = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-        val wifi = context.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         val wakeLock = power.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MMTube:botDownload")
             .apply { setReferenceCounted(false); acquire(SIX_HOURS) }
-        val wifiLock = runCatching {
-            wifi.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "MMTube:botWifi")
-                .apply { setReferenceCounted(false); acquire() }
-        }.getOrNull()
 
         BotRuntime.update {
             it.copy(jobTitle = probe.title, jobProgress = 0f, jobLabel = "ဒေါင်းနေတယ်")
@@ -372,7 +366,6 @@ class BotRunner(private val context: Context) {
             }
         } finally {
             runCatching { wakeLock.release() }
-            runCatching { wifiLock?.release() }
             BotRuntime.update {
                 it.copy(jobTitle = null, jobProgress = 0f, jobLabel = null)
             }

@@ -83,8 +83,13 @@ fun QuotaStrip(
         guest -> context.getString(R.string.quota_guest_title)
         else -> context.getString(R.string.quota_free_title)
     }
+    val paidDaysLeft = profile?.planExpiresAt?.let { ((it - now) / 86_400_000L).toInt().coerceAtLeast(0) }
     val subtitle = when {
-        paid -> context.getString(R.string.quota_paid_desc, Formatters.formatDate(profile?.planExpiresAt))
+        paid -> if (paidDaysLeft != null && paidDaysLeft > 0) {
+            context.getString(R.string.quota_paid_days_left, paidDaysLeft)
+        } else {
+            context.getString(R.string.quota_paid_desc, Formatters.formatDate(profile?.planExpiresAt))
+        }
         disabled -> context.getString(R.string.account_disabled_desc)
         guest -> context.getString(R.string.quota_guest_desc)
         quota == null -> context.getString(R.string.loading)
