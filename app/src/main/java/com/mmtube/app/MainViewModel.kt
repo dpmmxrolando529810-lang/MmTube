@@ -766,11 +766,22 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
-    fun submitPayment(plan: String, buyerPhone: String, note: String, imageBase64: String, onDone: (Boolean, String?) -> Unit) {
+    /**
+     * Uploads payment proof. [onDone] gets (ok, error, claimCode); the claim
+     * code is the Firestore document id so the admin can find the exact row
+     * without any schema change.
+     */
+    fun submitPayment(
+        plan: String,
+        buyerPhone: String,
+        note: String,
+        imageBase64: String,
+        onDone: (Boolean, String?, String?) -> Unit
+    ) {
         val profile = _ui.value.account.profile
         val db = container.firestore
         if (profile == null || db == null) {
-            onDone(false, "Sign in လုပ်ပါ")
+            onDone(false, "Sign in လုပ်ပါ", null)
             return
         }
         val months = Plans.months(plan)
@@ -782,12 +793,12 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             else -> 0
         }
         if (months <= 0 || imageBase64.isBlank()) {
-            onDone(false, "Plan နဲ့ ငွေပြေစာပုံ ဖြည့်ပါ")
+            onDone(false, "Plan နဲ့ ငွေပြေစာပုံ ဖြည့်ပါ", null)
             return
         }
         viewModelScope.launch {
             val result = runCatching {
-                db.collection("payments").add(
+                val ref = db.collection("payments").add(
                     mapOf(
                         "uid" to profile.uid,
                         "userCode" to profile.userCode,
@@ -802,10 +813,11 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                         "createdAt" to com.google.firebase.Timestamp.now()
                     )
                 ).await()
+                ref.id
             }
             result
-                .onSuccess { onDone(true, null) }
-                .onFailure { onDone(false, it.message) }
+                .onSuccess { id -> onDone(true, null, id) }
+                .onFailure { onDone(false, it.message, null) }
         }
     }
 
@@ -1151,6 +1163,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun setColorblindMode(v: Boolean) { viewModelScope.launch { container.settings.setColorblindMode(v) } }
+    fun setColorblindProfile(profile: String) { viewModelScope.launch { container.settings.setColorblindProfile(profile) } }
     fun setDynamicColor(v: Boolean) { viewModelScope.launch { container.settings.setDynamicColor(v) } }
 
     fun setTurbo(enabled: Boolean) {
@@ -1264,7 +1277,19 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                         }
                         _ui.update { it.copy(update = it.update.copy(checking = false)) }
                     } else {
-                        _ui.update { it.copy(update = UpdateUi(info = info)) }
+                        val dismissedVersion = runCatching {
+                            container.settings.snapshot().dismissedUpdateVersion
+                        }.getOrDefault("")
+                        _ui.update {
+                            it.copy(
+                                update = it.update.copy(
+                                    info = info,
+                                    // "Later" suppresses the automatic dialog only;
+                                    // a manual check should always show the update.
+                                    dismissed = silent && info.version == dismissedVersion
+                                )
+                            )
+                        }
                         // Auto-update: silently download the update in the background.
                         // Android only allows install after the user confirms in the
                         // system installer, but this removes the need to manually
@@ -1272,8 +1297,11 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                         if (silent && container.settings.snapshot().autoAppUpdate) {
                             val downloaded = container.updater.findDownloaded(info)
                             if (downloaded != null) {
-                                _ui.update { it.copy(update = UpdateUi(info = info, file = downloaded, progress = 100)) }
+                                _ui.update { it.copy(update = it.update.copy(info = info, file = downloaded, progress = 100)) }
                                 showUpdateReadyNotification()
+                                if (!_ui.value.update.dismissed) {
+                                    maybeLaunchInstallerOnce(info.version)
+                                }
                             } else {
                                 downloadUpdate(autoInstall = true)
                             }
@@ -1316,9 +1344,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 showUpdateReadyNotification()
                 event(UiEvent.Message(context.getString(R.string.update_ready)))
                 if (autoInstall && !_ui.value.update.dismissed) {
-                    // Launch the system installer straight away — the user only
-                    // needs to tap Install. This is as automatic as Android allows.
-                    installUpdate()
+                    // Launch the system installer once per version. If the user
+                    // backs out, the notification stays — no repeated popups on
+                    // every later app entry.
+                    maybeLaunchInstallerOnce(info.version)
                 }
             }.onFailure { error ->
                 _ui.update { it.copy(update = it.update.copy(downloading = false, error = error.message)) }
@@ -1342,7 +1371,25 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     fun dismissUpdate() {
+        val version = _ui.value.update.info?.version
         _ui.update { it.copy(update = it.update.copy(dismissed = true)) }
+        if (!version.isNullOrBlank()) {
+            viewModelScope.launch {
+                container.settings.setUpdateDismissedVersion(version)
+            }
+        }
+    }
+
+    /** True the first time this version becomes installable; after that the
+     *  installer is only opened from the dialog or the notification. */
+    private fun maybeLaunchInstallerOnce(version: String) {
+        viewModelScope.launch {
+            val prompted = runCatching { container.settings.snapshot().installPromptedVersion }
+                .getOrDefault("")
+            if (prompted == version) return@launch
+            container.settings.setInstallPromptedVersion(version)
+            installUpdate()
+        }
     }
 
     fun requestInstallUpdate() {

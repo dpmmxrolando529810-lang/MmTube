@@ -92,7 +92,12 @@ fun AppRoot(
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
 
-    MmtubeTheme(ui.settings.theme, ui.settings.colorblindMode, ui.settings.dynamicColor) {
+    MmtubeTheme(
+        themeMode = ui.settings.theme,
+        colorblindMode = ui.settings.colorblindMode,
+        dynamicColor = ui.settings.dynamicColor,
+        colorblindProfile = ui.settings.colorblindProfile
+    ) {
         val snackbarHostState = remember { SnackbarHostState() }
         val navController = rememberNavController()
 
@@ -254,11 +259,12 @@ fun AppRoot(
 private fun WhatsNewDialog(version: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val items = listOf(
-        "ငွေပေးချေမှု ပုံ screenshot တိုက်ရိုက်ပို့နိုင်ပါသည် (Upgrade စာမျက်နှာ)",
-        "Admin ထံမှ Plan အတည်ပြုချက်ကို App ထဲတွင် သိရမယ်",
-        "Plan သက်တမ်းကုန်ခါနီး သတိပေး notification",
-        "Notification permission ခွင့်ပြုချက် စစ်ဆေးရန် Settings ထဲ ထည့်ထားတယ်",
-        "Custom ROM များအတွက် Autostart လမ်းညွှန်"
+        "App ပိတ်သွားတာ / ဖုန်း restart ဖြစ်တာတောင် ဒေါင်းလုပ်တန်းစီထားတာကို ပြန်ဆက်လုပ်ပေးတယ်",
+        "ငွေပေးချေပြီးရင် Claim Code ပြပေးတယ် — Admin ကို ပို့ထားရင် စစ်ဆေးမှု ပိုမြန်တယ်",
+        "Admin ငြင်းပယ်ရင် အကြောင်းပြချက်ကို ငွေပေးချေမှုမှတ်တမ်းမှာ တိုက်ရိုက်မြင်ရတယ်",
+        "အရောင်ခွဲခြားရခက်သူများအတွက် Red-Green / Blue-Yellow palette ရွေးနိုင်တယ်",
+        "Update စစ်ဆေးမှု ပိုမြန်ပြီး GitHub limit မထိအောင် cache သုံးထားတယ်",
+        "MP3 အသံအတိုးအကျယ်ကို နားထောင်ရအဆင်ပြေအောင် ချိန်ညှိထားတယ်"
     )
     AlertDialog(
         onDismissRequest = onDismiss,

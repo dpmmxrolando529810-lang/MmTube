@@ -21,5 +21,15 @@ class AdminApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AdminContainer(this)
+        // App Check (Play Integrity) — release builds only.
+        if (!BuildConfig.DEBUG && AdminFirebaseConfig.isConfigured) {
+            runCatching {
+                com.google.firebase.appcheck.FirebaseAppCheck.getInstance()
+                    .installAppCheckProviderFactory(
+                        com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
+                            .getInstance()
+                    )
+            }
+        }
     }
 }

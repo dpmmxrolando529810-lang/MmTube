@@ -323,50 +323,50 @@
     <string name="history_cleanup_old_done">Old files cleaned up</string>
     <string name="queued_banner">Queued next: %1$s</string>
     <string name="settings_help">Help</string>
-    <string name="help_download_failed">ဒေါင်းလို့မရရင် ဘာလုပ်မလဲ?</string>
-    <string name="help_download_failed_body">ရွေးချယ်စရာများ:
+    <string name="help_download_failed">What if a download fails?</string>
+    <string name="help_download_failed_body">How to fix:
 
-(1) လင့်မှန်/မဟုတ် ပြန်စစ်ပါ — YouTube / Facebook / TikTok link ဖြစ်ရပါမယ်။
-(2) ဗီဒီယိုက Private သို့မဟုတ် Region-locked ဖြစ်ရင် ဒေါင်းလို့မရဘူး — Public video ကိုရွေးပါ။
-(3) အင်တာနက်အမြန်နှုန်း စမ်းကြည့်ပါ — Wi-Fi သို့မဟုတ် ဒေတာချတ်ရင်ပြန်စမ်းပါ။
-(4) အင်ဂျင် (yt-dlp) ကို "Update engine" နှိပ်ပြီး update လုပ်ပေးပါပါ။
-(5) မရသေးဘူးဆိုရင် MMTube Support (@TKA_MTC) ကို ဆက်သွယ်ပေးပါ။</string>
-    <string name="help_no_sound">အသံမထွက်ရင် ဘာလုပ်မလဲ?</string>
-    <string name="help_no_sound_body">ဗီဒီယိုဖိုင်အတွက် — YouTube MKV/MP4 stream တစ်ခုချင်းစီ ဆိုက်နဲ့ အလိုအလျောက် ပေါင်းစပ်သည်။ ExoPlayer/VLC/MX Player ဖြင့် ကြည့်ပါ။
+(1) Check the link — it must be a YouTube / Facebook / TikTok link.
+(2) Private or region-locked videos cannot be downloaded — choose a public one.
+(3) Check your connection — Wi-Fi or mobile data may be unstable.
+(4) Open Settings → Engine → Update engine to update yt-dlp.
+(5) Still stuck? Contact the owner (@TKA_MTC).</string>
+    <string name="help_no_sound">No sound in the video?</string>
+    <string name="help_no_sound_body">For video files — YouTube serves video and audio separately. MMTube merges them with FFmpeg, so play the file with MX Player, VLC or ExoPlayer.
 
-MP3/အသံအတွက် — ခွဲပြီးကျော်ပါ။ MP3 သည် MP3 player အားလုံးနှင့် အသံတူပါ။
+For MP3 — audio tags are written automatically.
 
-တပ်ဆင်နေချိန်မှာ AA/Opus audio error တစ်ခါကြုံတွေ့တတ်ပါတယ် — "နောက်မှ ထပ်စမ်းပါ" ကို တစ်ခေါက်နှိပ်ပြီး ပြန်ကြိုးစားပါ။</string>
-    <string name="help_slow_quality">ဒေါင်းလုဒ် အရည်အသွေး မမြင့်ရင်?</string>
-    <string name="help_slow_quality_body">MMTube သည် Source ကပေးသော အရည်အသွေးအမြင့်ဆုံး (MX 4K / 1440p / 1080p) default-တွေ့သည် — အဲဒါ"မမြင့်မားလျှင်":
+An audio codec error can happen occasionally — tap retry and try again.</string>
+    <string name="help_slow_quality">Download quality looks low?</string>
+    <string name="help_slow_quality_body">MMTube automatically picks the highest quality the source offers (4K/1440p/1080p). If it still looks low:
 
-• Source ကই အဲဒီ မြင့်မားတဲ့ အရည်အသွေး မရှိနိုင်ပါဘူး (ဥပမာ — အချို့ FB/TikTok ဗီဒီယိုတွေသည် 720p/1080p သာ)
-• ပိတ်ထားတဲ့ YouTube တစ်ခုကိုပဲ ကြည့်ပါ — YouTube က default အရ 480p သာ ပြတယ်ဆိုရင် အဲဒါက default ပါပဲ
-• Turbo mode (aria2c) ဖွင့်ထားပါက ဆက်လက် ဆက်လက်မြန်ဆန်စွာ ဒေါင်းမည်
-• ဖိုင်အရွယ်အစားက အကြမ်းသဘောအရ ကြီးမားမည်ဖြစ်ပါသည် — နေရာလုံလောက်အောင် စစ်ပါ</string>
+• The source video may only have a low-quality stream
+• Some Facebook/TikTok videos are only 720p/1080p
+• YouTube can restrict quality by region
+• Older Android phones may decode slowly</string>
     <string name="home_premium_title">Premium MMTube</string>
-    <string name="home_premium_desc">မကန့်သတ်ဒေါင်းလုဒ် · 4K/2K/1080p · အားလုံးအတွက် တစ်ခါတည်း payment</string>
+    <string name="home_premium_desc">Unlimited downloads · 4K/2K/1080p · one simple price</string>
     <string name="home_premium_cta">Upgrade</string>
-    <string name="settings_search">Settings list filter ရှာရန်</string>
+    <string name="settings_search">Search settings</string>
     <string name="settings_colorblind">Colorblind-friendly colors</string>
-    <string name="settings_colorblind_desc">အရောင်မခွဲနိုင်သောသူများအတွက် tab ပြင်ဆင်ချက်</string>
+    <string name="settings_colorblind_desc">Accessible palettes for red-green and blue-yellow colour blindness</string>
     <string name="settings_dynamic_color">Material You (dynamic color)</string>
-    <string name="settings_dynamic_color_desc">ဖုန်း၏ theme အရောင်နဲ့ညီအောင် ပြောင်း</string>
+    <string name="settings_dynamic_color_desc">Match the theme to your wallpaper colours</string>
     <string name="batch_title">Batch Download</string>
-    <string name="batch_hint">Link ကို တစ်ခုပြီး တစ်ခု စာကြောင်းတစ်ကြောင်းစီ ထည့်ပါ။</string>
-    <string name="batch_start">အားလုံး ဒေါင်းမယ်</string>
-    <string name="batch_empty">Link မပါသေးပါ။</string>
+    <string name="batch_hint">Paste one link per line.</string>
+    <string name="batch_start">Download all</string>
+    <string name="batch_empty">No links yet.</string>
     <string name="batch_queued">%1$d links queued. Planning downloads…</string>
-    <string name="diagnostics_view_logs">ဒေါင်းလုဒ် log ကြည့်မည် (share)</string>
-    <string name="diagnostics_delete_partial">ဆုံးမဖြစ်ဖိုင်များ ဖျက်မည် (.part/.aria2)</string>
-    <string name="partial_deleted">%1$d partial files ဖျက်ပြီး</string>
-    <string name="logs_share">ဒေါင်းလုဒ် log မျှဝေခြင်း</string>
-    <string name="queue_notification_title">တန်းစီထားသော ဒေါင်းလုဒ်များ</string>
-    <string name="error_no_space_title">နေရာမလုံလောက်ပါ</string>
-    <string name="error_no_space_body">ဒေါင်းလုဒ်ကို ဆက်လုပ်ဖို့ ဖုန်းထဲ နေရာလိုအပ်တယ်။ အဟောင်းဖိုင်များ ဖျက်ပေးမလား?</string>
-    <string name="storage_full_clean">အဟောင်းဖိုင်များ ဖျက်ပါ</string>
-    <string name="update_ready_notification">ဗားရှင်းအသစ် အဆင်သင့်ဖြစ်ပြီ — နှိပ်ပြီး Install လုပ်ပါ</string>
-    <string name="expired_plan_message">Premium Plan သက်တမ်းကုန်ပြီ — အခမဲ့သို့ ပြန်ကူးမယ်</string>
+    <string name="diagnostics_view_logs">View / share download log</string>
+    <string name="diagnostics_delete_partial">Delete unfinished files (.part/.aria2)</string>
+    <string name="partial_deleted">%1$d partial file(s) deleted</string>
+    <string name="logs_share">Share download log</string>
+    <string name="queue_notification_title">Queued downloads</string>
+    <string name="error_no_space_title">Not enough space</string>
+    <string name="error_no_space_body">There is not enough space to continue downloading. Delete old files?</string>
+    <string name="storage_full_clean">Delete old files</string>
+    <string name="update_ready_notification">New version ready — tap to install</string>
+    <string name="expired_plan_message">Your Premium plan has expired — switched back to Free.</string>
     <string name="notification_eta">Time remaining: %1$s</string>
 
     <string name="settings_notifications">Notifications</string>
@@ -408,59 +408,82 @@ Firebase project: %4$s</string>
     <string name="announcement_got_it">Got it</string>
 
     <string name="queue_section">Queued (%1$d) — drag to reorder</string>
-    <string name="queue_drag_hint">ဆွဲရွှေ့ပြီး အစီအစဉ် ပြန်ပြင်ပါ</string>
-    <string name="queue_drag_handle">ဆွဲရန်</string>
-    <string name="queue_remove">တန်းစီမှ ဖယ်ရန်</string>
-    <string name="queue_notification_count">%1$d တန်းစီထား — %2$s</string>
-    <string name="quota_block_notification_title">ယနေ့ဒေါင်းလုဒ်ပြည့်သွားပြီ</string>
-    <string name="quota_block_notification_body">Premium သို့ ပြောင်းပြီး အကန့်အသတ်မရှိ ဒေါင်းပါ</string>
+    <string name="queue_drag_hint">Press and hold, then drag to reorder</string>
+    <string name="queue_drag_handle">Drag</string>
+    <string name="queue_remove">Remove from queue</string>
+    <string name="queue_notification_count">%1$d queued — %2$s</string>
+    <string name="quota_block_notification_title">Daily download limit reached</string>
+    <string name="quota_block_notification_body">Upgrade to Premium for unlimited downloads</string>
     <string name="quota_block_notification_action">Upgrade to Premium</string>
 
-    <string name="payment_confirm_title">ငွေပေးချေမှု အတည်ပြုပါ</string>
-    <string name="payment_confirm_body">%1$s — %2$d Ks ပေးချေမှာ မဟုတ်ပါလား? Submit လုပ်ပြီး Admin အတည်ပြုနဲ့ စောင့်ပါ။</string>
-    <string name="payment_confirm_yes">Submit လုပ်မယ်</string>
-    <string name="payment_cancel_submit">ငွေပေးချေမှု ပယ်ဖျက်ရန်</string>
-    <string name="payment_approved_chime">ငွေပေးချေမှု အတည်ပြုပြီးပါပြီ — Premium Plan ဖွင့်ပြီးပါပြီ 🎉</string>
-    <string name="payment_rejected_notice">ငွေပေးချေမှု ငြင်းပယ်ခံရပါပြီ — Admin မှတ်ချက်ကိုအောက်မှာကြည့်ပါ</string>
-    <string name="account_upgrade_trial">Trial ကျန်: %1$d ရက်</string>
-    <string name="settings_delete_account">အကောင့်ဖျက်ရန်</string>
-    <string name="account_delete_done">အကောင့်ဖျက်ပြီးပါပြီ</string>
-    <string name="purchase_history_title">ဝယ်ယူမှုမှတ်တမ်း</string>
-    <string name="purchase_history_empty">ဝယ်ယူမှုမှတ်တမ်း မရှိသေးပါ။</string>
-    <string name="trial_banner_text">%1$d ရက် Trial ကျန်နေသည် — ပြီးနောက် Free ၁/day အသုံးပြုရမည်</string>
-    <string name="trial_banner_go">Premium ဝင်မယ်</string>
-    <string name="free_limit_text">ဒီနေ့အတွက် အခမဲ့ ဒေါင်းလုဒ် ကုန်သွားပြီ — Premium ပြောင်းလိုက်ရင် အကန့်အသတ်မရှိ</string>
+    <string name="payment_confirm_title">Confirm payment</string>
+    <string name="payment_confirm_body">Send %1$s — %2$d Ks? Submit and wait for admin approval.</string>
+    <string name="payment_confirm_yes">Submit</string>
+    <string name="payment_cancel_submit">Cancel my payment</string>
+    <string name="payment_approved_chime">Payment approved — Premium is now active 🎉</string>
+    <string name="payment_rejected_notice">Payment was rejected — see the admin note below</string>
+    <string name="account_upgrade_trial">Trial left: %1$d day(s)</string>
+    <string name="settings_delete_account">Delete account</string>
+    <string name="account_delete_done">Account deleted</string>
+    <string name="purchase_history_title">Purchase history</string>
+    <string name="purchase_history_empty">No purchases yet.</string>
+    <string name="trial_banner_text">%1$d day(s) of Trial left — then 1 free download/day</string>
+    <string name="trial_banner_go">Get Premium</string>
+    <string name="free_limit_text">Today\'s free download is used — go Premium for unlimited downloads</string>
     <string name="free_limit_go">Upgrade</string>
 
-    <string name="recap_notification_title">ဒီအပတ် သုံးသပ်ချက်</string>
-    <string name="recap_notification_body">ဒီအပတ် %1$d downloads — %2$s ဒေါင်းပြီးပါပြီ</string>
-    <string name="reset_app_data_done">App data အားလုံး ဖျက်ပြီးပါပြီ</string>
-    <string name="inbox_title">သတင်းအချက်အလက်များ</string>
-    <string name="inbox_mark_read">အကုန်ဖတ်ပြီးပြီ</string>
-    <string name="inbox_empty">သတင်းအချက်အလက် မရှိသေးပါ။</string>
-    <string name="settings_announcements">Owner ကြေညာချက် ရယူပါ</string>
-    <string name="settings_announcements_desc">ကြေညာချက်ကို လက်မခံချင်ရင် ပိတ်ထားပါ</string>
-    <string name="settings_crash_reports">Crash report ပို့ပါ</string>
-    <string name="settings_crash_reports_desc">အက်ပ်တွဲကျရင် အချက်အလက် ပို့ပေးမယ်</string>
-    <string name="settings_reset_app_data">App data အားလုံးဖျက်ရန်</string>
-    <string name="settings_reset_app_data_desc">မှတ်တမ်း နှင့် ချိန်ညှိချက်များ ဖျက်မယ်</string>
-    <string name="celebration_title">Premium အသုံးချပါ! 🎉</string>
-    <string name="celebration_body">ငွေပေးချေမှု အတည်ပြုပြီးပါပြီ — ယခုမှ အကန့်အသတ်မရှိ ဒေါင်းလုပ်ခဏ်းစားခွင့် ရပါပြီ</string>
-    <string name="week_chart_title">ဒီအပတ် downloads</string>
+    <string name="recap_notification_title">Your weekly recap</string>
+    <string name="recap_notification_body">%1$d downloads this week — %2$s completed</string>
+    <string name="reset_app_data_done">All app data cleared.</string>
+    <string name="inbox_title">Inbox</string>
+    <string name="inbox_mark_read">Mark all read</string>
+    <string name="inbox_empty">No announcements yet.</string>
+    <string name="settings_announcements">Receive owner announcements</string>
+    <string name="settings_announcements_desc">Turn off if you do not want announcement messages</string>
+    <string name="settings_crash_reports">Send crash reports</string>
+    <string name="settings_crash_reports_desc">Share diagnostics if the app crashes</string>
+    <string name="settings_reset_app_data">Clear all app data</string>
+    <string name="settings_reset_app_data_desc">Deletes history and preferences</string>
+    <string name="celebration_title">Enjoy Premium! 🎉</string>
+    <string name="celebration_body">Payment approved — you can now download without limits.</string>
+    <string name="week_chart_title">Downloads this week</string>
 
-    <string name="upgrade_renew_title">Premium သက်တမ်းတိုးမယ်</string>
-    <string name="upgrade_renew_subtitle">Premium ဝင်ပြီတိုးဖို့ plan တစ်ခုရွေးပြီး KBZ Pay သို့ money send လုပ်ပါ</string>
+    <string name="upgrade_renew_title">Renew Premium</string>
+    <string name="upgrade_renew_subtitle">Choose a plan and send the amount via KBZ Pay to renew Premium.</string>
 
-    <string name="plan_expired_title">Premium သက်တမ်းကုန်ပြီ</string>
-    <string name="plan_expired_body">ဒီ App ကို Premium ပြန်ဝင်ပြီး ဆက်လက်အသုံးချပါ</string>
-    <string name="notification_connecting">ဆက်သွယ်နေပါသည်…</string>
+    <string name="plan_expired_title">Premium expired</string>
+    <string name="plan_expired_body">Re-activate Premium to keep using the app.</string>
+    <string name="notification_connecting">Connecting…</string>
 
-    <string name="quota_paid_days_left">%1$d ရက် ကျန်နေသေးသည်</string>
+    <string name="quota_paid_days_left">%1$d day(s) left</string>
 
-    <string name="settings_reduce_motion">Motion လျှော့ချမယ်</string>
-    <string name="settings_reduce_motion_desc">အניམေးရှင်းများ လျှော့ချပြီး app ကိုပိုပေါ့ပါးအောင်လုပ်မယ်</string>
-    <string name="diagnostics_export_csv">History CSV ထုတ်ယူရန်</string>
-    <string name="celebration_ok">ရပြီ</string>
+    <string name="settings_reduce_motion">Reduce motion</string>
+    <string name="settings_reduce_motion_desc">Reduce animations and keep the app lighter</string>
+    <string name="diagnostics_export_csv">Export history CSV</string>
+    <string name="celebration_ok">Done</string>
 
-    <string name="download_reconnecting">ဆက်သွယ်နေပါသည်…</string>
+    <string name="download_reconnecting">Reconnecting…</string>
+        <string name="colorblind_off">Off</string>
+    <string name="colorblind_red_green">Red-green (Deuteranopia/Protanopia)</string>
+    <string name="colorblind_blue_yellow">Blue-yellow (Tritanopia)</string>
+    <string name="colorblind_dialog_desc">Pick the palette that matches how you see colours.</string>
+    <string name="plan_chip_premium">PREMIUM</string>
+    <string name="plan_chip_trial">TRIAL</string>
+    <string name="plan_chip_locked">LOCKED</string>
+    <string name="plan_chip_guest">GUEST</string>
+    <string name="plan_chip_free">FREE</string>
+    <string name="quota_exhausted_title">Today\'s free download is used</string>
+    <string name="quota_exhausted_desc">Go Premium for unlimited 4K and MP3 downloads. Activate in minutes with KBZ Pay.</string>
+    <string name="quota_exhausted_cta">Get Premium</string>
+    <string name="payment_claim_code_title">Your claim code</string>
+    <string name="payment_claim_code_desc">Send this code to the admin so your payment can be found quickly.</string>
+    <string name="payment_claim_code_copy">Copy claim code</string>
+    <string name="payment_claim_code_copied">Claim code copied</string>
+    <string name="upgrade_open_kbzpay">Open KBZ Pay</string>
+    <string name="upgrade_trial_remaining">Trial: %1$d day(s) left — then 1 free download/day</string>
+    <string name="plan_1m_price">1 Month — 1,000 Ks</string>
+    <string name="plan_3m_price">3 Months — 2,000 Ks</string>
+    <string name="plan_6m_price">6 Months — 4,000 Ks</string>
+    <string name="plan_12m_price">12 Months — 7,000 Ks</string>
+    <string name="payment_history_line">%1$s — %2$s (%3$d Ks)</string>
 </resources>

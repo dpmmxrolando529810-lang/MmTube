@@ -13,8 +13,8 @@ fun envOrProp(name: String, default: String = ""): String {
 fun quoted(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 23
-val appVersionName = (project.findProperty("versionName") as String?) ?: "1.7.0"
+val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 24
+val appVersionName = (project.findProperty("versionName") as String?) ?: "1.8.0"
 val keystorePath = envOrProp("KEYSTORE_PATH", "keystore/mmtube-demo.p12")
 
 android {
@@ -31,6 +31,8 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+
+        resourceConfigurations += listOf("en")
 
         buildConfigField("String", "FIREBASE_API_KEY", quoted(envOrProp("FIREBASE_API_KEY")))
         buildConfigField("String", "FIREBASE_APP_ID", quoted(envOrProp("FIREBASE_ADMIN_APP_ID", envOrProp("FIREBASE_APP_ID"))))
@@ -53,10 +55,12 @@ android {
     buildTypes {
         debug {
             signingConfig = signingConfigs.getByName("release")
+            isCrunchPngs = true
         }
         release {
             isMinifyEnabled = false
             isShrinkResources = false
+            isCrunchPngs = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
@@ -128,6 +132,8 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-appcheck")
+    implementation("com.google.firebase:firebase-appcheck-playintegrity")
 
     implementation("androidx.credentials:credentials:1.3.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")

@@ -45,43 +45,74 @@ class UpdateRepository(private val context: Context) {
         .readTimeout(60, TimeUnit.SECONDS)
         .build()
 
+    private val cache = context.getSharedPreferences("mmtube_update_cache", Context.MODE_PRIVATE)
+
+    /**
+     * Fetches the latest release with a cached ETag. GitHub's unauthenticated
+     * API allows only 60 requests per hour per IP; a 304 keeps repeat checks
+     * free, and a rate-limited 403 falls back to the last good payload so the
+     * app does not lose update prompts after a few restarts.
+     */
+    private fun fetchLatestRelease(repo: String): GithubRelease {
+        val cachedBody = cache.getString("release_json", null)
+        val cachedEtag = cache.getString("release_etag", null)
+        val cachedRepo = cache.getString("release_repo", null)
+        val hasCache = !cachedBody.isNullOrBlank() && cachedRepo == repo
+
+        val builder = Request.Builder()
+            .url("https://api.github.com/repos/$repo/releases/latest")
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", "MMTube/${BuildConfig.VERSION_NAME}")
+        if (hasCache && !cachedEtag.isNullOrBlank()) {
+            builder.header("If-None-Match", cachedEtag)
+        }
+        client.newCall(builder.build()).execute().use { response ->
+            if (response.code == 304 && hasCache) {
+                return json.decodeFromString(cachedBody!!)
+            }
+            if ((response.code == 403 || response.code == 429) && hasCache) {
+                return json.decodeFromString(cachedBody!!)
+            }
+            if (!response.isSuccessful) throw IOException("GitHub HTTP ${response.code}")
+            val body = response.body?.string() ?: throw IOException("Empty release body")
+            val etag = response.header("ETag").orEmpty()
+            cache.edit()
+                .putString("release_json", body)
+                .putString("release_etag", etag)
+                .putString("release_repo", repo)
+                .apply()
+            return json.decodeFromString(body)
+        }
+    }
+
     suspend fun checkForUpdate(): Result<UpdateInfo?> = withContext(Dispatchers.IO) {
         val repo = BuildConfig.UPDATE_REPO.trim()
         if (repo.isBlank()) return@withContext Result.success(null)
         runCatching {
-            val request = Request.Builder()
-                .url("https://api.github.com/repos/$repo/releases/latest")
-                .header("Accept", "application/vnd.github+json")
-                .header("User-Agent", "MMTube/${BuildConfig.VERSION_NAME}")
-                .build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("GitHub HTTP ${response.code}")
-                val body = response.body?.string() ?: throw IOException("Empty release body")
-                val release = json.decodeFromString<GithubRelease>(body)
-                val version = release.tag_name.removePrefix("v").trim()
-                if (version.isBlank() || !isNewer(version, BuildConfig.VERSION_NAME)) {
-                    return@use null
-                }
-                val asset = release.assets
-                    .filter { it.name.endsWith(".apk", true) }
-                    .filterNot { it.name.contains("admin", true) }
-                    .maxByOrNull {
-                        when {
-                            it.name.contains("universal", true) -> 2
-                            it.name.contains("release", true) -> 1
-                            else -> 0
-                        }
-                    } ?: return@use null
-                UpdateInfo(
-                    version = version,
-                    tag = release.tag_name,
-                    notes = release.body.orEmpty(),
-                    assetUrl = asset.browser_download_url,
-                    assetName = asset.name,
-                    sizeBytes = asset.size,
-                    htmlUrl = release.html_url
-                )
+            val release = fetchLatestRelease(repo)
+            val version = release.tag_name.removePrefix("v").trim()
+            if (version.isBlank() || !isNewer(version, BuildConfig.VERSION_NAME)) {
+                return@runCatching null
             }
+            val asset = release.assets
+                .filter { it.name.endsWith(".apk", true) }
+                .filterNot { it.name.contains("admin", true) }
+                .maxByOrNull {
+                    when {
+                        it.name.contains("universal", true) -> 2
+                        it.name.contains("release", true) -> 1
+                        else -> 0
+                    }
+                } ?: return@runCatching null
+            UpdateInfo(
+                version = version,
+                tag = release.tag_name,
+                notes = release.body.orEmpty(),
+                assetUrl = asset.browser_download_url,
+                assetName = asset.name,
+                sizeBytes = asset.size,
+                htmlUrl = release.html_url
+            )
         }.recoverCatching { error ->
             throw MmtubeException(ErrorKind.NETWORK, error.message, error)
         }

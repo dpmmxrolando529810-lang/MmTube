@@ -398,13 +398,12 @@ private fun SignedInCard(
                 Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(modifier = Modifier.size(10.dp).clip(CircleShape).background(color))
                     Text(
-                        text = "ငွေပေးချေမှု: " + when (p.plan) {
-                            "1m" -> "1 Month"
-                            "3m" -> "3 Months"
-                            "6m" -> "6 Months"
-                            "12m" -> "12 Months"
-                            else -> p.plan
-                        } + " — " + label + " (" + p.amountKs.toString() + " Ks)",
+                        text = context.getString(
+                            R.string.payment_history_line,
+                            planName(context, p.plan),
+                            label,
+                            p.amountKs
+                        ),
                         style = MmtubeType.BodyMedium,
                         color = color,
                         modifier = Modifier.padding(start = 10.dp)
@@ -525,13 +524,7 @@ private fun PurchaseHistorySection(vm: MainViewModel) {
                     Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.WorkspacePremium, contentDescription = null, tint = MmtubePalette.Amber, modifier = Modifier.size(18.dp))
                         Text(
-                            text = when (record.plan) {
-                                Plans.M1 -> "1 Month"
-                                Plans.M3 -> "3 Months"
-                                Plans.M6 -> "6 Months"
-                                Plans.M12 -> "12 Months"
-                                else -> "Free"
-                            },
+                            text = planName(context, record.plan),
                             style = MmtubeType.BodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.padding(start = 8.dp).weight(1f)
@@ -635,4 +628,12 @@ private fun AccountActions(
             )
         }
     }
+}
+
+private fun planName(context: android.content.Context, plan: String): String = when (plan) {
+    Plans.M1 -> context.getString(R.string.plan_1m)
+    Plans.M3 -> context.getString(R.string.plan_3m)
+    Plans.M6 -> context.getString(R.string.plan_6m)
+    Plans.M12 -> context.getString(R.string.plan_12m)
+    else -> context.getString(R.string.account_plan_free)
 }

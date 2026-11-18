@@ -73,6 +73,9 @@ import com.mmtube.app.util.Formatters
 import com.mmtube.app.util.copyText
 import com.mmtube.app.data.PaymentSummary
 import android.util.Base64
+import android.content.Intent
+import android.net.Uri
+import androidx.compose.material3.OutlinedButton
 
 @Composable
 fun UpgradeScreen(
@@ -110,15 +113,19 @@ fun UpgradeScreen(
 
         HeroCard(isActive = isActive, expiresAt = profile?.planExpiresAt)
 
+        if (profile?.isTrial == true) {
+            TrialRemainingBanner(profile.trialEndsAt)
+        }
+
         Column(Modifier.fillMaxWidth().selectableGroup()) {
             listOf(
-                "1m" to "1 Month — 1,000 Ks",
-                "3m" to "3 Months — 2,000 Ks",
-                "6m" to "6 Months — 4,000 Ks",
-                "12m" to "12 Months — 7,000 Ks"
-            ).forEach { (key, label) ->
+                "1m" to R.string.plan_1m_price,
+                "3m" to R.string.plan_3m_price,
+                "6m" to R.string.plan_6m_price,
+                "12m" to R.string.plan_12m_price
+            ).forEach { (key, labelRes) ->
                 PlanRow(
-                    label = label,
+                    label = context.getString(labelRes),
                     selected = selected == key,
                     onClick = { selected = key }
                 )
@@ -129,6 +136,37 @@ fun UpgradeScreen(
         UserIdCard(ui = ui, vm = vm)
         PaymentCard()
         PaymentProofCard(ui = ui, vm = vm, selected = selected, isActive = isActive)
+    }
+}
+
+@Composable
+private fun TrialRemainingBanner(trialEndsAt: Long?) {
+    val context = LocalContext.current
+    val now = System.currentTimeMillis()
+    val days = ((trialEndsAt ?: 0L) - now).coerceAtLeast(0L).let { it / 86_400_000L }.toInt()
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MmtubePalette.Amber.copy(alpha = 0.14f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MmtubePalette.Amber.copy(alpha = 0.4f)),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                Icons.Rounded.CalendarMonth,
+                contentDescription = null,
+                tint = MmtubePalette.Amber,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = context.getString(R.string.upgrade_trial_remaining, days),
+                style = MmtubeType.BodyMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 }
 
@@ -320,11 +358,11 @@ private fun planAmountKs(plan: String): Int = when (plan) {
     else -> 0
 }
 
-private fun planLabel(plan: String): String = when (plan) {
-    "1m" -> "1 Month"
-    "3m" -> "3 Months"
-    "6m" -> "6 Months"
-    "12m" -> "12 Months"
+private fun planLabel(context: android.content.Context, plan: String): String = when (plan) {
+    "1m" -> context.getString(R.string.plan_1m)
+    "3m" -> context.getString(R.string.plan_3m)
+    "6m" -> context.getString(R.string.plan_6m)
+    "12m" -> context.getString(R.string.plan_12m)
     else -> plan
 }
 
@@ -373,6 +411,7 @@ private fun PaymentProofCard(
     var imageAttached by remember { mutableStateOf(false) }
     var submitting by remember { mutableStateOf(false) }
     var confirmSubmit by remember { mutableStateOf(false) }
+    var claimCode by remember { mutableStateOf<String?>(null) }
     val signedIn = ui.account.profile != null
     val latest = ui.latestPayment
 
@@ -414,7 +453,7 @@ private fun PaymentProofCard(
             ) {
                 Icon(Icons.Rounded.WorkspacePremium, contentDescription = null, tint = MmtubePalette.Aqua, modifier = Modifier.size(18.dp))
                 Text(
-                    text = context.getString(R.string.payment_plan_amount, planLabel(selected), planAmountKs(selected)),
+                    text = context.getString(R.string.payment_plan_amount, planLabel(context, selected), planAmountKs(selected)),
                     style = MmtubeType.LabelLarge,
                     color = MmtubePalette.Aqua,
                     modifier = Modifier.padding(start = 8.dp)
@@ -484,18 +523,64 @@ private fun PaymentProofCard(
             )
         }
 
+        claimCode?.let { code ->
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MmtubePalette.Success.copy(alpha = 0.14f),
+                modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+            ) {
+                Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
+                    Text(
+                        text = context.getString(R.string.payment_claim_code_title),
+                        style = MmtubeType.LabelLarge,
+                        color = MmtubePalette.Success
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = code,
+                            style = MmtubeType.TitleMedium.copy(letterSpacing = 1.sp),
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        IconButton(onClick = {
+                            context.copyText("MMTube claim code", code)
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.payment_claim_code_copied),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }) {
+                            Icon(
+                                Icons.Rounded.ContentCopy,
+                                contentDescription = context.getString(R.string.payment_claim_code_copy),
+                                tint = MmtubePalette.Success,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        text = context.getString(R.string.payment_claim_code_desc),
+                        style = MmtubeType.LabelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { confirmSubmit = false },
             title = { Text(context.getString(R.string.payment_confirm_title)) },
-            text = { Text(context.getString(R.string.payment_confirm_body, planLabel(selected), planAmountKs(selected))) },
+            text = { Text(context.getString(R.string.payment_confirm_body, planLabel(context, selected), planAmountKs(selected))) },
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
+                    if (submitting) return@TextButton
                     confirmSubmit = false
                     val payload = imageBase64 ?: return@TextButton
                     submitting = true
-                    vm.submitPayment(selected, phone, note, payload) { ok, error ->
+                    vm.submitPayment(selected, phone, note, payload) { ok, error, code ->
                         submitting = false
                         if (ok) {
+                            claimCode = code
                             Toast.makeText(context, context.getString(R.string.payment_submit_ok), Toast.LENGTH_LONG).show()
                             imageBase64 = null
                             imageAttached = false
@@ -504,7 +589,7 @@ private fun PaymentProofCard(
                             Toast.makeText(context, context.getString(R.string.payment_submit_err, error ?: "?"), Toast.LENGTH_LONG).show()
                         }
                     }
-                }) { Text(context.getString(R.string.payment_confirm_yes)) }
+                }, enabled = !submitting) { Text(context.getString(R.string.payment_confirm_yes)) }
             },
             dismissButton = {
                 androidx.compose.material3.TextButton(onClick = { confirmSubmit = false }) {
@@ -538,11 +623,40 @@ private fun PaymentProofCard(
                 ) {}
                 Text(
                     text = context.getString(R.string.payment_latest_title) + ": " +
-                        planLabel(p.plan) + " — " + p.amountKs + " Ks · " + label,
+                        planLabel(context, p.plan) + " — " + p.amountKs + " Ks · " + label,
                     style = MmtubeType.LabelSmall,
                     color = color,
                     modifier = Modifier.padding(start = 8.dp)
                 )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = context.getString(R.string.payment_claim_code_title) + ": " + p.id,
+                    style = MmtubeType.LabelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(
+                    onClick = {
+                        context.copyText("MMTube claim code", p.id)
+                        Toast.makeText(
+                            context,
+                            context.getString(R.string.payment_claim_code_copied),
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    },
+                    modifier = Modifier.size(28.dp)
+                ) {
+                    Icon(
+                        Icons.Rounded.ContentCopy,
+                        contentDescription = context.getString(R.string.payment_claim_code_copy),
+                        tint = MmtubePalette.Blue,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
             }
             p.adminNote?.takeIf { it.isNotBlank() }?.let { reason ->
                 Text(
@@ -599,11 +713,27 @@ private fun PaymentCard() {
             contentDescription = "KBZ Pay QR — Thu Khant Aung",
             contentScale = ContentScale.FillWidth,
             modifier = Modifier
-                .fillMaxWidth(0.68f)
+                .fillMaxWidth(0.82f)
                 .align(Alignment.CenterHorizontally)
                 .clip(RoundedCornerShape(14.dp))
                 .padding(top = 12.dp)
         )
+        OutlinedButton(
+            onClick = { openKbzPay(context) },
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 12.dp)
+        ) {
+            Icon(
+                Icons.Rounded.PhoneAndroid,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp)
+            )
+            Text(
+                text = context.getString(R.string.upgrade_open_kbzpay),
+                style = MmtubeType.LabelLarge,
+                modifier = Modifier.padding(start = 8.dp)
+            )
+        }
         Text(
             text = context.getString(R.string.upgrade_payment_desc),
             style = MmtubeType.BodyMedium,
@@ -646,4 +776,23 @@ private fun StepsCard() {
             }
         }
     }
+}
+
+/** Opens the KBZ Pay app when installed, otherwise its store listing. */
+private fun openKbzPay(context: android.content.Context) {
+    val packageName = "com.kbzbank.kpaycustomer"
+    val launch = runCatching {
+        context.packageManager.getLaunchIntentForPackage(packageName)
+    }.getOrNull()
+    if (launch != null) {
+        runCatching { context.startActivity(launch) }
+        return
+    }
+    val market = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=$packageName"))
+    val web = Intent(
+        Intent.ACTION_VIEW,
+        Uri.parse("https://play.google.com/store/apps/details?id=$packageName")
+    )
+    runCatching { context.startActivity(market) }
+        .recoverCatching { context.startActivity(web) }
 }

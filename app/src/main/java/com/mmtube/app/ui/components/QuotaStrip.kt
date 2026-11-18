@@ -114,7 +114,27 @@ fun QuotaStrip(
                 )
             }
             Column(Modifier.weight(1f)) {
-                Text(title, style = MmtubeType.TitleMedium, color = MaterialTheme.colorScheme.onSurface)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(title, style = MmtubeType.TitleMedium, color = MaterialTheme.colorScheme.onSurface)
+                    Surface(
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(999.dp),
+                        color = accent.copy(alpha = 0.18f),
+                        modifier = Modifier.padding(start = 8.dp)
+                    ) {
+                        Text(
+                            text = when {
+                                paid -> context.getString(R.string.plan_chip_premium)
+                                profile?.isTrial == true -> context.getString(R.string.plan_chip_trial)
+                                disabled -> context.getString(R.string.plan_chip_locked)
+                                guest -> context.getString(R.string.plan_chip_guest)
+                                else -> context.getString(R.string.plan_chip_free)
+                            },
+                            style = MmtubeType.LabelSmall.copy(fontSize = 9.sp, letterSpacing = 0.6.sp),
+                            color = accent,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                }
                 Text(
                     subtitle,
                     style = MmtubeType.BodyMedium,

@@ -105,6 +105,7 @@ fun SettingsScreen(
     var showAutostart by remember { mutableStateOf(false) }
     var showVersionDetails by remember { mutableStateOf(false) }
     var showResetConfirm by remember { mutableStateOf(false) }
+    var showColorblind by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var ownerTaps by remember { mutableIntStateOf(0) }
     val haptic = LocalHapticFeedback.current
@@ -173,12 +174,11 @@ fun SettingsScreen(
                 checked = ui.settings.dynamicColor,
                 onChange = vm::setDynamicColor
             )
-            SettingsSwitchRow(
+            SettingsClickRow(
                 icon = Icons.Rounded.Speed,
                 label = context.getString(R.string.settings_colorblind),
-                description = context.getString(R.string.settings_colorblind_desc),
-                checked = ui.settings.colorblindMode,
-                onChange = vm::setColorblindMode
+                value = colorblindLabel(context, ui.settings.colorblindProfile),
+                onClick = { showColorblind = true }
             )
         }
 
@@ -534,6 +534,58 @@ fun SettingsScreen(
             }
         )
     }
+    if (showColorblind) {
+        val options = listOf(
+            "off" to context.getString(R.string.colorblind_off),
+            "red_green" to context.getString(R.string.colorblind_red_green),
+            "blue_yellow" to context.getString(R.string.colorblind_blue_yellow)
+        )
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showColorblind = false },
+            title = { Text(context.getString(R.string.settings_colorblind)) },
+            text = {
+                Column {
+                    Text(
+                        text = context.getString(R.string.colorblind_dialog_desc),
+                        style = MmtubeType.BodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    options.forEach { (key, label) ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    vm.setColorblindProfile(key)
+                                    showColorblind = false
+                                }
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            androidx.compose.material3.RadioButton(
+                                selected = ui.settings.colorblindProfile == key,
+                                onClick = {
+                                    vm.setColorblindProfile(key)
+                                    showColorblind = false
+                                }
+                            )
+                            Text(
+                                text = label,
+                                style = MmtubeType.BodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(start = 8.dp)
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { showColorblind = false }) {
+                    Text(android.R.string.ok.toString())
+                }
+            }
+        )
+    }
     if (showAutostart) {
         SimpleTextDialog(
             title = context.getString(R.string.help_autostart),
@@ -666,6 +718,12 @@ private fun SettingsValueRow(
             }
         }
     }
+}
+
+private fun colorblindLabel(context: android.content.Context, profile: String): String = when (profile) {
+    "red_green" -> context.getString(R.string.colorblind_red_green)
+    "blue_yellow" -> context.getString(R.string.colorblind_blue_yellow)
+    else -> context.getString(R.string.colorblind_off)
 }
 
 @Composable

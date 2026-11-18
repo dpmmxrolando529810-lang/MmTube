@@ -122,6 +122,9 @@ fun HomeScreen(
     var showBatch by remember { mutableStateOf(false) }
     var batchText by remember { mutableStateOf("") }
     val storageFull = ui.storageFullPrompt
+    // Free / trial-over users who have burned today's quota get the upgrade
+    // card promoted above everything else instead of a tiny line at the bottom.
+    val quotaExhausted = ui.quota?.let { !it.paid && !it.trial && !it.allowed } == true
     Box(modifier = Modifier.fillMaxSize()) {
     androidx.compose.runtime.CompositionLocalProvider(com.mmtube.app.ui.components.LocalReduceMotion provides ui.reduceMotion) {
     LazyColumn(
@@ -153,7 +156,17 @@ fun HomeScreen(
                 onRefresh = vm::refreshQuota
             )
         }
-        if (ui.quota?.paid != true && (ui.quota?.totalDownloads ?: 0) >= 3) {
+        if (quotaExhausted) {
+            item(key = "upsell_exhausted") {
+                PremiumUpsellCard(
+                    onUpgrade = {
+                        vm.dismissFreeLimitReached()
+                        onUpgrade()
+                    },
+                    exhausted = true
+                )
+            }
+        } else if (ui.quota?.paid != true && (ui.quota?.totalDownloads ?: 0) >= 3) {
             item(key = "upsell") {
                 PremiumUpsellCard(onUpgrade = onUpgrade)
             }
@@ -167,7 +180,7 @@ fun HomeScreen(
                 )
             }
         }
-        if (ui.freeLimitReached) {
+        if (ui.freeLimitReached && !quotaExhausted) {
             item(key = "free_limit") {
                 SimpleBanner(
                     text = context.getString(R.string.free_limit_text),
@@ -797,7 +810,7 @@ private fun OnboardingCard(onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun PremiumUpsellCard(onUpgrade: () -> Unit) {
+private fun PremiumUpsellCard(onUpgrade: () -> Unit, exhausted: Boolean = false) {
     val context = LocalContext.current
     FrostedCard(modifier = Modifier.fillMaxWidth()) {
         Row(
@@ -824,26 +837,40 @@ private fun PremiumUpsellCard(onUpgrade: () -> Unit) {
             }
             Column(Modifier.weight(1f)) {
                 Text(
-                    text = context.getString(R.string.home_premium_title),
+                    text = context.getString(
+                        if (exhausted) R.string.quota_exhausted_title else R.string.home_premium_title
+                    ),
                     style = MmtubeType.TitleMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
-                    text = context.getString(R.string.home_premium_desc),
+                    text = context.getString(
+                        if (exhausted) R.string.quota_exhausted_desc else R.string.home_premium_desc
+                    ),
                     style = MmtubeType.BodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            androidx.compose.material3.Button(
-                onClick = onUpgrade,
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = MmtubePalette.AquaDeep,
-                    contentColor = androidx.compose.ui.graphics.Color.White
-                )
-            ) {
-                Text(context.getString(R.string.home_premium_cta), style = MmtubeType.LabelLarge)
+            if (!exhausted) {
+                androidx.compose.material3.Button(
+                    onClick = onUpgrade,
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                        containerColor = MmtubePalette.AquaDeep,
+                        contentColor = androidx.compose.ui.graphics.Color.White
+                    )
+                ) {
+                    Text(context.getString(R.string.home_premium_cta), style = MmtubeType.LabelLarge)
+                }
             }
+        }
+        if (exhausted) {
+            GradientButton(
+                text = context.getString(R.string.quota_exhausted_cta),
+                onClick = onUpgrade,
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+                icon = Icons.Rounded.WorkspacePremium
+            )
         }
     }
 }

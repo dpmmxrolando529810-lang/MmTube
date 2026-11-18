@@ -139,7 +139,7 @@ fun PaymentsTab(ui: AdminUiState, vm: AdminViewModel) {
         OutlinedTextField(
             value = ui.paymentSearchQuery,
             onValueChange = vm::updatePaymentSearch,
-            placeholder = { Text("ဖုန်း / User ID ရှာရန်", color = Muted) },
+            placeholder = { Text("ဖုန်း / User ID / Claim # ရှာရန်", color = Muted) },
             singleLine = true,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.fillMaxWidth(),
@@ -183,7 +183,7 @@ fun PaymentsTab(ui: AdminUiState, vm: AdminViewModel) {
         }
         val q = ui.paymentSearchQuery.trim().lowercase()
         val filtered = ui.pendingPayments.filter { payment ->
-            q.isBlank() || listOfNotNull(payment.userCode, payment.buyerPhone, payment.email, payment.plan)
+            q.isBlank() || listOfNotNull(payment.userCode, payment.buyerPhone, payment.email, payment.plan, payment.id)
                 .any { it.lowercase().contains(q) }
         }
         filtered.forEach { payment ->
@@ -306,6 +306,7 @@ private fun PaymentCard(
             Text(Plans.label(payment.plan), color = Aqua, fontWeight = FontWeight.Bold)
         }
         Text(formatDateTimeMs(payment.createdAt), color = Muted, fontSize = 11.sp, modifier = Modifier.padding(top = 2.dp))
+        Text("Claim #${payment.id}", color = Amber, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Text("Email: ${payment.email ?: "—"}", color = Muted, fontSize = 11.sp)
         Text("KBZ Pay sender: ${payment.buyerPhone ?: "—"}", color = Muted, fontSize = 11.sp)
         Row(verticalAlignment = Alignment.CenterVertically) {

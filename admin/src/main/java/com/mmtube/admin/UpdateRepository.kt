@@ -56,37 +56,63 @@ class UpdateRepository(private val context: Context) {
 
     val version: String = BuildConfig.VERSION_NAME
 
+    private val cache = context.getSharedPreferences("admin_update_cache", Context.MODE_PRIVATE)
+
+    /** ETag-cached release fetch; falls back to the last good payload on rate limits. */
+    private fun fetchLatestRelease(repo: String): GithubRelease {
+        val cachedBody = cache.getString("release_json", null)
+        val cachedEtag = cache.getString("release_etag", null)
+        val cachedRepo = cache.getString("release_repo", null)
+        val hasCache = !cachedBody.isNullOrBlank() && cachedRepo == repo
+
+        val builder = Request.Builder()
+            .url("https://api.github.com/repos/$repo/releases/latest")
+            .header("Accept", "application/vnd.github+json")
+            .header("User-Agent", "MMTube-Admin/${BuildConfig.VERSION_NAME}")
+        if (hasCache && !cachedEtag.isNullOrBlank()) {
+            builder.header("If-None-Match", cachedEtag)
+        }
+        client.newCall(builder.build()).execute().use { response ->
+            if (response.code == 304 && hasCache) {
+                return json.decodeFromString(cachedBody!!)
+            }
+            if ((response.code == 403 || response.code == 429) && hasCache) {
+                return json.decodeFromString(cachedBody!!)
+            }
+            if (!response.isSuccessful) throw IOException("GitHub HTTP ${response.code}")
+            val body = response.body?.string() ?: throw IOException("Empty release body")
+            val etag = response.header("ETag").orEmpty()
+            cache.edit()
+                .putString("release_json", body)
+                .putString("release_etag", etag)
+                .putString("release_repo", repo)
+                .apply()
+            return json.decodeFromString(body)
+        }
+    }
+
     suspend fun checkForUpdate(): Result<AdminUpdateInfo?> = withContext(Dispatchers.IO) {
         val repo = BuildConfig.UPDATE_REPO.trim()
         if (repo.isBlank()) return@withContext Result.success(null)
         runCatching {
-            val request = Request.Builder()
-                .url("https://api.github.com/repos/$repo/releases/latest")
-                .header("Accept", "application/vnd.github+json")
-                .header("User-Agent", "MMTube-Admin/${BuildConfig.VERSION_NAME}")
-                .build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) throw IOException("GitHub HTTP ${response.code}")
-                val body = response.body?.string() ?: throw IOException("Empty release body")
-                val release = json.decodeFromString<GithubRelease>(body)
-                val latest = release.tag_name.removePrefix("v").trim()
-                if (latest.isBlank() || !isNewer(latest, BuildConfig.VERSION_NAME)) {
-                    return@use null
-                }
-                val asset = release.assets
-                    .filter { it.name.endsWith(".apk", true) }
-                    .filter { it.name.contains("admin", true) }
-                    .maxByOrNull { it.size } ?: return@use null
-                AdminUpdateInfo(
-                    version = latest,
-                    tag = release.tag_name,
-                    notes = release.body.orEmpty(),
-                    assetUrl = asset.browser_download_url,
-                    assetName = asset.name,
-                    sizeBytes = asset.size,
-                    htmlUrl = release.html_url
-                )
+            val release = fetchLatestRelease(repo)
+            val latest = release.tag_name.removePrefix("v").trim()
+            if (latest.isBlank() || !isNewer(latest, BuildConfig.VERSION_NAME)) {
+                return@runCatching null
             }
+            val asset = release.assets
+                .filter { it.name.endsWith(".apk", true) }
+                .filter { it.name.contains("admin", true) }
+                .maxByOrNull { it.size } ?: return@runCatching null
+            AdminUpdateInfo(
+                version = latest,
+                tag = release.tag_name,
+                notes = release.body.orEmpty(),
+                assetUrl = asset.browser_download_url,
+                assetName = asset.name,
+                sizeBytes = asset.size,
+                htmlUrl = release.html_url
+            )
         }
     }
 

@@ -328,9 +328,9 @@
 
 (၁) Link မှန်/မဟုတ် ပြန်စစ်ပါ — YouTube / Facebook / TikTok link ဖြစ်ရပါမယ်
 (၂) ဗီဒီယိုက Private သို့မဟုတ် Region-locked ဆိုရင် ဒေါင်းလို့မရဘူး — Public ကိုရွေးပါ
-(၃) အင်တာနက် အခြေအနေ စစ်ပါ — Wi-Fi/မိုဘိုင်းဒေတာ လှုပ်ရှားနေတယ်ဆိုပါစို့
-(၄) Settings → Engine → "Update engine" နှိပ်ပြီး yt-dlp ကို update လုပ်ပါ
-(၅) မရသေးဘူးဆို Parent (@TKA_MTC) ကို ဆက်သွယ်ပါ</string>
+(၃) အင်တာနက် အခြေအနေ စစ်ပါ — Wi-Fi/မိုဘိုင်းဒေတာ မတည်ငြိမ်နိုင်ပါ
+(၄) Settings → Engine → Update engine နှိပ်ပြီး yt-dlp ကို update လုပ်ပါ
+(၅) မရသေးဘူးဆို Owner (@TKA_MTC) ကို ဆက်သွယ်ပါ</string>
     <string name="help_no_sound">အသံမထွက်ရင် ဘာလုပ်မလဲ?</string>
     <string name="help_no_sound_body">ဗီဒီယိုဖိုင်အတွက် — YouTube က video/audio ခွဲပြီး ပေးတယ်။ MMTube က audio+video ကို FFmpeg နဲ့ ပေါင်းစပ်တယ် — ဒါကြောင့် MX Player/VLC/ExoPlayer ဖြင့်ကြည့်ပါ။
 
@@ -350,7 +350,7 @@ MP3 အတွက် — ချက်ချင်း audio tag တွေ့မယ
     <string name="settings_search">Settings ထဲ ရှာရန်</string>
     <string name="settings_colorblind">အရောင်မခွဲနိုင်သောသူများ (Colorblind)</string>
     <string name="settings_colorblind_desc">အရောင်အားလုံးအတွက် tab တစ်ခုတည်း — အပြာ/အစိမ်း/လိမ္မော် pattern</string>
-    <string name="settings_dynamic_color">Material You (dynamic color)</string>
+    <string name="settings_dynamic_color">Material You (အရောင်ပြောင်း)</string>
     <string name="settings_dynamic_color_desc">ဖုန်း၏ wallpaper အရောင်အတိုင်း theme ပြောင်း</string>
     <string name="batch_title">တစ်ပြိုင်နက် ဒေါင်းမည်</string>
     <string name="batch_hint">Link ကို တစ်ခုပြီး တစ်ခု စာကြောင်းတစ်ကြောင်းစီ ထည့်ပါ။</string>
@@ -380,7 +380,7 @@ MP3 အတွက် — ချက်ချင်း audio tag တွေ့မယ
     <string name="diagnostics_telegram">Owner Telegram သို့ log ပို့ရန်</string>
     <string name="error_unsupported_site">ဒီ app က YouTube, Facebook, TikTok link များသာ ဒေါင်းနိုင်ပါတယ်။</string>
     <string name="version_details_title">Build အသေးစိတ်</string>
-    <string name="version_details_body">Version: %1$s
+    <string name="version_details_body">ဗားရှင်း: %1$s
 Package: %2$s
 Android: %3$d
 Firebase project: %4$s</string>
@@ -408,16 +408,16 @@ Firebase project: %4$s</string>
     <string name="announcement_got_it">ရပြီ</string>
 
     <string name="queue_section">တန်းစီထားသည် (%1$d) — ဆွဲရွှေ့ပြီး ပြင်ပါ</string>
-    <string name="queue_drag_hint">ဖုန်းနှိပ်ပြီး ဆွဲရွှေ့ပါ</string>
+    <string name="queue_drag_hint">ဖိနှိပ်ပြီး ဆွဲရွှေ့၍ အစီအစဉ် ပြင်ပါ</string>
     <string name="queue_drag_handle">ဆွဲရန်</string>
     <string name="queue_remove">တန်းစီမှ ဖယ်ရန်</string>
     <string name="queue_notification_count">%1$d တန်းစီထား — %2$s</string>
-    <string name="quota_block_notification_title">ယနေ့ဒေါင်းလုဒ် ပြည့်သွားပြီ</string>
+    <string name="quota_block_notification_title">ယနေ့ ဒေါင်းလုဒ် ပမာဏ ပြည့်သွားပြီ</string>
     <string name="quota_block_notification_body">Premium ပြောင်းပြီး အကန့်အသတ်မရှိ ဒေါင်းပါ</string>
     <string name="quota_block_notification_action">Upgrade လုပ်ရန်</string>
 
     <string name="payment_confirm_title">ငွေပေးချေမှု အတည်ပြုပါ</string>
-    <string name="payment_confirm_body">%1$s — %2$d Ks ပေးချေမှာ မဟုတ်ပါလား? Submit လုပ်ပြီး Admin အတည်ပြုအိပ်ပါ။</string>
+    <string name="payment_confirm_body">%1$s — %2$d Ks ပေးချေမှာ မဟုတ်ပါလား? Submit လုပ်ပြီး Admin အတည်ပြုချက်ကို စောင့်ပါ။</string>
     <string name="payment_confirm_yes">Submit လုပ်မယ်</string>
     <string name="payment_cancel_submit">ငွေပေးချေမှု ပယ်ဖျက်ရန်</string>
     <string name="payment_approved_chime">ငွေပေးချေမှု အတည်ပြုပြီးပါပြီ — Premium Plan ဖွင့်ပြီးပါပြီ 🎉</string>
@@ -430,26 +430,26 @@ Firebase project: %4$s</string>
     <string name="trial_banner_text">%1$d ရက် Trial ကျန်နေသည် — ပြီးနောက် Free တစ်ရက် ၁ ကြိမ် အသုံးပြုရမည်</string>
     <string name="trial_banner_go">Premium ဝင်မယ်</string>
     <string name="free_limit_text">ဒီနေ့အတွက် အခမဲ့ ဒေါင်းလုဒ် ကုန်သွားပြီ — Premium ပြောင်းလိုက်ရင် အကန့်အသတ်မရှိ</string>
-    <string name="free_limit_go">Upgrade</string>
+    <string name="free_limit_go">Premium ဝင်မယ်</string>
 
     <string name="recap_notification_title">ဒီအပတ် သုံးသပ်ချက်</string>
     <string name="recap_notification_body">ဒီအပတ် %1$d downloads — %2$s ဒေါင်းပြီးပါပြီ</string>
     <string name="reset_app_data_done">App data အားလုံး ဖျက်ပြီးပါပြီ</string>
     <string name="inbox_title">သတင်းအချက်အလက်များ</string>
-    <string name="inbox_mark_read">အကုန်ဖတ်ပြီးပြီ</string>
+    <string name="inbox_mark_read">အားလုံး ဖတ်ပြီးအဖြစ် မှတ်ရန်</string>
     <string name="inbox_empty">သတင်းအချက်အလက် မရှိသေးပါ။</string>
-    <string name="settings_announcements">Owner ကြေညာချက် ရယူပါ</string>
-    <string name="settings_announcements_desc">ကြေညာချက်ကို လက်မခံချင်ရင် ပိတ်ထားပါ</string>
-    <string name="settings_crash_reports">Crash report ပို့ပါ</string>
-    <string name="settings_crash_reports_desc">အက်ပ်တွဲကျရင် အချက်အလက် ပို့ပေးမယ်</string>
-    <string name="settings_reset_app_data">App data အားလုံးဖျက်ရန်</string>
-    <string name="settings_reset_app_data_desc">မှတ်တမ်း နှင့် ချိန်ညှိချက်များ ဖျက်မယ်</string>
+    <string name="settings_announcements">Owner ကြေညာချက်များ လက်ခံရန်</string>
+    <string name="settings_announcements_desc">ကြေညာချက် မလိုချင်ရင် ပိတ်ထားပါ</string>
+    <string name="settings_crash_reports">Crash report ပို့ရန်</string>
+    <string name="settings_crash_reports_desc">App ပျက်ကျရင် အချက်အလက် ပို့ပေးမယ်</string>
+    <string name="settings_reset_app_data">App data အားလုံး ဖျက်ရန်</string>
+    <string name="settings_reset_app_data_desc">မှတ်တမ်းနှင့် ချိန်ညှိချက်များ ဖျက်မယ်</string>
     <string name="celebration_title">Premium အသုံးချပါ! 🎉</string>
-    <string name="celebration_body">ငွေပေးချေမှု အတည်ပြုပြီးပါပြီ — ယခုမှ အကန့်အသတ်မရှိ ဒေါင်းလုပ်ခဏ်းစားခွင့် ရပါပြီ</string>
+    <string name="celebration_body">ငွေပေးချေမှု အတည်ပြုပြီးပါပြီ — ယခုမှစပြီး အကန့်အသတ်မရှိ ဒေါင်းလုဒ် လုပ်ခွင့်ရပါပြီ</string>
     <string name="week_chart_title">ဒီအပတ် downloads</string>
 
     <string name="upgrade_renew_title">Premium သက်တမ်းတိုးမယ်</string>
-    <string name="upgrade_renew_subtitle">Premium ဝင်ပြီတိုးဖို့ plan တစ်ခုရွေးပြီး KBZ Pay သို့ money send လုပ်ပါ</string>
+    <string name="upgrade_renew_subtitle">Premium သက်တမ်းတိုးရန် plan တစ်ခု ရွေးပြီး KBZ Pay သို့ ငွေလွှဲပါ</string>
 
     <string name="plan_expired_title">Premium သက်တမ်းကုန်ပြီ</string>
     <string name="plan_expired_body">ဒီ App ကို Premium ပြန်ဝင်ပြီး ဆက်လက်အသုံးချပါ</string>
@@ -458,9 +458,32 @@ Firebase project: %4$s</string>
     <string name="quota_paid_days_left">%1$d ရက် ကျန်နေသေးသည်</string>
 
     <string name="settings_reduce_motion">Motion လျှော့ချမယ်</string>
-    <string name="settings_reduce_motion_desc">အניམေးရှင်းများ လျှော့ချပြီး app ကိုပိုပေါ့ပါးအောင်လုပ်မယ်</string>
+    <string name="settings_reduce_motion_desc">Animation များ လျှော့ချပြီး app ကို ပိုပေါ့ပါးအောင် လုပ်မယ်</string>
     <string name="diagnostics_export_csv">History CSV ထုတ်ယူရန်</string>
     <string name="celebration_ok">ရပြီ</string>
 
     <string name="download_reconnecting">ပြန်ချိတ်ဆက်နေပါသည်…</string>
+        <string name="colorblind_off">ပိတ်</string>
+    <string name="colorblind_red_green">အနီ-အစိမ်း (Deuteranopia/Protanopia)</string>
+    <string name="colorblind_blue_yellow">အပြာ-အဝါ (Tritanopia)</string>
+    <string name="colorblind_dialog_desc">သင့်မျက်စိ အရောင်ခွဲခြားနိုင်မှုနှင့် ကိုက်ညီသော palette ကို ရွေးပါ။</string>
+    <string name="plan_chip_premium">PREMIUM</string>
+    <string name="plan_chip_trial">TRIAL</string>
+    <string name="plan_chip_locked">LOCKED</string>
+    <string name="plan_chip_guest">GUEST</string>
+    <string name="plan_chip_free">FREE</string>
+    <string name="quota_exhausted_title">ဒီနေ့ အခမဲ့ ဒေါင်းလုဒ် ကုန်ပါပြီ</string>
+    <string name="quota_exhausted_desc">Premium ဖြင့် ကန့်သတ်ချက်မရှိ 4K/MP3 ဒေါင်းလုဒ် ဆက်လုပ်ပါ။ KBZ Pay ဖြင့် မိနစ်ပိုင်းအတွင်း ဖွင့်နိုင်ပါတယ်။</string>
+    <string name="quota_exhausted_cta">Premium ဝင်ရန်</string>
+    <string name="payment_claim_code_title">သင့် Claim Code</string>
+    <string name="payment_claim_code_desc">Admin ကို ဒီကုဒ် ပို့ပါ — ငွေပေးချေမှုကို လျင်မြန်စွာ ရှာနိုင်ပါတယ်။</string>
+    <string name="payment_claim_code_copy">Claim code ကူးယူရန်</string>
+    <string name="payment_claim_code_copied">Claim code ကူးယူပြီးပါပြီ</string>
+    <string name="upgrade_open_kbzpay">KBZ Pay ဖွင့်ရန်</string>
+    <string name="upgrade_trial_remaining">Trial ကျန် %1$d ရက် — ပြီးရင် အခမဲ့ တစ်ရက် ၁ ကြိမ်</string>
+    <string name="plan_1m_price">၁ လ — ၁,၀၀၀ ကျပ်</string>
+    <string name="plan_3m_price">၃ လ — ၂,၀၀၀ ကျပ်</string>
+    <string name="plan_6m_price">၆ လ — ၄,၀၀၀ ကျပ်</string>
+    <string name="plan_12m_price">၁၂ လ — ၇,၀၀၀ ကျပ်</string>
+    <string name="payment_history_line">ငွေပေးချေမှု: %1$s — %2$s (%3$d Ks)</string>
 </resources>

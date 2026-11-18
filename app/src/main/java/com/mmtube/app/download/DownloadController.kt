@@ -26,9 +26,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.Serializable
 import java.io.File
 import java.util.UUID
 
+@Serializable
 data class DownloadRequest(
     val url: String,
     val title: String,
@@ -49,7 +51,8 @@ class DownloadController(
     private val settingsStore: SettingsStore,
     private val historyStore: HistoryStore,
     private val quotaManager: QuotaManager,
-    private val exporter: MediaExporter
+    private val exporter: MediaExporter,
+    private val queueStore: QueueStore
 ) {
 
     private val _state = MutableStateFlow<DownloadState>(DownloadState.Idle)
@@ -68,24 +71,53 @@ class DownloadController(
 
     /** Downloads waiting to start — surfaced for the reorderable queue UI. */
     val queue: kotlinx.coroutines.flow.MutableStateFlow<List<DownloadRequest>> =
-        kotlinx.coroutines.flow.MutableStateFlow(emptyList())
+        kotlinx.coroutines.flow.MutableStateFlow(queueStore.load())
+
+    init {
+        // Reboot / process-death recovery: put the interrupted active download
+        // back at the front, then continue with the rest of the queue.
+        queueStore.loadActive()?.let { interrupted ->
+            updateQueue(listOf(interrupted) + queue.value)
+            queueStore.saveActive(null)
+        }
+        // The short delay lets the engine bootstrap settle first.
+        if (queue.value.isNotEmpty()) {
+            scope.launch {
+                kotlinx.coroutines.delay(3_000L)
+                if (!isActive() && _state.value !is DownloadState.Paused) {
+                    dequeueHead()?.let { restored ->
+                        // Use the foreground service so a restored download gets
+                        // the same wakelock + progress notification as a fresh one.
+                        runCatching { DownloadService.start(context, restored) }
+                            .onFailure { start(restored) }
+                    }
+                }
+            }
+        }
+    }
+
+    /** Single funnel for queue mutations so every change is persisted. */
+    private fun updateQueue(items: List<DownloadRequest>) {
+        queue.value = items
+        queueStore.save(items)
+    }
 
     /** Snapshot of the head of the queue (first queued download) — started automatically when the active one finishes. */
     val queuedRequest: DownloadRequest?
         get() = queue.value.firstOrNull()
 
     fun moveQueueItem(fromIndex: Int, toIndex: Int) {
-        queue.value = queue.value.toMutableList().apply {
+        updateQueue(queue.value.toMutableList().apply {
             val item = removeAt(fromIndex)
             add(toIndex.coerceIn(0, size), item)
-        }
+        })
     }
 
     fun removeFromQueue(index: Int): DownloadRequest? {
         val list = queue.value
         if (index !in list.indices) return null
         val removed = list[index]
-        queue.value = list.filterIndexed { i, _ -> i != index }
+        updateQueue(list.filterIndexed { i, _ -> i != index })
         return removed
     }
 
@@ -93,14 +125,15 @@ class DownloadController(
         val list = queue.value
         if (list.isEmpty()) return null
         val head = list.first()
-        queue.value = list.drop(1)
+        updateQueue(list.drop(1))
         return head
     }
 
     fun start(request: DownloadRequest) {
-        if (job?.isActive == true) { queue.value = queue.value + request; return }
-        if (_state.value is DownloadState.Paused) { queue.value = queue.value + request; return }
+        if (job?.isActive == true) { updateQueue(queue.value + request); return }
+        if (_state.value is DownloadState.Paused) { updateQueue(queue.value + request); return }
         currentRequest = request
+        queueStore.saveActive(request)
         _state.value = DownloadState.Preparing(request.title, request.mode)
         job = scope.launch {
             val startedAt = System.currentTimeMillis()
@@ -180,6 +213,7 @@ class DownloadController(
             } finally {
                 processId = null
                 currentRequest = null
+                queueStore.saveActive(null)
             }
         }
     }
@@ -192,6 +226,7 @@ class DownloadController(
         watchdog?.cancel()
         job?.cancel()
         pausedRequest = null
+        queueStore.saveActive(null)
         _state.value = DownloadState.Cancelled
     }
 
@@ -206,6 +241,7 @@ class DownloadController(
         job?.cancel()
         val progress = (state as? DownloadState.Running)?.progress ?: 0f
         pausedRequest = request
+        queueStore.saveActive(null)
         _state.value = DownloadState.Paused(request.title, request.mode, progress)
     }
 
@@ -390,6 +426,11 @@ class DownloadController(
                     addOption("--extract-audio")
                     addOption("--audio-format", "mp3")
                     addOption("--audio-quality", "0")
+                    // Even out loudness between tracks (single-pass EBU R128).
+                    addOption(
+                        "--postprocessor-args",
+                        "ffmpeg:-af loudnorm=I=-16:TP=-1.5:LRA=11"
+                    )
                 }
             }
             if (turbo) {

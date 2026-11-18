@@ -50,7 +50,8 @@ class AppContainer(context: Context) {
         settingsStore = settings,
         historyStore = history,
         quotaManager = quota,
-        exporter = exporter
+        exporter = exporter,
+        queueStore = com.mmtube.app.download.QueueStore(appContext)
     )
     val updater = UpdateRepository(appContext)
 
@@ -73,6 +74,18 @@ class MMTubeApp : Application() {
     override fun onCreate() {
         super.onCreate()
         container = AppContainer(this)
+        // App Check (Play Integrity) — release builds only. Debug builds stay
+        // token-free so local sideload testing is not blocked while the
+        // Firebase Console enforcement flag is off.
+        if (!BuildConfig.DEBUG && com.mmtube.app.data.FirebaseConfig.isConfigured) {
+            runCatching {
+                com.google.firebase.appcheck.FirebaseAppCheck.getInstance()
+                    .installAppCheckProviderFactory(
+                        com.google.firebase.appcheck.playintegrity.PlayIntegrityAppCheckProviderFactory
+                            .getInstance()
+                    )
+            }
+        }
         // Crashlytics is only enabled when Firebase is configured for this build.
         runCatching {
             if (com.mmtube.app.data.FirebaseConfig.isConfigured) {

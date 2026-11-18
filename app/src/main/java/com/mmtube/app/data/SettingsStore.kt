@@ -32,6 +32,7 @@ class SettingsStore(private val context: Context) {
         val LANGUAGE = stringPreferencesKey("language")
         val ONBOARDING = booleanPreferencesKey("onboarding_seen")
         val COLORBLIND = booleanPreferencesKey("colorblind_mode")
+        val COLORBLIND_PROFILE = stringPreferencesKey("colorblind_profile")
         val DYNAMIC = booleanPreferencesKey("dynamic_color")
         val CHIME = booleanPreferencesKey("chime_enabled")
         val LAST_SEEN_VERSION = stringPreferencesKey("last_seen_version")
@@ -43,6 +44,8 @@ class SettingsStore(private val context: Context) {
         val REDUCE_MOTION = booleanPreferencesKey("reduce_motion")
         val LAST_RECAP_AT = longPreferencesKey("last_recap_at")
         val ONBOARDING_SPLASH = booleanPreferencesKey("onboarding_splash_v3")
+        val INSTALL_PROMPTED = stringPreferencesKey("install_prompted_version")
+        val UPDATE_DISMISSED = stringPreferencesKey("update_dismissed_version")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -54,8 +57,16 @@ class SettingsStore(private val context: Context) {
 
     suspend fun snapshot(): SettingsSnapshot = settings.first()
 
-    private fun Preferences.toSnapshot(): SettingsSnapshot = SettingsSnapshot(
-        theme = ThemeMode.fromKey(this[Keys.THEME]),
+    private fun Preferences.toSnapshot(): SettingsSnapshot {
+        // Legacy boolean stays in sync; the string profile is authoritative
+        // once the user has picked one of the two new palettes.
+        val storedProfile = this[Keys.COLORBLIND_PROFILE]
+        val profile = when (storedProfile) {
+            "red_green", "blue_yellow", "off" -> storedProfile
+            else -> if (this[Keys.COLORBLIND] == true) "red_green" else "off"
+        }
+        return SettingsSnapshot(
+            theme = ThemeMode.fromKey(this[Keys.THEME]),
         turbo = this[Keys.TURBO] ?: true,
         autoEngineUpdate = this[Keys.AUTO_ENGINE] ?: true,
         autoAppUpdate = this[Keys.AUTO_APP] ?: true,
@@ -66,7 +77,8 @@ class SettingsStore(private val context: Context) {
         lastUpdateCheck = this[Keys.LAST_UPDATE_CHECK] ?: 0L,
         language = this[Keys.LANGUAGE] ?: "",
         onboardingSeen = this[Keys.ONBOARDING] ?: false,
-        colorblindMode = this[Keys.COLORBLIND] ?: false,
+        colorblindMode = profile != "off",
+        colorblindProfile = profile,
         dynamicColor = this[Keys.DYNAMIC] ?: false,
         chimeEnabled = this[Keys.CHIME] ?: true,
         lastSeenVersion = this[Keys.LAST_SEEN_VERSION] ?: "",
@@ -77,8 +89,11 @@ class SettingsStore(private val context: Context) {
         announcementsMuted = this[Keys.ANNOUNCEMENTS_MUTED] ?: false,
         reduceMotion = this[Keys.REDUCE_MOTION] ?: false,
         lastRecapAt = this[Keys.LAST_RECAP_AT] ?: 0L,
-        onboardingSplashSeen = this[Keys.ONBOARDING_SPLASH] ?: false
-    )
+        onboardingSplashSeen = this[Keys.ONBOARDING_SPLASH] ?: false,
+            installPromptedVersion = this[Keys.INSTALL_PROMPTED] ?: "",
+            dismissedUpdateVersion = this[Keys.UPDATE_DISMISSED] ?: ""
+        )
+    }
 
     suspend fun setTheme(mode: ThemeMode) {
         context.settingsDataStore.edit { it[Keys.THEME] = mode.name }
@@ -126,7 +141,16 @@ class SettingsStore(private val context: Context) {
         context.settingsDataStore.edit { it[longPreferencesKey("next_allowed_$uid")] = value }
     }
 
-    suspend fun setColorblindMode(v: Boolean) { context.settingsDataStore.edit { it[Keys.COLORBLIND] = v } }
+    suspend fun setColorblindMode(v: Boolean) =
+        setColorblindProfile(if (v) "red_green" else "off")
+
+    suspend fun setColorblindProfile(profile: String) {
+        val safe = if (profile == "red_green" || profile == "blue_yellow") profile else "off"
+        context.settingsDataStore.edit {
+            it[Keys.COLORBLIND_PROFILE] = safe
+            it[Keys.COLORBLIND] = safe != "off"
+        }
+    }
     suspend fun setDynamicColor(v: Boolean) { context.settingsDataStore.edit { it[Keys.DYNAMIC] = v } }
 
     suspend fun setChimeEnabled(v: Boolean) { context.settingsDataStore.edit { it[Keys.CHIME] = v } }
@@ -146,6 +170,14 @@ class SettingsStore(private val context: Context) {
     suspend fun setReduceMotion(v: Boolean) { context.settingsDataStore.edit { it[Keys.REDUCE_MOTION] = v } }
 
     suspend fun setLastRecapAt(v: Long) { context.settingsDataStore.edit { it[Keys.LAST_RECAP_AT] = v } }
+
+    suspend fun setInstallPromptedVersion(v: String) {
+        context.settingsDataStore.edit { it[Keys.INSTALL_PROMPTED] = v }
+    }
+
+    suspend fun setUpdateDismissedVersion(v: String) {
+        context.settingsDataStore.edit { it[Keys.UPDATE_DISMISSED] = v }
+    }
 
     suspend fun clearAll() {
         context.settingsDataStore.edit { it.clear() }

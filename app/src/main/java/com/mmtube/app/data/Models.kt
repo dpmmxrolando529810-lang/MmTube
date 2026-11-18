@@ -22,6 +22,7 @@ object Plans {
     fun isPaid(plan: String): Boolean = plan in paid
 }
 
+@Serializable
 enum class Platform {
     YOUTUBE,
     FACEBOOK,
@@ -29,6 +30,7 @@ enum class Platform {
     OTHER
 }
 
+@Serializable
 enum class DownloadMode(val key: String) {
     MAX("max"),
     P1080("1080"),
@@ -286,6 +288,8 @@ data class SettingsSnapshot(
     val language: String = "",
     val onboardingSeen: Boolean = false,
     val colorblindMode: Boolean = false,
+    /** "off" | "red_green" | "blue_yellow" */
+    val colorblindProfile: String = "off",
     val dynamicColor: Boolean = false,
     val chimeEnabled: Boolean = true,
     val lastSeenVersion: String = "",
@@ -296,5 +300,7 @@ data class SettingsSnapshot(
     val announcementsMuted: Boolean = false,
     val reduceMotion: Boolean = false,
     val lastRecapAt: Long = 0L,
-    val onboardingSplashSeen: Boolean = false
+    val onboardingSplashSeen: Boolean = false,
+    val installPromptedVersion: String = "",
+    val dismissedUpdateVersion: String = ""
 )

@@ -140,6 +140,70 @@ private val ColorblindLight = lightColorScheme(
     scrim = Color(0x99000000)
 )
 
+// Tritanopia (blue-yellow) safe palette — pink / teal / orange instead of
+// the blue-yellow axis. Surfaces stay identical to the regular theme.
+private val TritanDark = darkColorScheme(
+    primary = Color(0xFFE68FB0),
+    onPrimary = Color(0xFF3D1024),
+    primaryContainer = Color(0xFF5A213C),
+    onPrimaryContainer = Color(0xFFFFD9E6),
+    secondary = Color(0xFF5FC7B8),
+    onSecondary = Color(0xFF00332C),
+    secondaryContainer = Color(0xFF12463E),
+    onSecondaryContainer = Color(0xFFB8F2E8),
+    tertiary = Color(0xFFE7A45C),
+    onTertiary = Color(0xFF3A2200),
+    tertiaryContainer = Color(0xFF53330D),
+    onTertiaryContainer = Color(0xFFFFDDB3),
+    error = Color(0xFFE07A86),
+    onError = Color(0xFF3B0A15),
+    errorContainer = Color(0xFF471E28),
+    onErrorContainer = Color(0xFFFFD3DA),
+    background = MmtubePalette.DarkBackground,
+    onBackground = MmtubePalette.DarkOnBackground,
+    surface = MmtubePalette.DarkSurface,
+    onSurface = MmtubePalette.DarkOnSurface,
+    surfaceVariant = MmtubePalette.DarkSurfaceHigh,
+    onSurfaceVariant = MmtubePalette.DarkMuted,
+    outline = MmtubePalette.DarkOutline,
+    outlineVariant = MmtubePalette.DarkOutlineSoft,
+    inverseSurface = Color(0xFFE9ECF2),
+    inverseOnSurface = Color(0xFF1B2330),
+    inversePrimary = Color(0xFF8E3A5C),
+    scrim = Color(0x99000000)
+)
+
+private val TritanLight = lightColorScheme(
+    primary = Color(0xFFA8365D),
+    onPrimary = Color(0xFFFFFFFF),
+    primaryContainer = Color(0xFFFFD9E6),
+    onPrimaryContainer = Color(0xFF3D1024),
+    secondary = Color(0xFF00796B),
+    onSecondary = Color(0xFFFFFFFF),
+    secondaryContainer = Color(0xFFB8F2E8),
+    onSecondaryContainer = Color(0xFF00332C),
+    tertiary = Color(0xFF9A5200),
+    onTertiary = Color(0xFFFFFFFF),
+    tertiaryContainer = Color(0xFFFFDDB3),
+    onTertiaryContainer = Color(0xFF3A2200),
+    error = Color(0xFFB3261E),
+    onError = Color(0xFFFFFFFF),
+    errorContainer = Color(0xFFFFDAD6),
+    onErrorContainer = Color(0xFF410E0B),
+    background = MmtubePalette.LightBackground,
+    onBackground = MmtubePalette.LightOnBackground,
+    surface = MmtubePalette.LightSurface,
+    onSurface = MmtubePalette.LightOnSurface,
+    surfaceVariant = MmtubePalette.LightSurfaceHigh,
+    onSurfaceVariant = MmtubePalette.LightMuted,
+    outline = MmtubePalette.LightOutline,
+    outlineVariant = MmtubePalette.LightOutlineSoft,
+    inverseSurface = Color(0xFF1B2330),
+    inverseOnSurface = Color(0xFFF5F7FB),
+    inversePrimary = Color(0xFFFFD9E6),
+    scrim = Color(0x99000000)
+)
+
 private val LightColors = lightColorScheme(
     primary = MmtubePalette.AquaDeep,
     onPrimary = Color(0xFFFFFFFF),
@@ -178,8 +242,14 @@ fun MmtubeTheme(
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     colorblindMode: Boolean = false,
     dynamicColor: Boolean = false,
+    colorblindProfile: String = "off",
     content: @Composable () -> Unit
 ) {
+    val activeProfile = when {
+        colorblindProfile == "red_green" || colorblindProfile == "blue_yellow" -> colorblindProfile
+        colorblindMode -> "red_green"
+        else -> "off"
+    }
     val darkTheme = when (themeMode) {
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
         ThemeMode.LIGHT -> false
@@ -191,7 +261,8 @@ fun MmtubeTheme(
         if (darkTheme) androidx.compose.material3.dynamicDarkColorScheme(context)
         else androidx.compose.material3.dynamicLightColorScheme(context)
     } else when {
-        colorblindMode -> if (darkTheme) ColorblindDark else ColorblindLight
+        activeProfile == "blue_yellow" -> if (darkTheme) TritanDark else TritanLight
+        activeProfile == "red_green" -> if (darkTheme) ColorblindDark else ColorblindLight
         themeMode == ThemeMode.AMOLED -> AmoledColors
         else -> if (darkTheme) DarkColors else LightColors
     }
