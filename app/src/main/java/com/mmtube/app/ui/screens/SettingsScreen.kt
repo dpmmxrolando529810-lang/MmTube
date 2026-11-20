@@ -220,7 +220,7 @@ fun SettingsScreen(
                 }
             }
             SettingsValueRow(
-                icon = Icons.Rounded.Folder,
+                icon = Icons.Rounded.FolderOpen,
                 label = context.getString(R.string.settings_download_folder),
                 value = ui.settings.downloadFolder.ifBlank {
                     context.getString(R.string.settings_download_folder_default)

@@ -239,12 +239,13 @@ fun AppRoot(
             }
             val duplicate = ui.duplicatePrompt
             if (duplicate != null) {
+                val duplicateContext = androidx.compose.ui.platform.LocalContext.current
                 AlertDialog(
                     onDismissRequest = viewModel::dismissDuplicate,
-                    title = { Text(context.getString(R.string.download_duplicate_title)) },
+                    title = { Text(duplicateContext.getString(R.string.download_duplicate_title)) },
                     text = {
                         Text(
-                            context.getString(
+                            duplicateContext.getString(
                                 R.string.download_duplicate_body,
                                 duplicate.title
                             )
@@ -252,16 +253,16 @@ fun AppRoot(
                     },
                     confirmButton = {
                         TextButton(onClick = viewModel::downloadAnyway) {
-                            Text(context.getString(R.string.download_duplicate_anyway), color = MmtubePalette.Aqua)
+                            Text(duplicateContext.getString(R.string.download_duplicate_anyway), color = MmtubePalette.Aqua)
                         }
                     },
                     dismissButton = {
                         Row {
                             TextButton(onClick = viewModel::openDuplicate) {
-                                Text(context.getString(R.string.download_duplicate_open), color = MmtubePalette.Aqua)
+                                Text(duplicateContext.getString(R.string.download_duplicate_open), color = MmtubePalette.Aqua)
                             }
                             TextButton(onClick = viewModel::dismissDuplicate) {
-                                Text(context.getString(R.string.action_cancel), color = MmtubePalette.Danger)
+                                Text(duplicateContext.getString(R.string.action_cancel), color = MmtubePalette.Danger)
                             }
                         }
                     }
