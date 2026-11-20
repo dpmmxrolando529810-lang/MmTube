@@ -161,6 +161,13 @@ fun PaymentsTab(ui: AdminUiState, vm: AdminViewModel) {
                 Text("ရွေးထား ${ui.selectedPaymentIds.size} ခု ကို အတည်ပြုရန်", fontWeight = FontWeight.Bold)
             }
         }
+        androidx.compose.material3.TextButton(
+            onClick = vm::rejectSelectedPayments,
+            enabled = !ui.busy && ui.selectedPaymentIds.isNotEmpty(),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("ရွေးထား ${ui.selectedPaymentIds.size} ခု ကို ငြင်းပယ်ရန်", color = Danger)
+        }
         NoteField(
             value = ui.adminNote,
             onValueChange = vm::setAdminNote,
@@ -185,7 +192,7 @@ fun PaymentsTab(ui: AdminUiState, vm: AdminViewModel) {
         val filtered = ui.pendingPayments.filter { payment ->
             q.isBlank() || listOfNotNull(payment.userCode, payment.buyerPhone, payment.email, payment.plan, payment.id)
                 .any { it.lowercase().contains(q) }
-        }
+        }.sortedBy { it.createdAt }
         filtered.forEach { payment ->
             PaymentCard(
                 payment = payment,
@@ -295,12 +302,21 @@ private fun PaymentCard(
                 Checkbox(checked = selected, onCheckedChange = { it() })
             }
             Text(payment.userCode, color = OnDark, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-            if (payment.createdAt > 0 && System.currentTimeMillis() - payment.createdAt > 24L * 3600 * 1000) {
+            val ageDays = if (payment.createdAt > 0) {
+                ((System.currentTimeMillis() - payment.createdAt) / (24L * 3600 * 1000)).coerceAtLeast(0)
+            } else 0
+            if (ageDays > 0) {
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = Color(0xFF3A2410)
+                    color = if (ageDays >= 3) Color(0xFF4A1F1F) else Color(0xFF3A2410)
                 ) {
-                    Text("နောက်ကျ", color = Amber, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                    Text(
+                        "$ageDays ရက်",
+                        color = if (ageDays >= 3) Danger else Amber,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
                 }
             }
             Text(Plans.label(payment.plan), color = Aqua, fontWeight = FontWeight.Bold)

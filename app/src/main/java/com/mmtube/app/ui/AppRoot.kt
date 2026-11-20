@@ -237,6 +237,36 @@ fun AppRoot(
                     containerColor = Color(0xFF0C3B2F)
                 )
             }
+            val duplicate = ui.duplicatePrompt
+            if (duplicate != null) {
+                AlertDialog(
+                    onDismissRequest = viewModel::dismissDuplicate,
+                    title = { Text(context.getString(R.string.download_duplicate_title)) },
+                    text = {
+                        Text(
+                            context.getString(
+                                R.string.download_duplicate_body,
+                                duplicate.title
+                            )
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(onClick = viewModel::downloadAnyway) {
+                            Text(context.getString(R.string.download_duplicate_anyway), color = MmtubePalette.Aqua)
+                        }
+                    },
+                    dismissButton = {
+                        Row {
+                            TextButton(onClick = viewModel::openDuplicate) {
+                                Text(context.getString(R.string.download_duplicate_open), color = MmtubePalette.Aqua)
+                            }
+                            TextButton(onClick = viewModel::dismissDuplicate) {
+                                Text(context.getString(R.string.action_cancel), color = MmtubePalette.Danger)
+                            }
+                        }
+                    }
+                )
+            }
             val whatsNew = ui.whatsNewVersion
             if (whatsNew != null) {
                 WhatsNewDialog(version = whatsNew, onDismiss = viewModel::dismissWhatsNew)
@@ -259,12 +289,12 @@ fun AppRoot(
 private fun WhatsNewDialog(version: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val items = listOf(
-        "App ပိတ်သွားတာ / ဖုန်း restart ဖြစ်တာတောင် ဒေါင်းလုပ်တန်းစီထားတာကို ပြန်ဆက်လုပ်ပေးတယ်",
-        "ငွေပေးချေပြီးရင် Claim Code ပြပေးတယ် — Admin ကို ပို့ထားရင် စစ်ဆေးမှု ပိုမြန်တယ်",
-        "Admin ငြင်းပယ်ရင် အကြောင်းပြချက်ကို ငွေပေးချေမှုမှတ်တမ်းမှာ တိုက်ရိုက်မြင်ရတယ်",
-        "အရောင်ခွဲခြားရခက်သူများအတွက် Red-Green / Blue-Yellow palette ရွေးနိုင်တယ်",
-        "Update စစ်ဆေးမှု ပိုမြန်ပြီး GitHub limit မထိအောင် cache သုံးထားတယ်",
-        "MP3 အသံအတိုးအကျယ်ကို နားထောင်ရအဆင်ပြေအောင် ချိန်ညှိထားတယ်"
+        "Format picker နဲ့ လိုချင်တဲ့ resolution / fps / codec ကို တိတိကျကျ ရွေးနိုင်တယ်",
+        "သိမ်းဆည်းမယ့် folder ကို ကိုယ်ကြိုက်ရာ ရွေးနိုင်တယ်",
+        "ငွေပေးချေမှု အတည်ပြု/ငြင်းပယ်ချက်ကို app ပိတ်ထားလည်း notification နဲ့ သိနိုင်တယ်",
+        "Network ပြတ်ရင် အလိုအလျောက် ပြန်ကြိုးစားပြီး မလုံးတဲ့ ဖိုင်တွေ ရှင်းပေးတယ်",
+        "တူတဲ့ link ထပ်ဒေါင်းမယ်ဆို သတိပေးတယ်; မှတ်တမ်းမှာ ရှာ/ရွေးဖျက်/စီလို့ရတယ်",
+        "Admin မှာ အများကြီး ငြင်းပယ်နိုင်ပြီး နောက်ကျနေတဲ့ payment တွေ ပိုထင်ရှားတယ်"
     )
     AlertDialog(
         onDismissRequest = onDismiss,

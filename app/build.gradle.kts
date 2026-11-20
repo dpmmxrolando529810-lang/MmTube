@@ -7,6 +7,12 @@ plugins {
     id("com.google.firebase.crashlytics")
 }
 
+firebaseCrashlytics {
+    // Release builds are minified; skip mapping upload so local/CI builds do not
+    // depend on Crashlytics upload credentials.
+    mappingFileUploadEnabled = false
+}
+
 // google-services.json is generated from the same env vars as the manual Firebase bootstrap,
 // so CI/local builds keep working without committing the file.
 run {
@@ -52,8 +58,8 @@ fun envOrProp(name: String, default: String = ""): String {
 fun quoted(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 25
-val appVersionName = (project.findProperty("versionName") as String?) ?: "1.8.0"
+val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 26
+val appVersionName = (project.findProperty("versionName") as String?) ?: "1.9.0"
 val keystorePath = envOrProp("KEYSTORE_PATH", "keystore/mmtube-demo.p12")
 
 android {
@@ -107,8 +113,8 @@ android {
             isCrunchPngs = true
         }
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             isCrunchPngs = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
@@ -200,6 +206,8 @@ dependencies {
     implementation("com.google.firebase:firebase-appcheck")
     implementation("com.google.firebase:firebase-appcheck-playintegrity")
 
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+    implementation("androidx.documentfile:documentfile:1.0.1")
     implementation("androidx.credentials:credentials:1.3.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")

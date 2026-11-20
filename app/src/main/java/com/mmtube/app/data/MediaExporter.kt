@@ -27,7 +27,13 @@ data class ExportedMedia(
 
 class MediaExporter(private val context: Context) {
 
-    suspend fun export(file: File, mode: DownloadMode, platform: Platform? = null): ExportedMedia = withContext(Dispatchers.IO) {
+    suspend fun export(
+        file: File,
+        mode: DownloadMode,
+        platform: Platform? = null,
+        relativeBase: String? = null,
+        volumeName: String? = null
+    ): ExportedMedia = withContext(Dispatchers.IO) {
         val mime = mimeType(file, mode)
         val folder = when (platform) {
             Platform.YOUTUBE -> "YouTube"
@@ -38,9 +44,11 @@ class MediaExporter(private val context: Context) {
         val size = file.length()
         val audio = mode == DownloadMode.MP3
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            exportToMediaStore(file, mime, audio, size, relativeSub = folder) ?: fallback(file, mime, size, folder)
+            exportToMediaStore(file, mime, audio, size, folder, relativeBase, volumeName)
+                ?: fallback(file, mime, size, folder)
         } else if (hasStoragePermission()) {
-            exportToPublic(file, mime, audio, size, folder) ?: fallback(file, mime, size, folder)
+            exportToPublic(file, mime, audio, size, folder, relativeBase, volumeName)
+                ?: fallback(file, mime, size, folder)
         } else {
             fallback(file, mime, size, folder)
         }
@@ -64,17 +72,25 @@ class MediaExporter(private val context: Context) {
         mime: String,
         audio: Boolean,
         size: Long,
-        relativeSub: String?
+        relativeSub: String?,
+        relativeBase: String?,
+        volumeName: String?
     ): ExportedMedia? {
         val resolver = context.contentResolver
+        val volume = volumeName?.takeIf { it.isNotBlank() } ?: MediaStore.VOLUME_EXTERNAL_PRIMARY
         val collection = if (audio) {
-            MediaStore.Audio.Media.EXTERNAL_CONTENT_URI
+            MediaStore.Audio.Media.getContentUri(volume)
         } else {
-            MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+            MediaStore.Video.Media.getContentUri(volume)
+        }
+        val base = if (relativeBase.isNullOrBlank()) {
+            if (audio) "Music/MMTube" else "Movies/MMTube"
+        } else {
+            relativeBase.trim('/') + "/MMTube"
         }
         val relative = buildString {
-            append(if (audio) "Music/MMTube" else "Movies/MMTube")
-            if (relativeSub != null) append("/").append(relativeSub)
+            append(base)
+            if (!relativeSub.isNullOrBlank()) append("/").append(relativeSub)
         }
         val values = ContentValues().apply {
             put(MediaStore.MediaColumns.DISPLAY_NAME, file.name)
@@ -111,13 +127,17 @@ class MediaExporter(private val context: Context) {
         mime: String,
         audio: Boolean,
         size: Long,
-        folder: String?
+        folder: String?,
+        relativeBase: String?,
+        volumeName: String?
     ): ExportedMedia? {
         return runCatching {
-            val base = Environment.getExternalStoragePublicDirectory(
-                if (audio) Environment.DIRECTORY_MUSIC else Environment.DIRECTORY_MOVIES
-            )
-            val baseFolder = if (folder != null) File(File(base, "MMTube"), folder) else File(base, "MMTube")
+            val root = Environment.getExternalStorageDirectory()
+            val baseFolder = if (!relativeBase.isNullOrBlank()) {
+                File(File(root, relativeBase.trim('/')), "MMTube")
+            } else {
+                File(root, if (audio) "Music/MMTube" else "Movies/MMTube")
+            }.let { if (folder != null) File(it, folder) else it }
             baseFolder.mkdirs()
             val target = uniqueFile(baseFolder, file.name)
             file.copyTo(target, overwrite = false)

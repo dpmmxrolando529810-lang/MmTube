@@ -46,6 +46,8 @@ class SettingsStore(private val context: Context) {
         val ONBOARDING_SPLASH = booleanPreferencesKey("onboarding_splash_v3")
         val INSTALL_PROMPTED = stringPreferencesKey("install_prompted_version")
         val UPDATE_DISMISSED = stringPreferencesKey("update_dismissed_version")
+        val DOWNLOAD_FOLDER = stringPreferencesKey("download_folder")
+        val DOWNLOAD_FOLDER_VOLUME = stringPreferencesKey("download_folder_volume")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -91,7 +93,9 @@ class SettingsStore(private val context: Context) {
         lastRecapAt = this[Keys.LAST_RECAP_AT] ?: 0L,
         onboardingSplashSeen = this[Keys.ONBOARDING_SPLASH] ?: false,
             installPromptedVersion = this[Keys.INSTALL_PROMPTED] ?: "",
-            dismissedUpdateVersion = this[Keys.UPDATE_DISMISSED] ?: ""
+            dismissedUpdateVersion = this[Keys.UPDATE_DISMISSED] ?: "",
+            downloadFolder = this[Keys.DOWNLOAD_FOLDER] ?: "",
+            downloadFolderVolume = this[Keys.DOWNLOAD_FOLDER_VOLUME] ?: "external_primary"
         )
     }
 
@@ -177,6 +181,13 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setUpdateDismissedVersion(v: String) {
         context.settingsDataStore.edit { it[Keys.UPDATE_DISMISSED] = v }
+    }
+
+    suspend fun setDownloadFolder(uri: String, volume: String = "external_primary") {
+        context.settingsDataStore.edit {
+            it[Keys.DOWNLOAD_FOLDER] = uri
+            it[Keys.DOWNLOAD_FOLDER_VOLUME] = volume
+        }
     }
 
     suspend fun clearAll() {

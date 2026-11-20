@@ -65,6 +65,10 @@ fun DownloadsScreen(
     var pendingDelete by remember { mutableStateOf<HistoryItem?>(null) }
     var clearAllConfirm by remember { mutableStateOf(false) }
     var cleanupOldConfirm by remember { mutableStateOf(false) }
+    var query by remember { mutableStateOf("") }
+    var sort by remember { mutableStateOf(0) }
+    var selection by remember { mutableStateOf(setOf<String>()) }
+    var deleteSelectedConfirm by remember { mutableStateOf(false) }
 
     val active = ui.download
     val hasActive = active is DownloadState.Preparing || active is DownloadState.Running ||
@@ -72,13 +76,21 @@ fun DownloadsScreen(
         active is DownloadState.Paused
 
     val filtered = ui.history.filter { item ->
-        when (filter) {
+        val matchesType = when (filter) {
             1 -> !item.mimeType.startsWith("audio")
             2 -> item.mimeType.startsWith("audio")
             else -> true
         }
+        matchesType && (query.isBlank() || item.title.contains(query.trim(), ignoreCase = true))
+    }.let { list ->
+        when (sort) {
+            1 -> list.sortedBy { it.createdAt }
+            2 -> list.sortedByDescending { it.sizeBytes }
+            else -> list.sortedByDescending { it.createdAt }
+        }
     }
     val totalBytes = ui.history.sumOf { it.sizeBytes }
+    val selectedItems = ui.history.filter { it.id in selection }
 
     LazyColumn(
         modifier = Modifier
@@ -124,6 +136,52 @@ fun DownloadsScreen(
             }
         }
         item {
+            androidx.compose.material3.OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text(context.getString(R.string.downloads_search), style = MmtubeType.BodyMedium) },
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth()
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(top = 6.dp)) {
+                listOf(
+                    R.string.downloads_sort_newest,
+                    R.string.downloads_sort_oldest,
+                    R.string.downloads_sort_largest
+                ).forEachIndexed { index, label ->
+                    androidx.compose.material3.FilterChip(
+                        selected = sort == index,
+                        onClick = { sort = index },
+                        label = { Text(context.getString(label), style = MmtubeType.LabelSmall) }
+                    )
+                }
+            }
+        }
+        if (selection.isNotEmpty()) {
+            item {
+                FrostedCard(shape = RoundedCornerShape(14.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            context.getString(R.string.downloads_selected, selection.size),
+                            style = MmtubeType.LabelLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.weight(1f)
+                        )
+                        androidx.compose.material3.TextButton(onClick = { selection = emptySet() }) {
+                            Text(context.getString(R.string.downloads_done), color = MmtubePalette.Aqua)
+                        }
+                        androidx.compose.material3.TextButton(onClick = { deleteSelectedConfirm = true }) {
+                            Text(context.getString(R.string.downloads_delete_selected), color = MmtubePalette.Danger)
+                        }
+                    }
+                }
+            }
+        }
+        item {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -138,6 +196,14 @@ fun DownloadsScreen(
                             text = context.getString(R.string.storage_used, Formatters.formatBytes(totalBytes)),
                             style = MmtubeType.LabelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (ui.tempBytes > 0L) {
+                        Text(
+                            text = context.getString(R.string.storage_temp, Formatters.formatBytes(ui.tempBytes)),
+                            style = MmtubeType.LabelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
+                            modifier = Modifier.padding(start = 24.dp, top = 2.dp)
                         )
                     }
                     if (ui.history.isNotEmpty()) {
@@ -208,7 +274,11 @@ fun DownloadsScreen(
                     item = item,
                     onOpen = { vm.openHistory(item) },
                     onShare = { vm.shareHistory(item) },
-                    onDelete = { pendingDelete = item }
+                    onDelete = { pendingDelete = item },
+                    selected = item.id in selection,
+                    onToggleSelect = {
+                        selection = if (item.id in selection) selection - item.id else selection + item.id
+                    }
                 )
             }
         }
@@ -237,6 +307,20 @@ fun DownloadsScreen(
                 clearAllConfirm = false
             },
             onDismiss = { clearAllConfirm = false },
+            danger = true
+        )
+    }
+    if (deleteSelectedConfirm) {
+        ConfirmDialog(
+            title = context.getString(R.string.downloads_delete_selected),
+            body = context.getString(R.string.downloads_delete_selected_confirm, selectedItems.size),
+            confirmLabel = context.getString(R.string.action_delete),
+            onConfirm = {
+                vm.deleteHistoryItems(selectedItems)
+                selection = emptySet()
+                deleteSelectedConfirm = false
+            },
+            onDismiss = { deleteSelectedConfirm = false },
             danger = true
         )
     }

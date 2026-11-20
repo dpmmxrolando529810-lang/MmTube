@@ -86,7 +86,10 @@ data class MainUiState(
     val unreadAnnouncements: Int = 0,
     val showInbox: Boolean = false,
     val reduceMotion: Boolean = false,
-    val showCelebration: Boolean = false
+    val showCelebration: Boolean = false,
+    val selectedFormatId: String? = null,
+    val duplicatePrompt: com.mmtube.app.data.HistoryItem? = null,
+    val tempBytes: Long = 0L
 ) {
     val termsAccepted: Boolean get() = settings.acceptedTerms
 }
@@ -174,6 +177,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             val snap = container.settings.snapshot()
             _ui.update { it.copy(reduceMotion = snap.reduceMotion) }
         }
+        refreshStorageInfo()
         // What's New: show once per version upgrade.
         viewModelScope.launch {
             val snap = container.settings.snapshot()
@@ -338,6 +342,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                             link = result.url,
                             probe = ProbeUi.Success(result),
                             mode = if (result.audioOnly) DownloadMode.MP3 else DownloadMode.MAX,
+                            selectedFormatId = null,
                             detected = result.platform,
                             pendingAutoDownload = false
                         )
@@ -372,6 +377,15 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 _ui.update { it.copy(storageFullPrompt = true) }
                 return@launch
             }
+            val source = probe.webpageUrl ?: probe.url
+            val duplicate = runCatching { container.history.snapshot() }
+                .getOrDefault(emptyList())
+                .firstOrNull { it.sourceUrl.isNotBlank() && it.sourceUrl == source }
+            if (duplicate != null && duplicateAck != source) {
+                _ui.update { it.copy(duplicatePrompt = duplicate) }
+                return@launch
+            }
+            if (duplicate != null) duplicateAck = null
             val quota = runCatching { container.quota.current() }.getOrNull()
             _ui.update { it.copy(quota = quota) }
             if (quota == null || !quota.allowed) {
@@ -392,9 +406,49 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 mode = mode,
                 thumbnail = probe.thumbnail,
                 durationSeconds = probe.durationSeconds,
-                qualityLabel = qualityLabel(probe, mode)
+                qualityLabel = qualityLabel(probe, mode),
+                formatId = _ui.value.selectedFormatId
             )
             DownloadService.start(context, request)
+            refreshStorageInfo()
+        }
+    }
+
+    private var duplicateAck: String? = null
+
+    fun selectFormat(id: String?) {
+        _ui.update { it.copy(selectedFormatId = id) }
+    }
+
+    fun downloadAnyway() {
+        duplicateAck = (_ui.value.probe as? ProbeUi.Success)?.result?.let { it.webpageUrl ?: it.url }
+        _ui.update { it.copy(duplicatePrompt = null) }
+        startDownload()
+    }
+
+    fun dismissDuplicate() {
+        duplicateAck = null
+        _ui.update { it.copy(duplicatePrompt = null) }
+    }
+
+    fun openDuplicate() {
+        val item = _ui.value.duplicatePrompt ?: return
+        dismissDuplicate()
+        openHistory(item)
+    }
+
+    fun refreshStorageInfo() {
+        viewModelScope.launch {
+            val bytes = runCatching { container.downloads.tempBytes() }.getOrDefault(0L)
+            _ui.update { it.copy(tempBytes = bytes) }
+        }
+    }
+
+    fun clearTempFiles() {
+        viewModelScope.launch {
+            val removed = runCatching { container.downloads.clearTempFiles() }.getOrDefault(0)
+            refreshStorageInfo()
+            event(UiEvent.Message(context.getString(R.string.storage_temp_cleared, removed)))
         }
     }
 
@@ -816,7 +870,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 ref.id
             }
             result
-                .onSuccess { id -> onDone(true, null, id) }
+                .onSuccess { id ->
+                    com.mmtube.app.data.PaymentStatusWorker.enqueue(context, id)
+                    onDone(true, null, id)
+                }
                 .onFailure { onDone(false, it.message, null) }
         }
     }
@@ -1143,7 +1200,27 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             runCatching { container.exporter.delete(item) }
             container.history.remove(item.id)
+            refreshStorageInfo()
             event(UiEvent.Message(context.getString(R.string.action_delete)))
+        }
+    }
+
+    fun deleteHistoryItems(items: List<HistoryItem>) {
+        if (items.isEmpty()) return
+        viewModelScope.launch {
+            items.forEach { item ->
+                runCatching { container.exporter.delete(item) }
+                container.history.remove(item.id)
+            }
+            refreshStorageInfo()
+            event(UiEvent.Message(context.getString(R.string.downloads_deleted_count, items.size)))
+        }
+    }
+
+    fun setDownloadFolder(relativePath: String) {
+        viewModelScope.launch {
+            container.settings.setDownloadFolder(relativePath)
+            event(UiEvent.Message(context.getString(R.string.settings_download_folder_saved)))
         }
     }
 
@@ -1444,23 +1521,38 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     // ---------- Errors ----------
 
-    fun errorText(kind: ErrorKind): String = when (kind) {
-        ErrorKind.INVALID_LINK -> context.getString(R.string.error_invalid_link)
-        ErrorKind.UNSUPPORTED -> context.getString(R.string.error_unsupported)
-        ErrorKind.PRIVATE -> context.getString(R.string.error_private)
-        ErrorKind.AGE -> context.getString(R.string.error_age)
-        ErrorKind.UNAVAILABLE -> context.getString(R.string.error_unavailable)
-        ErrorKind.NETWORK -> context.getString(R.string.error_network)
-        ErrorKind.ENGINE -> context.getString(R.string.error_engine)
-        ErrorKind.DOWNLOAD -> context.getString(R.string.error_download)
-        ErrorKind.QUOTA -> context.getString(R.string.error_quota)
-        ErrorKind.NO_SPACE -> context.getString(R.string.error_no_space)
-        ErrorKind.FIREBASE -> context.getString(R.string.error_firebase)
-        ErrorKind.SIGN_IN_CANCELLED -> context.getString(R.string.error_sign_in_cancelled)
-        ErrorKind.SIGN_IN_UNAVAILABLE -> context.getString(R.string.error_sign_in_unavailable)
-        ErrorKind.NOT_ADMIN -> context.getString(R.string.error_not_admin)
-        ErrorKind.INSTALL_PERMISSION -> context.getString(R.string.error_install_permission)
-        ErrorKind.GENERIC -> context.getString(R.string.error_generic)
+    fun errorText(kind: ErrorKind): String {
+        val base = when (kind) {
+            ErrorKind.INVALID_LINK -> context.getString(R.string.error_invalid_link)
+            ErrorKind.UNSUPPORTED -> context.getString(R.string.error_unsupported)
+            ErrorKind.PRIVATE -> context.getString(R.string.error_private)
+            ErrorKind.AGE -> context.getString(R.string.error_age)
+            ErrorKind.UNAVAILABLE -> context.getString(R.string.error_unavailable)
+            ErrorKind.NETWORK -> context.getString(R.string.error_network)
+            ErrorKind.ENGINE -> context.getString(R.string.error_engine)
+            ErrorKind.DOWNLOAD -> context.getString(R.string.error_download)
+            ErrorKind.QUOTA -> context.getString(R.string.error_quota)
+            ErrorKind.NO_SPACE -> context.getString(R.string.error_no_space)
+            ErrorKind.FIREBASE -> context.getString(R.string.error_firebase)
+            ErrorKind.SIGN_IN_CANCELLED -> context.getString(R.string.error_sign_in_cancelled)
+            ErrorKind.SIGN_IN_UNAVAILABLE -> context.getString(R.string.error_sign_in_unavailable)
+            ErrorKind.NOT_ADMIN -> context.getString(R.string.error_not_admin)
+            ErrorKind.INSTALL_PERMISSION -> context.getString(R.string.error_install_permission)
+            ErrorKind.GENERIC -> context.getString(R.string.error_generic)
+        }
+        val hintRes = when (kind) {
+            ErrorKind.PRIVATE -> R.string.error_hint_private
+            ErrorKind.AGE -> R.string.error_hint_age
+            ErrorKind.UNAVAILABLE -> R.string.error_hint_unavailable
+            ErrorKind.NETWORK -> R.string.error_hint_network
+            ErrorKind.NO_SPACE -> R.string.error_hint_no_space
+            ErrorKind.DOWNLOAD -> R.string.error_hint_download
+            ErrorKind.UNSUPPORTED -> R.string.error_hint_unsupported
+            ErrorKind.QUOTA -> R.string.error_hint_quota
+            else -> 0
+        }
+        val hint = if (hintRes == 0) "" else context.getString(hintRes)
+        return if (hint.isBlank()) base else base + "\n" + hint
     }
 
     private fun event(event: UiEvent) {

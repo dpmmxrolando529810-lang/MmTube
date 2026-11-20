@@ -13,8 +13,8 @@ fun envOrProp(name: String, default: String = ""): String {
 fun quoted(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 24
-val appVersionName = (project.findProperty("versionName") as String?) ?: "1.8.0"
+val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 25
+val appVersionName = (project.findProperty("versionName") as String?) ?: "1.9.0"
 val keystorePath = envOrProp("KEYSTORE_PATH", "keystore/mmtube-demo.p12")
 
 android {
@@ -58,8 +58,8 @@ android {
             isCrunchPngs = true
         }
         release {
-            isMinifyEnabled = false
-            isShrinkResources = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             isCrunchPngs = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(

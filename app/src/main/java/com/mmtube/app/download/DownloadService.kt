@@ -82,6 +82,14 @@ class DownloadService : Service() {
         return START_NOT_STICKY
     }
 
+    /** Android 14+ stops a data-sync foreground service after ~6 hours.
+     *  Pause the download so it can be resumed instead of being killed silently. */
+    override fun onTimeout(startId: Int) {
+        runCatching { controller.pauseForTimeout() }
+        super.onTimeout(startId)
+        runCatching { stopSelf(startId) }
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {

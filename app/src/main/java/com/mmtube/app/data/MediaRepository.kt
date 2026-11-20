@@ -144,6 +144,32 @@ class MediaRepository(context: Context, private val engine: EngineManager) {
             ?: info.fileSize.takeIf { it > 0 }
             ?: 0L
         val platform = platformFrom(info.extractorKey ?: info.extractor, url)
+        val formatOptions = formats.mapNotNull { format ->
+            val id = format.formatId?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val video = format.vcodec != null && format.vcodec != "none" && format.height > 0
+            val audio = format.acodec != null && format.acodec != "none" &&
+                (format.vcodec == null || format.vcodec == "none")
+            if (!video && !audio) return@mapNotNull null
+            MediaFormatOption(
+                id = id,
+                height = format.height.coerceAtLeast(0),
+                fps = format.fps.coerceAtLeast(0),
+                tbr = format.tbr.coerceAtLeast(0),
+                vcodec = format.vcodec?.takeIf { it != "none" },
+                acodec = format.acodec?.takeIf { it != "none" },
+                sizeBytes = format.fileSize.takeIf { it > 0 }
+                    ?: format.fileSizeApproximate.takeIf { it > 0 } ?: 0L,
+                isVideo = video
+            )
+        }.distinctBy { it.id }.let { all ->
+            val videos = all.filter { it.isVideo }.sortedWith(
+                compareByDescending<MediaFormatOption> { it.height }
+                    .thenByDescending { it.fps }.thenByDescending { it.tbr }
+            ).take(20)
+            val audios = all.filterNot { it.isVideo }
+                .sortedByDescending { it.tbr }.take(6)
+            videos + audios
+        }
         return ProbeResult(
             url = url,
             title = info.title ?: info.fulltitle ?: "Untitled",
@@ -156,7 +182,8 @@ class MediaRepository(context: Context, private val engine: EngineManager) {
             estimatedBytes = estimated,
             audioOnly = height <= 0,
             extractor = info.extractorKey ?: info.extractor,
-            webpageUrl = info.webpageUrl ?: url
+            webpageUrl = info.webpageUrl ?: url,
+            formats = formatOptions
         )
     }
 

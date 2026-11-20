@@ -163,6 +163,17 @@ data class QuotaState(
         ((nextAllowedAt ?: 0L) - now).coerceAtLeast(0L)
 }
 
+data class MediaFormatOption(
+    val id: String,
+    val height: Int,
+    val fps: Int,
+    val tbr: Int,
+    val vcodec: String?,
+    val acodec: String?,
+    val sizeBytes: Long,
+    val isVideo: Boolean
+)
+
 data class ProbeResult(
     val url: String,
     val title: String,
@@ -175,7 +186,8 @@ data class ProbeResult(
     val estimatedBytes: Long,
     val audioOnly: Boolean,
     val extractor: String?,
-    val webpageUrl: String?
+    val webpageUrl: String?,
+    val formats: List<MediaFormatOption> = emptyList()
 )
 
 sealed interface ProbeUi {
@@ -238,6 +250,8 @@ sealed interface DownloadState {
 data class HistoryItem(
     val id: String,
     val title: String,
+    /** Source link, used to warn about duplicate downloads. */
+    val sourceUrl: String = "",
     val platform: String,
     val quality: String,
     val sizeBytes: Long,
@@ -302,5 +316,8 @@ data class SettingsSnapshot(
     val lastRecapAt: Long = 0L,
     val onboardingSplashSeen: Boolean = false,
     val installPromptedVersion: String = "",
-    val dismissedUpdateVersion: String = ""
+    val dismissedUpdateVersion: String = "",
+    /** SAF tree URI (or preset value) chosen for downloaded files. */
+    val downloadFolder: String = "",
+    val downloadFolderVolume: String = "external_primary"
 )

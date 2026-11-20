@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -195,6 +196,44 @@ fun SettingsScreen(
                 label = context.getString(R.string.settings_quality),
                 value = context.getString(R.string.settings_quality_desc)
             )
+            val pickFolder = rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
+            ) { uri ->
+                if (uri == null) return@rememberLauncherForActivityResult
+                runCatching {
+                    context.contentResolver.takePersistableUriPermission(
+                        uri,
+                        android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                    )
+                }
+                val relative = com.mmtube.app.download.DownloadFolderResolver
+                    .relativeFromTreeUri(context, uri)
+                if (relative != null) {
+                    vm.setDownloadFolder(relative)
+                } else {
+                    android.widget.Toast.makeText(
+                        context,
+                        context.getString(R.string.settings_download_folder_unsupported),
+                        android.widget.Toast.LENGTH_LONG
+                    ).show()
+                }
+            }
+            SettingsValueRow(
+                icon = Icons.Rounded.Folder,
+                label = context.getString(R.string.settings_download_folder),
+                value = ui.settings.downloadFolder.ifBlank {
+                    context.getString(R.string.settings_download_folder_default)
+                }
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+                androidx.compose.material3.TextButton(onClick = { pickFolder.launch(null) }) {
+                    Text(context.getString(R.string.settings_download_folder_pick), color = MmtubePalette.Aqua)
+                }
+                androidx.compose.material3.TextButton(onClick = { vm.setDownloadFolder("") }) {
+                    Text(context.getString(R.string.settings_download_folder_reset), color = MmtubePalette.Amber)
+                }
+            }
         }
 
         SettingsGroup(context.getString(R.string.settings_engine), visibleIf = qMatch(query, listOf("engine", "yt-dlp", "update", "အင်ဂျင်", "version", "update engine"))) {

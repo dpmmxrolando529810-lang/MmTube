@@ -273,7 +273,9 @@ fun HistoryRow(
     onOpen: () -> Unit,
     onShare: () -> Unit,
     onDelete: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    selected: Boolean = false,
+    onToggleSelect: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val audio = item.mode == "mp3" || item.mimeType.startsWith("audio")
@@ -288,6 +290,12 @@ fun HistoryRow(
         shape = RoundedCornerShape(20.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            onToggleSelect?.let { toggle ->
+                androidx.compose.material3.Checkbox(
+                    checked = selected,
+                    onCheckedChange = { toggle() }
+                )
+            }
             Box(
                 modifier = Modifier
                     .size(6.dp, 66.dp)

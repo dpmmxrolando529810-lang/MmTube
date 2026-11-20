@@ -598,6 +598,47 @@ class AdminViewModel(private val container: AdminContainer) : ViewModel() {
         }
     }
 
+    /** Reject every selected pending payment with one shared reason. */
+    fun rejectSelectedPayments() {
+        val db = firestore ?: return
+        if (_ui.value.busy) return
+        val selected = _ui.value.selectedPaymentIds
+        if (selected.isEmpty()) return
+        val payments = _ui.value.pendingPayments.filter { it.id in selected }
+        if (payments.isEmpty()) return
+        val reason = _ui.value.adminNote.trim().ifBlank { "Rejected by admin" }
+        _ui.update { it.copy(busy = true) }
+        viewModelScope.launch {
+            var ok = 0
+            var fail = 0
+            for (payment in payments) {
+                val result = runCatching {
+                    db.collection("payments").document(payment.id).set(
+                        mapOf(
+                            "status" to "rejected",
+                            "reviewedAt" to FieldValue.serverTimestamp(),
+                            "adminNote" to reason,
+                            "imageBase64" to ""
+                        ),
+                        SetOptions.merge()
+                    ).await()
+                }
+                if (result.isSuccess) ok++ else fail++
+            }
+            logAction("✗ ${ok} ခု ငြင်းပယ် (${fail} fail)")
+            _ui.update {
+                it.copy(
+                    busy = false,
+                    message = if (fail == 0) "${ok} ခု ငြင်းပယ်ပြီး" else "${ok} အောင်မြင်, ${fail} ပျက်",
+                    adminNote = "",
+                    selectedPaymentIds = emptySet()
+                )
+            }
+            loadPendingPayments()
+            loadLogs()
+        }
+    }
+
     fun togglePaymentSelection(paymentId: String) {
         _ui.update {
             val next = it.selectedPaymentIds.toMutableSet()

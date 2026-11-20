@@ -5,6 +5,7 @@
     <external-files-path name="mmtube_root" path="." />
     <external-path name="public_movies" path="Movies/MMTube/" />
     <external-path name="public_music" path="Music/MMTube/" />
+    <external-path name="external_root" path="." />
     <cache-path name="mmtube_cache" path="." />
     <files-path name="mmtube_files" path="." />
 </paths>

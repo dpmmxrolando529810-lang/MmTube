@@ -39,6 +39,8 @@ data class DownloadRequest(
     val thumbnail: String?,
     val durationSeconds: Int,
     val qualityLabel: String,
+    /** yt-dlp format id chosen in the format picker, if any. */
+    val formatId: String? = null,
     val resume: Boolean = false,
     /** Stable identity for reorderable queue UI. */
     val queueId: String = java.util.UUID.randomUUID().toString()
@@ -74,6 +76,7 @@ class DownloadController(
         kotlinx.coroutines.flow.MutableStateFlow(queueStore.load())
 
     init {
+        cleanupTempFiles(olderThanMs = 10 * 60 * 1000L)
         // Reboot / process-death recovery: put the interrupted active download
         // back at the front, then continue with the rest of the queue.
         queueStore.loadActive()?.let { interrupted ->
@@ -144,13 +147,22 @@ class DownloadController(
                 }
                 startWatchdog()
                 val directory = downloadDirectory().apply { mkdirs() }
-                val turbo = settingsStore.snapshot().turbo
+                val settingsSnapshot = settingsStore.snapshot()
+                val turbo = settingsSnapshot.turbo
                 val file = downloadWithFallback(request, directory, turbo, startedAt)
                 _state.value = DownloadState.Saving(request.title, request.mode)
-                val exported = exporter.export(file, request.mode, request.platform)
+                val exported = exporter.export(
+                    file = file,
+                    mode = request.mode,
+                    platform = request.platform,
+                    relativeBase = settingsSnapshot.downloadFolder.takeIf { it.isNotBlank() },
+                    volumeName = settingsSnapshot.downloadFolderVolume
+                )
+                cleanupTempFiles(olderThanMs = 10 * 60 * 1000L)
                 val item = HistoryItem(
                     id = UUID.randomUUID().toString(),
                     title = request.title,
+                    sourceUrl = request.url,
                     platform = request.platform.name,
                     quality = request.qualityLabel,
                     sizeBytes = exported.sizeBytes,
@@ -251,6 +263,16 @@ class DownloadController(
         start(request.copy(resume = true))
     }
 
+    /** Called when Android 14+ ends a long-running data-sync foreground service.
+     *  Pause instead of dying silently so the user can resume from the notification. */
+    fun pauseForTimeout() {
+        if (_state.value is DownloadState.Running || _state.value is DownloadState.Preparing ||
+            _state.value is DownloadState.Merging || _state.value is DownloadState.Saving
+        ) {
+            pause()
+        }
+    }
+
     private fun startWatchdog() {
         watchdog?.cancel()
         watchdog = scope.launch {
@@ -294,32 +316,58 @@ class DownloadController(
         turbo: Boolean,
         startedAt: Long
     ): File {
-        val firstId = "download-${System.nanoTime()}"
-        processId = firstId
-        try {
-            execute(request, directory, firstId, turbo)
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (cancelled: YoutubeDL.CanceledException) {
-            throw cancelled
-        } catch (error: Throwable) {
-            if (!turbo) throw error
-            Log.w(TAG, "Turbo download failed; retrying with the native downloader", error)
-            _state.value = DownloadState.Running(
-                title = request.title,
-                mode = request.mode,
-                progress = 0f,
-                etaSeconds = -1L,
-                speedBytes = 0L,
-                totalBytes = 0L,
-                line = "Turbo failed — retrying with the native downloader…"
-            )
-            val retryId = "download-${System.nanoTime()}"
-            processId = retryId
-            execute(request, directory, retryId, false)
+        val maxAttempts = 3
+        var sawError = false
+        for (attempt in 0 until maxAttempts) {
+            val useTurbo = turbo && attempt == 0
+            val id = "download-${System.nanoTime()}-$attempt"
+            processId = id
+            try {
+                execute(request.copy(resume = attempt > 0), directory, id, useTurbo)
+                sawError = false
+                break
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (cancelled: YoutubeDL.CanceledException) {
+                throw cancelled
+            } catch (error: Throwable) {
+                sawError = true
+                val turboFallback = useTurbo && attempt == 0
+                val transient = isTransient(error)
+                if (!turboFallback && (!transient || attempt == maxAttempts - 1)) throw error
+                val line = if (turboFallback) {
+                    "Turbo failed — retrying with the native downloader"
+                } else {
+                    "Connection lost — retrying (${attempt + 1}/$maxAttempts)"
+                }
+                Log.w(TAG, "$line: ${error.message}", error)
+                _state.value = DownloadState.Running(
+                    title = request.title,
+                    mode = request.mode,
+                    progress = 0f,
+                    etaSeconds = -1L,
+                    speedBytes = 0L,
+                    totalBytes = 0L,
+                    line = line,
+                    reconnecting = true
+                )
+                kotlinx.coroutines.delay(if (turboFallback) 400L else 2_000L * (attempt + 1))
+            }
         }
+        if (sawError) throw MmtubeException(ErrorKind.DOWNLOAD, "Download failed after $maxAttempts attempts")
         return findOutput(directory, request.mode, startedAt)
             ?: throw MmtubeException(ErrorKind.DOWNLOAD, "Downloaded file was not found")
+    }
+
+    private fun isTransient(error: Throwable): Boolean {
+        val text = buildString {
+            append(error.message.orEmpty()).append(' ').append(error.cause?.message.orEmpty())
+        }.lowercase()
+        return listOf(
+            "timed out", "timeout", "connection reset", "connection aborted",
+            "temporary failure", "network is unreachable", "unreachable",
+            "handshake", "ssl", "502", "503", "504", "try again"
+        ).any { it in text }
     }
 
     private suspend fun execute(
@@ -397,6 +445,9 @@ class DownloadController(
             addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\{[^\{\}]*\}\s*${'$'}""")
             addOption("-o", output)
             if (request.resume) addOption("--continue")
+            if (!request.formatId.isNullOrBlank() && request.mode != DownloadMode.MP3) {
+                addOption("-f", request.formatId + "/best")
+            }
             when (request.mode) {
                 DownloadMode.MAX -> {
                     addOption("-f", "bestvideo+bestaudio/best")
@@ -461,6 +512,42 @@ class DownloadController(
         return (fresh.ifEmpty { files }).maxWithOrNull(
             compareBy<File> { it.lastModified() }.thenBy { it.length() }
         )
+    }
+
+    /** Remove leftovers from failed/cancelled downloads so they do not eat storage. */
+    private fun cleanupTempFiles(olderThanMs: Long) {
+        runCatching {
+            val now = System.currentTimeMillis()
+            downloadDirectory().listFiles()
+                ?.filter { it.isFile }
+                ?.filter { file ->
+                    val name = file.name.lowercase()
+                    name.endsWith(".part") || name.endsWith(".ytdl") ||
+                        name.endsWith(".aria2") || name.endsWith(".temp") ||
+                        name.endsWith(".tmp")
+                }
+                ?.filter { now - it.lastModified() >= olderThanMs }
+                ?.forEach { runCatching { it.delete() } }
+        }
+    }
+
+    fun tempBytes(): Long = runCatching {
+        downloadDirectory().listFiles()?.filter { it.isFile }?.sumOf { it.length() } ?: 0L
+    }.getOrDefault(0L)
+
+    fun clearTempFiles(): Int {
+        var removed = 0
+        runCatching {
+            downloadDirectory().listFiles()?.filter { it.isFile }?.forEach { file ->
+                val name = file.name.lowercase()
+                if (name.endsWith(".part") || name.endsWith(".ytdl") ||
+                    name.endsWith(".aria2") || name.endsWith(".temp") || name.endsWith(".tmp")
+                ) {
+                    if (runCatching { file.delete() }.getOrDefault(false)) removed++
+                }
+            }
+        }
+        return removed
     }
 
     private fun downloadDirectory(): File {

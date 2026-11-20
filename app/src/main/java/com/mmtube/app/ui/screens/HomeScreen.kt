@@ -895,6 +895,9 @@ private fun PreviewSection(
                     audioOnly = result.audioOnly,
                     onSelect = vm::selectMode
                 )
+                if (!result.audioOnly && ui.mode != com.mmtube.app.data.DownloadMode.MP3 && result.formats.isNotEmpty()) {
+                    FormatPickerRow(ui = ui, vm = vm, formats = result.formats)
+                }
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1014,6 +1017,100 @@ private fun StatChipInline(text: String) {
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
         )
+    }
+}
+
+@Composable
+private fun FormatPickerRow(
+    ui: MainUiState,
+    vm: MainViewModel,
+    formats: List<com.mmtube.app.data.MediaFormatOption>
+) {
+    val context = LocalContext.current
+    var showDialog by remember { mutableStateOf(false) }
+    val selected = formats.firstOrNull { it.id == ui.selectedFormatId }
+    FrostedCard(
+        modifier = Modifier.fillMaxWidth().clickable { showDialog = true },
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(Icons.Rounded.List, contentDescription = null, tint = MmtubePalette.Aqua, modifier = Modifier.size(18.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(context.getString(R.string.format_pick_title), style = MmtubeType.LabelLarge, color = MaterialTheme.colorScheme.onSurface)
+                Text(
+                    text = selected?.let { formatOptionLabel(context, it) }
+                        ?: context.getString(R.string.format_auto),
+                    style = MmtubeType.LabelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+    if (showDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(context.getString(R.string.format_pick_title)) },
+            text = {
+                androidx.compose.foundation.lazy.LazyColumn(modifier = Modifier.fillMaxWidth()) {
+                    item {
+                        androidx.compose.material3.TextButton(onClick = {
+                            vm.selectFormat(null)
+                            showDialog = false
+                        }) {
+                            Text(context.getString(R.string.format_auto), color = MmtubePalette.Aqua)
+                        }
+                    }
+                    items(formats) { option ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    vm.selectFormat(option.id)
+                                    showDialog = false
+                                }
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            androidx.compose.material3.RadioButton(
+                                selected = ui.selectedFormatId == option.id,
+                                onClick = {
+                                    vm.selectFormat(option.id)
+                                    showDialog = false
+                                }
+                            )
+                            Text(
+                                text = formatOptionLabel(context, option),
+                                style = MmtubeType.BodyMedium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = { showDialog = false }) {
+                    Text(context.getString(R.string.action_ok))
+                }
+            }
+        )
+    }
+}
+
+private fun formatOptionLabel(
+    context: android.content.Context,
+    option: com.mmtube.app.data.MediaFormatOption
+): String {
+    val size = if (option.sizeBytes > 0) " · " + Formatters.formatBytes(option.sizeBytes) else ""
+    return if (option.isVideo) {
+        val fps = if (option.fps > 0) " ${option.fps}fps" else ""
+        "${option.height}p$fps$size"
+    } else {
+        val bitrate = if (option.tbr > 0) "${option.tbr} kbps" else context.getString(R.string.format_audio)
+        bitrate + size
     }
 }
 
