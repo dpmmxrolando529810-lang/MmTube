@@ -7,12 +7,6 @@ plugins {
     id("com.google.firebase.crashlytics")
 }
 
-firebaseCrashlytics {
-    // Release builds are minified; skip mapping upload so local/CI builds do not
-    // depend on Crashlytics upload credentials.
-    mappingFileUploadEnabled = false
-}
-
 // google-services.json is generated from the same env vars as the manual Firebase bootstrap,
 // so CI/local builds keep working without committing the file.
 run {
