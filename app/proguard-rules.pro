@@ -20,3 +20,4 @@
 -keepattributes *Annotation*, Signature, InnerClasses, EnclosingMethod, SourceFile, LineNumberTable
 -dontwarn org.slf4j.**
 -dontwarn java.awt.**
+-dontwarn java.beans.**
