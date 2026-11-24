@@ -20,6 +20,7 @@ class AdminApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        com.mmtube.admin.ui.AdminI18n.init(this)
         container = AdminContainer(this)
         // App Check (Play Integrity) — release builds only.
         if (!BuildConfig.DEBUG && AdminFirebaseConfig.isConfigured) {

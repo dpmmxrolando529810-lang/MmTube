@@ -30,7 +30,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -76,14 +75,14 @@ private val PanelFill = Color(0xFF141E33)
 private fun fmtDate(ms: Long?): String = when (ms) {
     null, 0L -> "—"
     else -> runCatching {
-        SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(Date(ms))
+        SimpleDateFormat("MMM d, yyyy", if (AdminI18n.english) Locale.US else Locale.getDefault()).format(Date(ms))
     }.getOrDefault("—")
 }
 
 private fun fmtDateTime(ms: Long?): String = when (ms) {
     null, 0L -> "—"
     else -> runCatching {
-        SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(ms))
+        SimpleDateFormat("MMM d, HH:mm", if (AdminI18n.english) Locale.US else Locale.getDefault()).format(Date(ms))
     }.getOrDefault("—")
 }
 
@@ -393,7 +392,7 @@ private fun planAmountAdmin(plan: String): Int = when (plan) {
 }
 
 private fun formatDateTimeMs(ms: Long): String = runCatching {
-    SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(ms))
+    SimpleDateFormat("MMM d, HH:mm", if (AdminI18n.english) Locale.US else Locale.getDefault()).format(Date(ms))
 }.getOrDefault("")
 
 @Composable

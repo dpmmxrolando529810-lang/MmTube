@@ -373,6 +373,21 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         }
     }
 
+    private fun isSameDownload(
+        item: com.mmtube.app.data.HistoryItem,
+        probe: com.mmtube.app.data.ProbeResult,
+        source: String
+    ): Boolean {
+        if (item.sourceUrl.isNotBlank()) {
+            return UrlUtils.sameVideo(item.sourceUrl, source)
+        }
+        // History saved before sourceUrl existed: fall back to title + duration.
+        if (!item.title.trim().equals(probe.title.trim(), ignoreCase = true)) return false
+        return probe.durationSeconds <= 0 ||
+            item.durationSeconds <= 0 ||
+            kotlin.math.abs(item.durationSeconds - probe.durationSeconds) <= 2
+    }
+
     fun selectMode(mode: DownloadMode) {
         _ui.update { it.copy(mode = mode) }
         viewModelScope.launch {
@@ -404,18 +419,9 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 return@launch
             }
             val source = probe.webpageUrl ?: probe.url
-            val duplicate = runCatching { container.history.snapshot() }
+            val historyItems = runCatching { container.history.snapshot() }
                 .getOrDefault(emptyList())
-                .firstOrNull { item ->
-                    when {
-                        item.sourceUrl.isNotBlank() -> UrlUtils.sameVideo(item.sourceUrl, source)
-                        // History saved before sourceUrl existed: fall back to title + duration.
-                        item.title.trim().equals(probe.title.trim(), ignoreCase = true) &&
-                            (probe.durationSeconds <= 0 || item.durationSeconds <= 0 ||
-                                kotlin.math.abs(item.durationSeconds - probe.durationSeconds) <= 2)
-                        else -> false
-                    }
-                }
+            val duplicate = historyItems.firstOrNull { item -> isSameDownload(item, probe, source) }
             if (duplicate != null && duplicateAck != source) {
                 _ui.update { it.copy(duplicatePrompt = duplicate) }
                 return@launch

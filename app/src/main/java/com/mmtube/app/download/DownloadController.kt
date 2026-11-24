@@ -214,7 +214,11 @@ class DownloadController(
                 }
                 maybeStartNext()
             } catch (cancelled: YoutubeDL.CanceledException) {
-                _state.value = DownloadState.Cancelled
+                if (_state.value !is DownloadState.Paused &&
+                    _state.value !is DownloadState.Cancelled
+                ) {
+                    _state.value = DownloadState.Cancelled
+                }
                 maybeStartNext()
             } catch (error: Throwable) {
                 if (_state.value is DownloadState.Cancelled) return@launch
@@ -254,11 +258,13 @@ class DownloadController(
             runCatching { YoutubeDL.getInstance().destroyProcessById(id) }
         }
         watchdog?.cancel()
-        job?.cancel()
         val progress = (state as? DownloadState.Running)?.progress ?: 0f
         pausedRequest = request
         queueStore.saveActive(null)
+        // Set Paused before the coroutine's cancellation handler runs so it does
+        // not overwrite the state with Cancelled.
         _state.value = DownloadState.Paused(request.title, request.mode, progress)
+        job?.cancel()
     }
 
     fun resume() {

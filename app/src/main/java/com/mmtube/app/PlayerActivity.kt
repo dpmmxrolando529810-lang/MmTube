@@ -4,6 +4,7 @@ import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.media.MediaPlayer
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -39,6 +40,7 @@ class PlayerActivity : AppCompatActivity() {
     private var videoWidth = 16
     private var videoHeight = 9
     private var durationMs = 0
+    private var player: MediaPlayer? = null
     private var dragging = false
     private val speeds = listOf(1.0f, 1.25f, 1.5f, 2.0f, 0.75f)
     private var speedIndex = 0
@@ -101,15 +103,16 @@ class PlayerActivity : AppCompatActivity() {
         })
 
         video.setVideoURI(uri)
-        video.setOnPreparedListener { player ->
-            durationMs = player.duration.coerceAtLeast(0)
-            videoWidth = player.videoWidth.takeIf { it > 0 } ?: 16
-            videoHeight = player.videoHeight.takeIf { it > 0 } ?: 9
+        video.setOnPreparedListener { prepared ->
+            player = prepared
+            durationMs = prepared.duration.coerceAtLeast(0)
+            videoWidth = prepared.videoWidth.takeIf { it > 0 } ?: 16
+            videoHeight = prepared.videoHeight.takeIf { it > 0 } ?: 9
             val saved = if (mediaId.isNotBlank()) prefs.getInt("pos_$mediaId", 0) else 0
             if (saved in 1..(durationMs - 3_000)) {
                 video.seekTo(saved)
             }
-            player.isLooping = false
+            prepared.isLooping = false
             video.start()
             applySpeed()
             updatePlayLabel()
@@ -153,9 +156,9 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun applySpeed() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return
-        if (!video.isPlaying) return
+        val mp = player ?: return
         runCatching {
-            video.setPlaybackParams(video.playbackParams.setSpeed(speeds[speedIndex]))
+            mp.playbackParams = mp.playbackParams.setSpeed(speeds[speedIndex])
         }
     }
 
@@ -215,7 +218,10 @@ class PlayerActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (!video.isPlaying && durationMs > 0) video.start()
+        if (!video.isPlaying && durationMs > 0) {
+            video.start()
+            applySpeed()
+        }
         video.post(ticker)
     }
 

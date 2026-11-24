@@ -38,7 +38,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
@@ -291,6 +290,21 @@ private fun HeaderRow(email: String?, onSignOut: () -> Unit) {
             email?.let {
                 Text(it, fontSize = 11.sp, color = Muted, maxLines = 1)
             }
+        }
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = Color(0x2AFFFFFF),
+            modifier = Modifier
+                .padding(end = 2.dp)
+                .clickable { AdminI18n.toggle(context) }
+        ) {
+            Text(
+                text = if (AdminI18n.english) "MY" else "EN",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = OnDark,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+            )
         }
         IconButton(onClick = onSignOut) {
             Icon(Icons.Rounded.Logout, contentDescription = context.getString(R.string.admin_sign_out), tint = Muted)
@@ -778,12 +792,12 @@ internal fun formatDate(millis: Long?): String {
     return runCatching {
         Instant.ofEpochMilli(millis)
             .atZone(ZoneId.systemDefault())
-            .format(DateTimeFormatter.ofPattern("MMM d, yyyy", Locale.getDefault()))
+            .format(DateTimeFormatter.ofPattern("MMM d, yyyy", if (AdminI18n.english) Locale.US else Locale.getDefault()))
     }.getOrDefault("—")
 }
 
 internal fun formatTime(millis: Long): String = runCatching {
     Instant.ofEpochMilli(millis)
         .atZone(ZoneId.systemDefault())
-        .format(DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault()))
+        .format(DateTimeFormatter.ofPattern("HH:mm", if (AdminI18n.english) Locale.US else Locale.getDefault()))
 }.getOrDefault("")

@@ -360,7 +360,8 @@ private fun WhatsNewDialog(version: String, onDismiss: () -> Unit) {
         "History နဲ့ settings ကို backup ထုတ်/ပြန်ထည့် လုပ်နိုင်တယ်",
         "Queue ကို အားလုံး pause/resume လုပ်နိုင်တယ်",
         "Batch link တွေမှာ မရတဲ့ link ကို အကြောင်းပြချက်နဲ့ ပြတယ်",
-        "မှတ်တမ်းမှာ link ကူး/မျှဝေ၊ ဖိုင်အမည် ပြင်နိုင်တယ်"
+        "မှတ်တမ်းမှာ link ကူး/မျှဝေ၊ ဖိုင်အမည် ပြင်နိုင်တယ်",
+        "Admin app မှာ EN / MY ဘာသာစကား ပြောင်းနိုင်တယ်"
     )
     AlertDialog(
         onDismissRequest = onDismiss,
