@@ -1186,12 +1186,21 @@ private fun formatOptionLabel(
     option: com.mmtube.app.data.MediaFormatOption
 ): String {
     val size = if (option.sizeBytes > 0) " · " + Formatters.formatBytes(option.sizeBytes) else ""
+    val bitrate = if (option.tbr > 0) "${option.tbr} kbps" else ""
     return if (option.isVideo) {
         val fps = if (option.fps > 0) " ${option.fps}fps" else ""
-        "${option.height}p$fps$size"
+        val codec = option.vcodec?.takeIf { it.isNotBlank() && it != "none" }?.let { " · $it" }.orEmpty()
+        val hdr = if (option.hdr) " · HDR" else ""
+        val warning = if (!com.mmtube.app.util.FormatSupport.isPlayable(option.vcodec)) {
+            " ⚠ " + context.getString(R.string.format_unsupported)
+        } else {
+            ""
+        }
+        "${option.height}p$fps$size${if (bitrate.isEmpty()) "" else " · $bitrate"}$codec$hdr$warning"
     } else {
-        val bitrate = if (option.tbr > 0) "${option.tbr} kbps" else context.getString(R.string.format_audio)
-        bitrate + size
+        val label = if (option.tbr > 0) bitrate else context.getString(R.string.format_audio)
+        val codec = option.acodec?.takeIf { it.isNotBlank() && it != "none" }?.let { " · $it" }.orEmpty()
+        label + size + codec
     }
 }
 

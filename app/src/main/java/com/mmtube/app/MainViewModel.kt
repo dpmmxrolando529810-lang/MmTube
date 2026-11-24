@@ -440,6 +440,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 return@launch
             }
             val mode = _ui.value.mode
+            val selected = probe.formats.firstOrNull { it.id == _ui.value.selectedFormatId }
             val request = DownloadRequest(
                 url = probe.webpageUrl ?: probe.url,
                 title = state.customTitle.trim().ifBlank { probe.title },
@@ -448,7 +449,11 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 thumbnail = probe.thumbnail,
                 durationSeconds = probe.durationSeconds,
                 qualityLabel = qualityLabel(probe, mode),
-                formatId = _ui.value.selectedFormatId
+                formatId = _ui.value.selectedFormatId,
+                expectedHeight = if (mode == DownloadMode.MP3) 0
+                    else selected?.height?.takeIf { it > 0 } ?: probe.maxHeight,
+                expectedFps = if (mode == DownloadMode.MP3) 0
+                    else selected?.fps?.takeIf { it > 0 } ?: probe.maxFps
             )
             DownloadService.start(context, request)
             refreshStorageInfo()
@@ -560,6 +565,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             var queued = 0
             val failures = mutableListOf<com.mmtube.app.data.BatchFailure>()
             val seen = mutableSetOf<String>()
+            val probeCache = mutableMapOf<String, Pair<com.mmtube.app.data.ProbeResult?, String?>>()
             val history = runCatching { container.history.snapshot() }.getOrDefault(emptyList())
             for (rawUrl in urls) {
                 val normalized = UrlUtils.normalize(rawUrl)
@@ -578,21 +584,31 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     )
                     continue
                 }
-                val probe = container.media.probe(normalized)
-                val result = probe.getOrNull()
-                if (result == null) {
-                    val kind = (probe.exceptionOrNull() as? MmtubeException)?.kind ?: ErrorKind.GENERIC
-                    failures += com.mmtube.app.data.BatchFailure(rawUrl, errorText(kind))
-                    continue
-                }
-                val duplicate = history.firstOrNull { item ->
-                    item.sourceUrl.isNotBlank() && UrlUtils.sameVideo(item.sourceUrl, normalized)
-                }
-                if (duplicate != null) {
+                if (history.any { item ->
+                        item.sourceUrl.isNotBlank() && UrlUtils.sameVideo(item.sourceUrl, normalized)
+                    }
+                ) {
                     failures += com.mmtube.app.data.BatchFailure(
                         rawUrl,
                         context.getString(R.string.batch_reason_duplicate)
                     )
+                    continue
+                }
+                if (!probeCache.containsKey(key)) {
+                    val probe = container.media.probe(normalized)
+                    val ok = probe.getOrNull()
+                    val reason = if (ok == null) {
+                        val kind = (probe.exceptionOrNull() as? MmtubeException)?.kind ?: ErrorKind.GENERIC
+                        errorText(kind)
+                    } else {
+                        null
+                    }
+                    probeCache[key] = ok to reason
+                }
+                val cached = probeCache[key]!!
+                val result = cached.first
+                if (result == null) {
+                    failures += com.mmtube.app.data.BatchFailure(rawUrl, cached.second ?: errorText(ErrorKind.GENERIC))
                     continue
                 }
                 val mode = if (result.audioOnly) DownloadMode.MP3 else preferredMode()
@@ -605,7 +621,9 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     mode = mode,
                     thumbnail = result.thumbnail,
                     durationSeconds = result.durationSeconds,
-                    qualityLabel = qualityLabel
+                    qualityLabel = qualityLabel,
+                    expectedHeight = if (mode == DownloadMode.MP3) 0 else result.maxHeight,
+                    expectedFps = if (mode == DownloadMode.MP3) 0 else result.maxFps
                 )
                 DownloadService.start(context, request)
                 queued += 1
@@ -1558,6 +1576,38 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setAutoEngineUpdate(enabled: Boolean) {
         viewModelScope.launch { container.settings.setAutoEngineUpdate(enabled) }
+    }
+
+    fun setTurboProfile(profile: String) {
+        viewModelScope.launch { container.settings.setTurboProfile(profile) }
+    }
+
+    fun setChunkMb(mb: Int) {
+        viewModelScope.launch { container.settings.setChunkMb(mb) }
+    }
+
+    fun setSpeedMode(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setSpeedMode(enabled) }
+    }
+
+    fun importCookies(uri: android.net.Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = com.mmtube.app.util.CookieStore.import(context, uri)
+            withContext(Dispatchers.Main) {
+                event(
+                    UiEvent.Message(
+                        context.getString(
+                            if (ok) R.string.cookies_imported else R.string.cookies_invalid
+                        )
+                    )
+                )
+            }
+        }
+    }
+
+    fun clearCookies() {
+        com.mmtube.app.util.CookieStore.clear(context)
+        event(UiEvent.Message(context.getString(R.string.cookies_cleared)))
     }
 
     fun setAutoAppUpdate(enabled: Boolean) {

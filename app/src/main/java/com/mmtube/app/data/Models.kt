@@ -171,7 +171,11 @@ data class MediaFormatOption(
     val vcodec: String?,
     val acodec: String?,
     val sizeBytes: Long,
-    val isVideo: Boolean
+    val isVideo: Boolean,
+    /** yt-dlp format_note, e.g. "HDR" or "1080p60". */
+    val note: String? = null,
+    /** True for HDR / 10-bit formats (VP9.2, AV1 profile 2, HEVC 10-bit). */
+    val hdr: Boolean = false
 )
 
 data class BatchFailure(val url: String, val reason: String)
@@ -242,7 +246,9 @@ sealed interface DownloadState {
         val speedBytes: Long,
         val totalBytes: Long,
         val line: String,
-        val reconnecting: Boolean = false
+        val reconnecting: Boolean = false,
+        val retries: Int = 0,
+        val concurrency: Int = 0
     ) : DownloadState
 
     data class Merging(val title: String, val mode: DownloadMode) : DownloadState
@@ -270,7 +276,9 @@ data class HistoryItem(
     val createdAt: Long,
     val mode: String,
     val savedToGallery: Boolean = false,
-    val downloadDurationMs: Long = 0L
+    val downloadDurationMs: Long = 0L,
+    /** Set when the stored file is smaller/lower fps than the format we asked for. */
+    val qualityNote: String? = null
 )
 
 data class PurchaseRecord(
@@ -328,5 +336,11 @@ data class SettingsSnapshot(
     val downloadFolder: String = "",
     val downloadFolderVolume: String = "external_primary",
     /** Last quality mode picked by the user, remembered across links. */
-    val lastMode: String = ""
+    val lastMode: String = "",
+    /** standard=8 / balanced=24 / aggressive=40 parallel fragments. */
+    val turboProfile: String = "balanced",
+    /** aria2c chunk size in MB (1 / 2 / 4). */
+    val chunkMb: Int = 1,
+    /** Skip gallery export and metadata embedding for maximum speed. */
+    val speedMode: Boolean = false
 )

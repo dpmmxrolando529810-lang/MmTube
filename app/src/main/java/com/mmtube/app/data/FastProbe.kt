@@ -30,9 +30,12 @@ class FastProbe(private val context: Context) {
         data object TimedOut : Result
     }
 
-    suspend fun run(url: String, timeoutMs: Long = DEFAULT_TIMEOUT_MS): Result =
-        withContext(Dispatchers.IO) {
-            val command = buildCommand(url)
+    suspend fun run(
+        url: String,
+        timeoutMs: Long = DEFAULT_TIMEOUT_MS,
+        cookiesPath: String? = null
+    ): Result = withContext(Dispatchers.IO) {
+            val command = buildCommand(url, cookiesPath)
             runInterruptible { execute(command, timeoutMs) }
         }
 
@@ -87,9 +90,10 @@ class FastProbe(private val context: Context) {
         }
     }
 
-    private fun buildCommand(url: String): List<String> {
+    private fun buildCommand(url: String, cookiesPath: String?): List<String> {
         val nativeDir = File(context.applicationInfo.nativeLibraryDir)
         val workDir = File(context.noBackupFilesDir, "youtubedl-android")
+        val cookieOptions = cookiesPath?.let { listOf("--cookies", it) }.orEmpty()
         return listOf(
             File(nativeDir, "libpython.so").absolutePath,
             File(workDir, "yt-dlp/yt-dlp").absolutePath,
@@ -102,9 +106,8 @@ class FastProbe(private val context: Context) {
             "--ignore-config",
             "--socket-timeout", "15",
             "--retries", "2",
-            "--extractor-retries", "2",
-            url
-        )
+            "--extractor-retries", "2"
+        ) + cookieOptions + listOf(url)
     }
 
     private fun environment(): Map<String, String> {

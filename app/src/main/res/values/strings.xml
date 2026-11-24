@@ -563,4 +563,23 @@ Firebase project: %4$s</string>
     <string name="player_play">Play</string>
     <string name="player_pause">Pause</string>
     <string name="player_error">This video cannot be played</string>
+    <string name="format_unsupported">may not play on this phone</string>
+    <string name="download_retries">Retries: %1$d</string>
+    <string name="quality_mismatch">Saved %1$dp/%2$dfps (requested %3$dp/%4$dfps)</string>
+    <string name="settings_speed_profile">Speed profile</string>
+    <string name="settings_profile_standard">Standard (8)</string>
+    <string name="settings_profile_balanced">Balanced (24)</string>
+    <string name="settings_profile_aggressive">Aggressive (40)</string>
+    <string name="settings_chunk">Download chunk size</string>
+    <string name="settings_chunk_desc">%1$d MB per connection (aria2)</string>
+    <string name="settings_speed_mode">Speed mode</string>
+    <string name="settings_speed_mode_desc">Skip gallery copy, thumbnails and metadata for the fastest save</string>
+    <string name="settings_cookies_import">Import cookies.txt</string>
+    <string name="settings_cookies_clear">Remove cookies</string>
+    <string name="settings_cookies_on">Cookies loaded — private and member-only formats are available</string>
+    <string name="settings_cookies_off">No cookies — some formats may be hidden</string>
+    <string name="cookies_imported">Cookies imported</string>
+    <string name="cookies_invalid">That file is not a valid cookies.txt</string>
+    <string name="cookies_cleared">Cookies removed</string>
+    <string name="settings_sd_warning">Storage is on a removable card — copying there is slower and less reliable.</string>
 </resources>

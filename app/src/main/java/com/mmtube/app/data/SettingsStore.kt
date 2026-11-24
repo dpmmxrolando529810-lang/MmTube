@@ -49,6 +49,9 @@ class SettingsStore(private val context: Context) {
         val DOWNLOAD_FOLDER = stringPreferencesKey("download_folder")
         val DOWNLOAD_FOLDER_VOLUME = stringPreferencesKey("download_folder_volume")
         val LAST_MODE = stringPreferencesKey("last_mode")
+        val TURBO_PROFILE = stringPreferencesKey("turbo_profile")
+        val CHUNK_MB = intPreferencesKey("chunk_mb")
+        val SPEED_MODE = booleanPreferencesKey("speed_mode")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -97,7 +100,12 @@ class SettingsStore(private val context: Context) {
             dismissedUpdateVersion = this[Keys.UPDATE_DISMISSED] ?: "",
             downloadFolder = this[Keys.DOWNLOAD_FOLDER] ?: "",
             downloadFolderVolume = this[Keys.DOWNLOAD_FOLDER_VOLUME] ?: "external_primary",
-            lastMode = this[Keys.LAST_MODE] ?: ""
+            lastMode = this[Keys.LAST_MODE] ?: "",
+            turboProfile = this[Keys.TURBO_PROFILE]?.takeIf {
+                it in listOf("standard", "balanced", "aggressive")
+            } ?: "balanced",
+            chunkMb = this[Keys.CHUNK_MB]?.takeIf { it in listOf(1, 2, 4) } ?: 1,
+            speedMode = this[Keys.SPEED_MODE] ?: false
         )
     }
 
@@ -183,6 +191,18 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setUpdateDismissedVersion(v: String) {
         context.settingsDataStore.edit { it[Keys.UPDATE_DISMISSED] = v }
+    }
+
+    suspend fun setTurboProfile(profile: String) {
+        context.settingsDataStore.edit { it[Keys.TURBO_PROFILE] = profile }
+    }
+
+    suspend fun setChunkMb(mb: Int) {
+        context.settingsDataStore.edit { it[Keys.CHUNK_MB] = mb.coerceIn(1, 4) }
+    }
+
+    suspend fun setSpeedMode(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.SPEED_MODE] = enabled }
     }
 
     suspend fun setLastMode(mode: String) {

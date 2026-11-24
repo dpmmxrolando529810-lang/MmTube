@@ -198,6 +198,89 @@ fun SettingsScreen(
                 label = context.getString(R.string.settings_quality),
                 value = context.getString(R.string.settings_quality_desc)
             )
+            SettingsValueRow(
+                icon = Icons.Rounded.Speed,
+                label = context.getString(R.string.settings_speed_profile),
+                value = when (ui.settings.turboProfile) {
+                    "standard" -> context.getString(R.string.settings_profile_standard)
+                    "aggressive" -> context.getString(R.string.settings_profile_aggressive)
+                    else -> context.getString(R.string.settings_profile_balanced)
+                }
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+                listOf("standard", "balanced", "aggressive").forEach { profile ->
+                    androidx.compose.material3.TextButton(
+                        onClick = { vm.setTurboProfile(profile) },
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                            contentColor = if (ui.settings.turboProfile == profile) MmtubePalette.Aqua
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Text(
+                            context.getString(
+                                when (profile) {
+                                    "standard" -> R.string.settings_profile_standard
+                                    "aggressive" -> R.string.settings_profile_aggressive
+                                    else -> R.string.settings_profile_balanced
+                                }
+                            )
+                        )
+                    }
+                }
+            }
+            SettingsValueRow(
+                icon = Icons.Rounded.Speed,
+                label = context.getString(R.string.settings_chunk),
+                value = context.getString(R.string.settings_chunk_desc, ui.settings.chunkMb)
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+                listOf(1, 2, 4).forEach { mb ->
+                    androidx.compose.material3.TextButton(
+                        onClick = { vm.setChunkMb(mb) },
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                            contentColor = if (ui.settings.chunkMb == mb) MmtubePalette.Aqua
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) { Text("$mb MB") }
+                }
+            }
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Speed,
+                label = context.getString(R.string.settings_speed_mode),
+                description = context.getString(R.string.settings_speed_mode_desc),
+                checked = ui.settings.speedMode,
+                onChange = vm::setSpeedMode
+            )
+            var cookiesSet by remember { mutableStateOf(com.mmtube.app.util.CookieStore.hasCookies(context)) }
+            val pickCookies = rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+            ) { uri ->
+                if (uri != null) {
+                    vm.importCookies(uri)
+                    cookiesSet = true
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+                androidx.compose.material3.TextButton(onClick = { pickCookies.launch(arrayOf("text/plain", "*/*")) }) {
+                    Text(context.getString(R.string.settings_cookies_import), color = MmtubePalette.Aqua)
+                }
+                if (cookiesSet) {
+                    androidx.compose.material3.TextButton(onClick = {
+                        vm.clearCookies()
+                        cookiesSet = false
+                    }) {
+                        Text(context.getString(R.string.settings_cookies_clear), color = MmtubePalette.Danger)
+                    }
+                }
+            }
+            Text(
+                context.getString(
+                    if (cookiesSet) R.string.settings_cookies_on else R.string.settings_cookies_off
+                ),
+                style = MmtubeType.LabelSmall,
+                color = if (cookiesSet) MmtubePalette.Success else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp)
+            )
             val pickFolder = rememberLauncherForActivityResult(
                 androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
             ) { uri ->
@@ -235,6 +318,16 @@ fun SettingsScreen(
                 androidx.compose.material3.TextButton(onClick = { vm.setDownloadFolder("") }) {
                     Text(context.getString(R.string.settings_download_folder_reset), color = MmtubePalette.Amber)
                 }
+            }
+            if (ui.settings.downloadFolderVolume.isNotBlank() &&
+                ui.settings.downloadFolderVolume != "external_primary"
+            ) {
+                Text(
+                    context.getString(R.string.settings_sd_warning),
+                    style = MmtubeType.LabelSmall,
+                    color = MmtubePalette.Amber,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
             }
         }
 

@@ -143,6 +143,8 @@ fun ActiveDownloadCard(
                             if (state.etaSeconds >= 0) add(context.getString(R.string.download_eta, Formatters.formatEta(state.etaSeconds)))
                             if (state.speedBytes > 0) add(context.getString(R.string.download_speed, Formatters.formatBytes(state.speedBytes)))
                             if (state.totalBytes > 0) add("/ ${Formatters.formatBytes(state.totalBytes)}")
+                            if (state.retries > 0) add(context.getString(R.string.download_retries, state.retries))
+                            if (state.concurrency > 0) add("×${state.concurrency}")
                         }.joinToString("  •  ")
                     }
                     Text(
@@ -348,6 +350,14 @@ fun HistoryRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1
                 )
+                if (!item.qualityNote.isNullOrBlank()) {
+                    Text(
+                        text = item.qualityNote,
+                        style = MmtubeType.LabelSmall,
+                        color = MmtubePalette.Amber,
+                        maxLines = 2
+                    )
+                }
                 Text(
                     text = Formatters.formatDateBurmese(item.createdAt),
                     style = MmtubeType.LabelSmall,

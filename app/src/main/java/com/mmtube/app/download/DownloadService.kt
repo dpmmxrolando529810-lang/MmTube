@@ -271,6 +271,12 @@ class DownloadService : Service() {
         }
     }
 
+    override fun onDestroy() {
+        observer?.cancel()
+        releaseWakeLock()
+        super.onDestroy()
+    }
+
     private fun releaseWakeLock() {
         runCatching {
             if (wakeLock?.isHeld == true) wakeLock?.release()
@@ -308,7 +314,9 @@ class DownloadService : Service() {
             thumbnail = getStringExtra(EXTRA_THUMBNAIL),
             durationSeconds = getIntExtra(EXTRA_DURATION, 0),
             qualityLabel = quality,
-            resume = getBooleanExtra(EXTRA_RESUME, false)
+            resume = getBooleanExtra(EXTRA_RESUME, false),
+            expectedHeight = getIntExtra(EXTRA_EXPECTED_HEIGHT, 0),
+            expectedFps = getIntExtra(EXTRA_EXPECTED_FPS, 0)
         )
     }
 
@@ -327,6 +335,8 @@ class DownloadService : Service() {
         private const val EXTRA_THUMBNAIL = "thumbnail"
         private const val EXTRA_DURATION = "duration"
         private const val EXTRA_RESUME = "resume"
+        private const val EXTRA_EXPECTED_HEIGHT = "expected_height"
+        private const val EXTRA_EXPECTED_FPS = "expected_fps"
 
         fun start(context: Context, request: DownloadRequest) {
             val intent = Intent(context, DownloadService::class.java).apply {
@@ -339,6 +349,8 @@ class DownloadService : Service() {
                 putExtra(EXTRA_THUMBNAIL, request.thumbnail)
                 putExtra(EXTRA_DURATION, request.durationSeconds)
                 putExtra(EXTRA_RESUME, request.resume)
+                putExtra(EXTRA_EXPECTED_HEIGHT, request.expectedHeight)
+                putExtra(EXTRA_EXPECTED_FPS, request.expectedFps)
             }
             ContextCompat.startForegroundService(context, intent)
         }

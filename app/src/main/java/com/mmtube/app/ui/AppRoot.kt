@@ -361,7 +361,10 @@ private fun WhatsNewDialog(version: String, onDismiss: () -> Unit) {
         "Queue ကို အားလုံး pause/resume လုပ်နိုင်တယ်",
         "Batch link တွေမှာ မရတဲ့ link ကို အကြောင်းပြချက်နဲ့ ပြတယ်",
         "မှတ်တမ်းမှာ link ကူး/မျှဝေ၊ ဖိုင်အမည် ပြင်နိုင်တယ်",
-        "Admin app မှာ EN / MY ဘာသာစကား ပြောင်းနိုင်တယ်"
+        "Admin app မှာ EN / MY ဘာသာစကား ပြောင်းနိုင်တယ်",
+        "Format ရွေးရင် bitrate / codec / HDR ပြသပြီး ဖုန်းနဲ့ ကိုက်ညီမှု စစ်ပေးတယ်",
+        "Cookies.txt ထည့်နိုင်တယ်; speed profile, chunk size, speed mode ရွေးနိုင်တယ်",
+        "အလိုအလျောက် speed/retry အလိုက် concurrency ညှိပေးပြီး file အရည်အသွေး ပြန်စစ်ပေးတယ်"
     )
     AlertDialog(
         onDismissRequest = onDismiss,

@@ -563,4 +563,23 @@ Firebase project: %4$s</string>
     <string name="player_play">ဖွင့်</string>
     <string name="player_pause">ရပ်</string>
     <string name="player_error">ဒီဗီဒီယိုကို ဖွင့်မရပါ</string>
+    <string name="format_unsupported">ဖုန်းမှာ မဖွင့်နိုင်နိုင်</string>
+    <string name="download_retries">ပြန်ကြိုးစား: %1$d</string>
+    <string name="quality_mismatch">%1$dp/%2$dfps သိမ်းထား (တောင်းထားတာ %3$dp/%4$dfps)</string>
+    <string name="settings_speed_profile">မြန်နှုန်း profile</string>
+    <string name="settings_profile_standard">ပုံမှန် (၈)</string>
+    <string name="settings_profile_balanced">မျှတ (၂၄)</string>
+    <string name="settings_profile_aggressive">အမြန်ဆုံး (၄၀)</string>
+    <string name="settings_chunk">ဒေါင်းလုဒ် အပိုင်းအရွယ်</string>
+    <string name="settings_chunk_desc">ချိတ်ဆက်မှုတစ်ခုလျှင် %1$d MB (aria2)</string>
+    <string name="settings_speed_mode">အမြန်ဆုံး mode</string>
+    <string name="settings_speed_mode_desc">Gallery ကူးယူ/thumbnail/metadata ကျော်ပြီး အမြန်ဆုံး သိမ်းမယ်</string>
+    <string name="settings_cookies_import">cookies.txt ထည့်မယ်</string>
+    <string name="settings_cookies_clear">Cookies ဖယ်မယ်</string>
+    <string name="settings_cookies_on">Cookies တင်ထားပြီး — private/member-only format တွေ ရနိုင်ပါပြီ</string>
+    <string name="settings_cookies_off">Cookies မရှိသေး — အချို့ format တွေ မပေါ်နိုင်ပါ</string>
+    <string name="cookies_imported">Cookies ထည့်ပြီး</string>
+    <string name="cookies_invalid">ဒီဖိုင်က မှန်ကန်တဲ့ cookies.txt မဟုတ်ပါ</string>
+    <string name="cookies_cleared">Cookies ဖယ်ပြီး</string>
+    <string name="settings_sd_warning">Removable card ထဲ သိမ်းထားလို့ ကူးယူရ နှေးပြီး မတည်ငြိမ်နိုင်ပါ။</string>
 </resources>

@@ -6,6 +6,7 @@ import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import com.yausername.youtubedl_android.mapper.VideoFormat
 import com.yausername.youtubedl_android.mapper.VideoInfo
+import com.mmtube.app.util.CookieStore
 import com.mmtube.app.util.UrlUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -20,6 +21,7 @@ class MediaRepository(context: Context, private val engine: EngineManager) {
 
     suspend fun probe(rawUrl: String): Result<ProbeResult> {
         return runCatching {
+            val cookiesPath = CookieStore.path(context)
             val url = UrlUtils.normalize(rawUrl)
                 ?: throw MmtubeException(ErrorKind.INVALID_LINK, "Invalid URL")
             cached(url)?.let { return@runCatching it }
@@ -31,19 +33,19 @@ class MediaRepository(context: Context, private val engine: EngineManager) {
             // out; after a timeout the fast path is parked for this session so a
             // bad run can never make every analysis wait twice.
             val json = if (fastProbeDisabled) {
-                probeWithLibrary(url)
+                probeWithLibrary(url, cookiesPath)
             } else {
-                when (val run = fastProbe.run(url)) {
+                when (val run = fastProbe.run(url, cookiesPath = cookiesPath)) {
                     is FastProbe.Result.Ok -> run.json
                     FastProbe.Result.TimedOut -> {
                         fastProbeDisabled = true
-                        probeWithLibrary(url)
+                        probeWithLibrary(url, cookiesPath)
                     }
-                    FastProbe.Result.Failed -> probeWithLibrary(url)
+                    FastProbe.Result.Failed -> probeWithLibrary(url, cookiesPath)
                 }
             }
             val info = parse(json)
-            val result = buildResult(url, info)
+            val result = buildResult(url, info, json)
             remember(url, result)
             result
         }.recoverCatching { error ->
@@ -59,7 +61,7 @@ class MediaRepository(context: Context, private val engine: EngineManager) {
         }
     }
 
-    private suspend fun probeWithLibrary(url: String): String {
+    private suspend fun probeWithLibrary(url: String, cookiesPath: String?): String {
         val request = YoutubeDLRequest(url).apply {
             addOption("--dump-json")
             addOption("--no-playlist")
@@ -70,6 +72,7 @@ class MediaRepository(context: Context, private val engine: EngineManager) {
             addOption("--socket-timeout", "20")
             addOption("--retries", "2")
             addOption("--extractor-retries", "2")
+            if (cookiesPath != null) addOption("--cookies", cookiesPath)
         }
         val processId = "probe-${System.nanoTime()}"
         val response = try {
@@ -116,8 +119,19 @@ class MediaRepository(context: Context, private val engine: EngineManager) {
         }
     }
 
-    private fun buildResult(url: String, info: VideoInfo): ProbeResult {
+    private fun buildResult(url: String, info: VideoInfo, rawJson: String? = null): ProbeResult {
         val formats = info.formats.orEmpty()
+        val extra: Map<String, com.fasterxml.jackson.databind.JsonNode> = runCatching {
+            val root = YoutubeDL.objectMapper.readTree(rawJson ?: "{}")
+            val array = root.path("formats")
+            if (!array.isArray) return@runCatching emptyMap()
+            val map = LinkedHashMap<String, com.fasterxml.jackson.databind.JsonNode>()
+            for (node in array) {
+                val id = node.path("format_id").takeIf { !it.isMissingNode && !it.isNull }?.asText()
+                if (!id.isNullOrBlank()) map[id] = node
+            }
+            map
+        }.getOrDefault(emptyMap())
         val videoFormats = formats.filter {
             it.vcodec != null && it.vcodec != "none" && it.height > 0
         }
@@ -150,6 +164,17 @@ class MediaRepository(context: Context, private val engine: EngineManager) {
             val audio = format.acodec != null && format.acodec != "none" &&
                 (format.vcodec == null || format.vcodec == "none")
             if (!video && !audio) return@mapNotNull null
+            val node = extra[id]
+            val note = format.formatNote?.takeIf { it.isNotBlank() }
+                ?: node?.path("format_note")?.takeUnless { it.isMissingNode || it.isNull }?.asText()
+            val dynamicRange = node?.path("dynamic_range")?.takeUnless { it.isMissingNode || it.isNull }?.asText().orEmpty()
+            val codec = format.vcodec?.lowercase().orEmpty()
+            val hdr = note.orEmpty().contains("hdr", true) ||
+                dynamicRange.contains("hdr", true) ||
+                codec.contains("vp9.2") ||
+                codec.startsWith("av01.2") ||
+                codec.contains("hvc1") ||
+                codec.contains("hev1")
             MediaFormatOption(
                 id = id,
                 height = format.height.coerceAtLeast(0),
@@ -159,7 +184,9 @@ class MediaRepository(context: Context, private val engine: EngineManager) {
                 acodec = format.acodec?.takeIf { it != "none" },
                 sizeBytes = format.fileSize.takeIf { it > 0 }
                     ?: format.fileSizeApproximate.takeIf { it > 0 } ?: 0L,
-                isVideo = video
+                isVideo = video,
+                note = note,
+                hdr = hdr
             )
         }.distinctBy { it.id }.let { all ->
             val videos = all.filter { it.isVideo }.sortedWith(

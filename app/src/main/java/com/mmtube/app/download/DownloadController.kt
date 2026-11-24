@@ -14,7 +14,9 @@ import com.mmtube.app.data.MmtubeException
 import com.mmtube.app.data.Platform
 import com.mmtube.app.data.QuotaManager
 import com.mmtube.app.data.SettingsStore
+import com.mmtube.app.util.CookieStore
 import com.mmtube.app.util.Formatters
+import com.mmtube.app.util.MediaVerifier
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import kotlinx.coroutines.CancellationException
@@ -42,8 +44,17 @@ data class DownloadRequest(
     /** yt-dlp format id chosen in the format picker, if any. */
     val formatId: String? = null,
     val resume: Boolean = false,
+    /** What the preview promised, used to verify the stored file. */
+    val expectedHeight: Int = 0,
+    val expectedFps: Int = 0,
     /** Stable identity for reorderable queue UI. */
     val queueId: String = java.util.UUID.randomUUID().toString()
+)
+
+private data class SpeedConfig(
+    val concurrency: Int,
+    val chunkMb: Int,
+    val speedMode: Boolean
 )
 
 class DownloadController(
@@ -129,6 +140,17 @@ class DownloadController(
     }
 
     /** Start the next queued item unless the user paused the queue. */
+    private var measuredSpeedBytes = 0L
+    private var observedRetries = 0
+    private var lastRetryLineAt = 0L
+
+    /** Adjusts fragments from measured speed and retries; always bounded. */
+    private fun tunedConcurrency(base: Int): Int {
+        val retries = observedRetries.coerceAtMost(6)
+        val boost = if (measuredSpeedBytes >= 8L * 1024 * 1024 && retries == 0) 8 else 0
+        return (base + boost - retries * 4).coerceIn(8, 40)
+    }
+
     private fun maybeStartNext() {
         if (queuePaused.value) return
         if (_state.value is DownloadState.Paused) return
@@ -172,15 +194,31 @@ class DownloadController(
                 val directory = downloadDirectory().apply { mkdirs() }
                 val settingsSnapshot = settingsStore.snapshot()
                 val turbo = settingsSnapshot.turbo
-                val file = downloadWithFallback(request, directory, turbo, startedAt)
+                observedRetries = 0
+                val base = when (settingsSnapshot.turboProfile) {
+                    "standard" -> 8
+                    "aggressive" -> 40
+                    else -> 24
+                }
+                val config = SpeedConfig(base, settingsSnapshot.chunkMb, settingsSnapshot.speedMode)
+                val file = downloadWithFallback(request, directory, turbo, config, startedAt)
                 _state.value = DownloadState.Saving(request.title, request.mode)
                 val exported = exporter.export(
                     file = file,
                     mode = request.mode,
                     platform = request.platform,
                     relativeBase = settingsSnapshot.downloadFolder.takeIf { it.isNotBlank() },
-                    volumeName = settingsSnapshot.downloadFolderVolume
+                    volumeName = settingsSnapshot.downloadFolderVolume,
+                    fast = config.speedMode
                 )
+                val qualityNote = runCatching {
+                    MediaVerifier.mismatchNote(
+                        context,
+                        android.net.Uri.parse(exported.uri.toString()),
+                        request.expectedHeight,
+                        request.expectedFps
+                    )
+                }.getOrNull()
                 cleanupTempFiles(olderThanMs = 10 * 60 * 1000L)
                 val item = HistoryItem(
                     id = UUID.randomUUID().toString(),
@@ -197,7 +235,8 @@ class DownloadController(
                     createdAt = System.currentTimeMillis(),
                     mode = request.mode.key,
                     savedToGallery = exported.savedToGallery,
-                    downloadDurationMs = System.currentTimeMillis() - capturedStartedAt
+                    downloadDurationMs = System.currentTimeMillis() - capturedStartedAt,
+                    qualityNote = qualityNote
                 )
                 runCatching { historyStore.add(item) }
                     .onFailure { Log.w(TAG, "Could not save history", it) }
@@ -340,6 +379,7 @@ class DownloadController(
         request: DownloadRequest,
         directory: File,
         turbo: Boolean,
+        config: SpeedConfig,
         startedAt: Long
     ): File {
         val maxAttempts = 3
@@ -349,7 +389,7 @@ class DownloadController(
             val id = "download-${System.nanoTime()}-$attempt"
             processId = id
             try {
-                execute(request.copy(resume = attempt > 0), directory, id, useTurbo)
+                execute(request.copy(resume = attempt > 0), directory, id, useTurbo, config)
                 sawError = false
                 break
             } catch (cancelled: CancellationException) {
@@ -379,7 +419,9 @@ class DownloadController(
                     speedBytes = 0L,
                     totalBytes = 0L,
                     line = line,
-                    reconnecting = true
+                    reconnecting = true,
+                    retries = attempt + 1,
+                    concurrency = config.concurrency
                 )
                 kotlinx.coroutines.delay(if (turboFallback) 400L else 2_000L * (attempt + 1))
             }
@@ -409,9 +451,10 @@ class DownloadController(
         request: DownloadRequest,
         directory: File,
         processId: String,
-        turbo: Boolean
+        turbo: Boolean,
+        config: SpeedConfig
     ) {
-        val ytRequest = buildRequest(request, directory, turbo)
+        val ytRequest = buildRequest(request, directory, turbo, config)
         withContext(Dispatchers.IO) {
             YoutubeDL.getInstance().execute(
                 ytRequest,
@@ -423,6 +466,13 @@ class DownloadController(
                 val line = rawLine
                     .replace(Regex("\u001B\\[[;\\d]*m"), "")
                     .trim()
+                if (line.contains("retry", true)) {
+                    val lineTime = System.currentTimeMillis()
+                    if (lineTime - lastRetryLineAt > 2_000L) {
+                        observedRetries += 1
+                        lastRetryLineAt = lineTime
+                    }
+                }
                 val current = _state.value
                 if (current !is DownloadState.Cancelled) {
                     if (line.contains("[Merger]", true) ||
@@ -436,6 +486,7 @@ class DownloadController(
                             lastProgressUpdate = now
                             val previous = current as? DownloadState.Running
                             val speed = Formatters.parseSpeed(line)
+                            if (speed > 0L) measuredSpeedBytes = speed
                             val total = Formatters.parseTotal(line).takeIf { it > 0 }
                                 ?: previous?.totalBytes ?: 0L
                             _state.value = DownloadState.Running(
@@ -446,7 +497,9 @@ class DownloadController(
                                 speedBytes = speed,
                                 totalBytes = total,
                                 line = line.take(180),
-                                reconnecting = false
+                                reconnecting = false,
+                                retries = observedRetries,
+                                concurrency = tunedConcurrency(config.concurrency)
                             )
                         }
                     }
@@ -455,12 +508,43 @@ class DownloadController(
         }
     }
 
+    private fun requestFormat(request: DownloadRequest): Pair<String, String> {
+        val selected = request.formatId?.takeIf { it.isNotBlank() }
+        if (selected != null && request.mode != DownloadMode.MP3) {
+            return selected + "/best" to ""
+        }
+        if (request.mode == DownloadMode.MP3) {
+            return "bestaudio/best" to "tbr:desc"
+        }
+        val limit = when (request.mode) {
+            DownloadMode.P1080 -> "[height<=1080]"
+            DownloadMode.P720 -> "[height<=720]"
+            else -> ""
+        }
+        val format = if (limit.isEmpty()) {
+            "bestvideo+bestaudio/best"
+        } else {
+            "bestvideo$limit+bestaudio/best$limit/best"
+        }
+        // Same source, different priorities: YouTube has both resolution and
+        // frame-rate variants, TikTok is usually bitrate-bound.
+        val sort = when (request.platform) {
+            Platform.TIKTOK -> "tbr:desc,res:desc,fps:desc"
+            Platform.FACEBOOK -> "res:desc,tbr:desc,fps:desc"
+            else -> "res:desc,fps:desc,tbr:desc"
+        }
+        return format to sort
+    }
+
     private fun buildRequest(
         request: DownloadRequest,
         directory: File,
-        turbo: Boolean
+        turbo: Boolean,
+        config: SpeedConfig
     ): YoutubeDLRequest {
         val output = File(directory, "%(title).90B [%(id)s].%(ext)s").absolutePath
+        val concurrency = tunedConcurrency(config.concurrency)
+        val cookies = CookieStore.path(context)
         return YoutubeDLRequest(request.url).apply {
             addOption("--no-playlist")
             addOption("--no-warnings")
@@ -473,55 +557,41 @@ class DownloadController(
             addOption("--retries", "10")
             addOption("--fragment-retries", "30")
             addOption("--extractor-retries", "3")
-            addOption("--concurrent-fragments", "24")
-            addOption("--embed-metadata")
-            addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\([^\(\)]*\)\s*${'$'}""")
-            addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\[[^\[\]]*\]\s*${'$'}""")
-            addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\{[^\{\}]*\}\s*${'$'}""")
+            addOption("--concurrent-fragments", concurrency.toString())
+            if (!config.speedMode) {
+                addOption("--embed-metadata")
+                addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\([^\(\)]*\)\s*${'$'}""")
+                addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\[[^\[\]]*\]\s*${'$'}""")
+                addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\{[^\{\}]*\}\s*${'$'}""")
+            }
+            if (cookies != null) addOption("--cookies", cookies)
             addOption("-o", output)
             if (request.resume) addOption("--continue")
-            if (!request.formatId.isNullOrBlank() && request.mode != DownloadMode.MP3) {
-                addOption("-f", request.formatId + "/best")
-            }
-            when (request.mode) {
-                DownloadMode.MAX -> {
-                    addOption("-f", "bestvideo+bestaudio/best")
-                    // True maximum quality: highest resolution, then highest
-                    // bitrate — not codec preference. Picks the 18.5 Mbps VP9
-                    // 2160p stream instead of the smaller AV1 one.
-                    addOption("-S", "res:desc,fps:desc,tbr:desc")
-                    addOption("--merge-output-format", "mp4")
-                }
-
-                DownloadMode.P1080 -> {
-                    addOption("-f", "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best")
-                    addOption("-S", "res:desc,fps:desc,tbr:desc")
-                    addOption("--merge-output-format", "mp4")
-                }
-
-                DownloadMode.P720 -> {
-                    addOption("-f", "bestvideo[height<=720]+bestaudio/best[height<=720]/best")
-                    addOption("-S", "res:desc,fps:desc,tbr:desc")
-                    addOption("--merge-output-format", "mp4")
-                }
-
-                DownloadMode.MP3 -> {
-                    addOption("-f", "bestaudio/best")
+            val (format, sort) = requestFormat(request)
+            addOption("-f", format)
+            if (sort.isNotBlank()) addOption("-S", sort)
+            if (request.mode == DownloadMode.MP3) {
+                if (!config.speedMode) {
                     addOption("--write-thumbnail")
                     addOption("--embed-thumbnail")
-                    addOption("--extract-audio")
-                    addOption("--audio-format", "mp3")
-                    addOption("--audio-quality", "0")
-                    // Even out loudness between tracks (single-pass EBU R128).
-                    addOption(
-                        "--postprocessor-args",
-                        "ffmpeg:-af loudnorm=I=-16:TP=-1.5:LRA=11"
-                    )
                 }
+                addOption("--extract-audio")
+                addOption("--audio-format", "mp3")
+                addOption("--audio-quality", "0")
+                // Even out loudness between tracks (single-pass EBU R128).
+                addOption(
+                    "--postprocessor-args",
+                    "ffmpeg:-af loudnorm=I=-16:TP=-1.5:LRA=11"
+                )
+            } else {
+                addOption("--merge-output-format", "mp4")
             }
             if (turbo) {
                 addOption("--downloader", "libaria2c.so")
-                addOption("--external-downloader-args", "aria2c:-x24 -s24 -k1M")
+                addOption(
+                    "--external-downloader-args",
+                    "aria2c:-x$concurrency -s$concurrency -k${config.chunkMb}M"
+                )
             }
         }
     }

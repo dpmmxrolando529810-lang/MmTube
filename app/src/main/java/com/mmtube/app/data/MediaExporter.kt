@@ -38,14 +38,13 @@ class MediaExporter(private val context: Context) {
         mode: DownloadMode,
         platform: Platform? = null,
         relativeBase: String? = null,
-        volumeName: String? = null
+        volumeName: String? = null,
+        fast: Boolean = false
     ): ExportedMedia = withContext(Dispatchers.IO) {
         val mime = mimeType(file, mode)
-        val folder = when (platform) {
-            Platform.YOUTUBE -> "YouTube"
-            Platform.FACEBOOK -> "Facebook"
-            Platform.TIKTOK -> "TikTok"
-            else -> null
+        val folder = folderFor(mode, platform)
+        if (fast) {
+            return@withContext fallback(file, mime, file.length(), folder)
         }
         val size = file.length()
         val audio = mode == DownloadMode.MP3
@@ -57,6 +56,16 @@ class MediaExporter(private val context: Context) {
                 ?: fallback(file, mime, size, folder)
         } else {
             fallback(file, mime, size, folder)
+        }
+    }
+
+    private fun folderFor(mode: DownloadMode, platform: Platform?): String? {
+        if (mode == DownloadMode.MP3) return null
+        return when (platform) {
+            Platform.YOUTUBE -> "YouTube"
+            Platform.FACEBOOK -> "Facebook"
+            Platform.TIKTOK -> "TikTok"
+            else -> null
         }
     }
 
