@@ -22,4 +22,25 @@ object FormatSupport {
             }
         }.getOrDefault(true)
     }
+
+    fun isAudioPlayable(acodec: String?): Boolean {
+        if (acodec.isNullOrBlank() || acodec.equals("none", true)) return true
+        val value = acodec.lowercase()
+        val mime = when {
+            value.startsWith("flac") -> "audio/flac"
+            value.startsWith("opus") -> "audio/opus"
+            value.startsWith("vorbis") -> "audio/vorbis"
+            value.startsWith("mp3") -> "audio/mpeg"
+            value.startsWith("aac") || value.startsWith("mp4a") -> "audio/mp4a-latm"
+            value.startsWith("ac3") -> "audio/ac3"
+            value.startsWith("eac3") -> "audio/eac3"
+            else -> return true
+        }
+        return runCatching {
+            MediaCodecList(MediaCodecList.REGULAR_CODECS).codecInfos.any { info ->
+                !info.isEncoder && info.supportedTypes.any { it.equals(mime, true) }
+            }
+        }.getOrDefault(true)
+    }
+
 }

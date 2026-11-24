@@ -58,6 +58,7 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
         if (fastProbeDisabled) return probeWithLibrary(url, cookiesPath, ageFallback)
         return when (val run = fastProbe.run(url, cookiesPath = cookiesPath, ageFallback = ageFallback)) {
             is FastProbe.Result.Ok -> run.json
+            is FastProbe.Result.Lines -> run.json.firstOrNull() ?: "{}"
             FastProbe.Result.TimedOut -> {
                 fastProbeDisabled = true
                 probeWithLibrary(url, cookiesPath, ageFallback)
@@ -65,6 +66,47 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
             FastProbe.Result.Failed -> probeWithLibrary(url, cookiesPath, ageFallback)
         }
     }
+
+    /** Analyses a whole batch in one yt-dlp process, returning results per URL. */
+    suspend fun probeMany(
+        rawUrls: List<String>
+    ): Map<String, Result<ProbeResult>> = withContext(Dispatchers.IO) {
+        val urls = rawUrls.mapNotNull { UrlUtils.normalize(it) }.distinct()
+        val output = LinkedHashMap<String, Result<ProbeResult>>()
+        val pending = mutableListOf<String>()
+        for (url in urls) {
+            val hit = cached(url)
+            if (hit != null) output[url] = Result.success(hit) else pending.add(url)
+        }
+        if (pending.isEmpty()) return@withContext output
+        if (!engine.ensureReady()) {
+            pending.forEach { output[it] = Result.failure(MmtubeException(ErrorKind.ENGINE, "Engine not ready")) }
+            return@withContext output
+        }
+        val cookiesPath = CookieStore.path(context)
+        val jsonLines = runCatching {
+            when (val run = fastProbe.runMany(pending, cookiesPath = cookiesPath)) {
+                is FastProbe.Result.Ok -> listOf(run.json)
+                is FastProbe.Result.Lines -> run.json
+                else -> emptyList()
+            }
+        }.getOrDefault(emptyList())
+        if (jsonLines.size == pending.size) {
+            pending.zip(jsonLines).forEach { (url, line) ->
+                output[url] = buildOne(url, line)
+            }
+        } else {
+            pending.forEach { url -> output[url] = probe(url) }
+        }
+        output
+    }
+
+    private fun buildOne(url: String, json: String): Result<ProbeResult> = runCatching {
+        val info = parse(json)
+        val result = buildResult(url, info, json)
+        remember(url, result)
+        result
+    }.recoverCatching { throw normalizeProbeError(it) }
 
     /** Drops huge unused fields (thumbnails, captions, descriptions, comments). */
     private fun slimJson(json: String): String = runCatching {

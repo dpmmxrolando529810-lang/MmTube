@@ -493,7 +493,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     else selected?.isVideo ?: true,
                 alternates = if (usedSmart) smart?.alternates.orEmpty() else emptyList(),
                 preferMkv = if (usedSmart) smart?.hdr ?: false else selected?.hdr ?: false,
-                audioFormat = state.settings.audioFormat,
+                audioFormat = effectiveAudioFormat(),
                 adaptiveProfile = state.settings.adaptiveProfile,
                 parallelStreams = state.settings.parallelStreams,
                 estimatedBytes = probe.estimatedBytes,
@@ -507,6 +507,18 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     private var duplicateAck: String? = null
+
+    private fun effectiveAudioFormat(): String {
+        val saved = _ui.value.settings.audioFormat
+        val acodec = when (saved) {
+            "opus" -> "opus"
+            "flac" -> "flac"
+            else -> return "mp3"
+        }
+        if (com.mmtube.app.util.FormatSupport.isAudioPlayable(acodec)) return saved
+        event(UiEvent.Message(context.getString(R.string.audio_codec_unsupported)))
+        return "mp3"
+    }
 
     /** Starts a download without waiting for the preview (fastest start). */
     fun fastStart(raw: String? = null) {
@@ -524,7 +536,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             thumbnail = null,
             durationSeconds = 0,
             qualityLabel = context.getString(R.string.fast_start_quality),
-            audioFormat = _ui.value.settings.audioFormat,
+            audioFormat = effectiveAudioFormat(),
             adaptiveProfile = _ui.value.settings.adaptiveProfile,
             parallelStreams = _ui.value.settings.parallelStreams,
             preserveAudio = _ui.value.settings.preserveAudioDynamics,
@@ -637,7 +649,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             var queued = 0
             val failures = mutableListOf<com.mmtube.app.data.BatchFailure>()
             val seen = mutableSetOf<String>()
-            val probeCache = mutableMapOf<String, Pair<com.mmtube.app.data.ProbeResult?, String?>>()
+            val candidates = mutableListOf<Pair<String, String>>()
             val history = runCatching { container.history.snapshot() }.getOrDefault(emptyList())
             for (rawUrl in urls) {
                 val normalized = UrlUtils.normalize(rawUrl)
@@ -666,21 +678,19 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     )
                     continue
                 }
-                if (!probeCache.containsKey(key)) {
-                    val probe = container.media.probe(normalized)
-                    val ok = probe.getOrNull()
-                    val reason = if (ok == null) {
-                        val kind = (probe.exceptionOrNull() as? MmtubeException)?.kind ?: ErrorKind.GENERIC
-                        errorText(kind)
-                    } else {
-                        null
-                    }
-                    probeCache[key] = ok to reason
-                }
-                val cached = probeCache[key]!!
-                val result = cached.first
+                candidates += normalized to rawUrl
+            }
+            // One yt-dlp process analyses the whole batch instead of one per link.
+            val analysed = runCatching {
+                container.media.probeMany(candidates.map { it.first })
+            }.getOrDefault(emptyMap())
+            for ((normalized, rawUrl) in candidates) {
+                val probe = analysed[normalized]
+                val result = probe?.getOrNull()
                 if (result == null) {
-                    failures += com.mmtube.app.data.BatchFailure(rawUrl, cached.second ?: errorText(ErrorKind.GENERIC))
+                    val kind = (probe?.exceptionOrNull() as? MmtubeException)?.kind
+                        ?: ErrorKind.GENERIC
+                    failures += com.mmtube.app.data.BatchFailure(rawUrl, errorText(kind))
                     continue
                 }
                 val mode = if (result.audioOnly) DownloadMode.MP3 else preferredMode()
@@ -697,8 +707,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     expectedHeight = if (mode == DownloadMode.MP3) 0 else result.maxHeight,
                     expectedFps = if (mode == DownloadMode.MP3) 0 else result.maxFps,
                     estimatedBytes = result.estimatedBytes,
+                    audioFormat = effectiveAudioFormat(),
                     preserveAudio = _ui.value.settings.preserveAudioDynamics,
-                    autoChunk = _ui.value.settings.autoChunk
+                    autoChunk = _ui.value.settings.autoChunk,
+                    memoryKey = UrlUtils.canonicalKey(normalized).orEmpty()
                 )
                 DownloadService.start(context, request)
                 queued += 1
@@ -1411,7 +1423,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     fun openHistory(item: HistoryItem) {
         if (item.mimeType.startsWith("video")) {
             runCatching {
-                PlayerActivity.start(context, Uri.parse(item.uri), item.title, item.id)
+                PlayerActivity.start(context, Uri.parse(item.uri), item.title, item.id, item.isHdr)
             }.onSuccess { return }.onFailure {
                 Log.w("MMTube", "Player launch failed", it)
             }

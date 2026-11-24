@@ -601,4 +601,6 @@ Firebase project: %4$s</string>
     <string name="settings_multichannel_desc">ရှိရင် 5.1/7.1 stream ကို ရွေးမယ် (bitrate မြင့် stereo အစား)</string>
     <string name="settings_auto_storage">အမြန်ဆုံး temp storage</string>
     <string name="settings_auto_storage_desc">တစ်နေ့တစ်ခါ internal နဲ့ SD card ကို တိုင်းပြီး ပိုမြန်တာကို သုံးပေးမယ်</string>
+    <string name="audio_codec_unsupported">ဒီဖုန်းက အဲ့ဒီအသံ format ကို မဖွင့်နိုင်လို့ MP3 ကို သုံးပေးထားပါတယ်</string>
+    <string name="player_hdr_unsupported">ဒီဗီဒီယိုက HDR ဖြစ်ပေမယ့် ဒီမျက်နှာပြင်က HDR မပြနိုင်လို့ အရောင်တွေ ပြန်မှိန်နေနိုင်ပါတယ်</string>
 </resources>

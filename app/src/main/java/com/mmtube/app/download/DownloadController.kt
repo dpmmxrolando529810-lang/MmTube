@@ -22,6 +22,7 @@ import com.mmtube.app.util.MediaVerifier
 import com.mmtube.app.util.NetworkProfile
 import com.mmtube.app.util.ProbeVerifier
 import com.mmtube.app.util.RangeProbe
+import com.mmtube.app.util.RetryAfter
 import com.mmtube.app.util.StorageSpeed
 import com.mmtube.app.util.StreamMerger
 import com.mmtube.app.util.ThermalGuard
@@ -81,7 +82,8 @@ private data class SpeedConfig(
     val parallelStreams: Boolean,
     val supportsRanges: Boolean,
     val network: String,
-    val adaptive: Boolean
+    val adaptive: Boolean,
+    val rateLimitMb: Int = 0
 )
 
 class DownloadController(
@@ -293,19 +295,19 @@ class DownloadController(
                     parallelStreams = settingsSnapshot.parallelStreams,
                     supportsRanges = range.supported,
                     network = network,
-                    adaptive = settingsSnapshot.adaptiveProfile
+                    adaptive = settingsSnapshot.adaptiveProfile,
+                    rateLimitMb = ThermalGuard.rateCapMb(context)
                 )
                 val directory = downloadDirectory(config.speedMode, settingsSnapshot.autoStorage)
                     .apply { mkdirs() }
                 var file = downloadWithFallback(request, directory, turbo, config, startedAt)
-                if (request.preferMkv) {
-                    val color = ProbeVerifier.inspect(context, file)
-                    if (color != null && !color.isHdr) {
-                        val hdrFile = File(directory, "hdr-${startedAt}.mkv")
-                        if (StreamMerger.remuxWithHdrTags(context, file, hdrFile)) {
-                            runCatching { file.delete() }
-                            file = hdrFile
-                        }
+                var color = ProbeVerifier.inspect(context, file)
+                if (request.preferMkv && color != null && !color.isHdr) {
+                    val hdrFile = File(directory, "hdr-${startedAt}.mkv")
+                    if (StreamMerger.remuxWithHdrTags(context, file, hdrFile)) {
+                        runCatching { file.delete() }
+                        file = hdrFile
+                        color = ProbeVerifier.inspect(context, file)
                     }
                 }
                 _state.value = DownloadState.Saving(request.title, request.mode)
@@ -343,7 +345,8 @@ class DownloadController(
                     mode = request.mode.key,
                     savedToGallery = exported.savedToGallery,
                     downloadDurationMs = System.currentTimeMillis() - capturedStartedAt,
-                    qualityNote = qualityNote
+                    qualityNote = qualityNote,
+                    isHdr = color?.isHdr ?: false
                 )
                 runCatching { historyStore.add(item) }
                     .onFailure { Log.w(TAG, "Could not save history", it) }
@@ -565,7 +568,10 @@ class DownloadController(
                     retries = attempt + 1,
                     concurrency = config.concurrency
                 )
-                kotlinx.coroutines.delay(if (turboFallback) 400L else 2_000L * (attempt + 1))
+                val serverHint = RetryAfter.delayMs(request.url)
+                kotlinx.coroutines.delay(
+                    maxOf(if (turboFallback) 400L else 2_000L * (attempt + 1), serverHint)
+                )
             }
         }
         if (sawError) {
@@ -757,6 +763,9 @@ class DownloadController(
             addOption("--fragment-retries", "30")
             addOption("--extractor-retries", "3")
             addOption("--concurrent-fragments", concurrency.toString())
+            if (config.rateLimitMb > 0) {
+                addOption("--limit-rate", "${config.rateLimitMb}M")
+            }
             if (!config.speedMode) {
                 addOption("--embed-metadata")
                 addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\([^\(\)]*\)\s*${'$'}""")

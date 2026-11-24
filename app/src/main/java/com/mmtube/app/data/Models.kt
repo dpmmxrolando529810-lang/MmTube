@@ -283,7 +283,8 @@ data class HistoryItem(
     val savedToGallery: Boolean = false,
     val downloadDurationMs: Long = 0L,
     /** Set when the stored file is smaller/lower fps than the format we asked for. */
-    val qualityNote: String? = null
+    val qualityNote: String? = null,
+    val isHdr: Boolean = false
 )
 
 data class PurchaseRecord(

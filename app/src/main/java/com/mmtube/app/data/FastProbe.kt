@@ -26,6 +26,7 @@ class FastProbe(private val context: Context) {
 
     sealed interface Result {
         data class Ok(val json: String) : Result
+        data class Lines(val json: List<String>) : Result
         data object Failed : Result
         data object TimedOut : Result
     }
@@ -36,7 +37,7 @@ class FastProbe(private val context: Context) {
         cookiesPath: String? = null,
         ageFallback: Boolean = false
     ): Result = withContext(Dispatchers.IO) {
-            val command = buildCommand(url, cookiesPath, ageFallback)
+            val command = buildCommand(listOf(url), cookiesPath, ageFallback)
             runInterruptible { execute(command, timeoutMs) }
         }
 
@@ -80,19 +81,36 @@ class FastProbe(private val context: Context) {
                 Log.w(TAG, "Probe exit=$exit ${stderr.toString().take(400)}")
                 return Result.Failed
             }
-            val json = stdout.toString()
-            if (!json.trimStart().startsWith("{")) {
+            val lines = stdout.lineSequence()
+                .map { it.trim() }
+                .filter { it.startsWith("{") }
+                .toList()
+            if (lines.isEmpty()) {
                 Log.w(TAG, "Probe returned no JSON: ${stderr.toString().take(400)}")
                 return Result.Failed
             }
-            return Result.Ok(json)
+            return if (lines.size == 1) Result.Ok(lines.first()) else Result.Lines(lines)
         } finally {
             process.destroyForcibly()
         }
     }
 
+    suspend fun runMany(
+        urls: List<String>,
+        timeoutMs: Long = DEFAULT_TIMEOUT_MS,
+        cookiesPath: String? = null
+    ): Result = withContext(Dispatchers.IO) {
+        val command = buildCommand(urls, cookiesPath, ageFallback = false)
+        runInterruptible { execute(command, timeoutMs.coerceAtMost(120_000L)) }
+    }.let { result ->
+        when (result) {
+            is Result.Ok -> Result.Lines(listOf(result.json))
+            else -> result
+        }
+    }
+
     private fun buildCommand(
-        url: String,
+        urls: List<String>,
         cookiesPath: String?,
         ageFallback: Boolean
     ): List<String> {
@@ -118,7 +136,7 @@ class FastProbe(private val context: Context) {
             } else {
                 "youtube:player_client=android,ios,tv,web_safari,mweb;formats=duplicate"
             }
-        ) + cookieOptions + listOf(url)
+        ) + cookieOptions + urls
     }
 
     private fun environment(): Map<String, String> {

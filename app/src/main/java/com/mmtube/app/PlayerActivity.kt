@@ -37,6 +37,7 @@ class PlayerActivity : AppCompatActivity() {
 
     private val prefs by lazy { getSharedPreferences("mmtube_player", Context.MODE_PRIVATE) }
     private var mediaId: String = ""
+    private var expectsHdr: Boolean = false
     private var videoWidth = 16
     private var videoHeight = 9
     private var durationMs = 0
@@ -68,6 +69,7 @@ class PlayerActivity : AppCompatActivity() {
 
         val uri = intent.data
         mediaId = intent.getStringExtra(EXTRA_ID).orEmpty()
+        expectsHdr = intent.getBooleanExtra(EXTRA_HDR, false)
         title.text = intent.getStringExtra(EXTRA_TITLE).orEmpty()
 
         if (uri == null) {
@@ -113,6 +115,13 @@ class PlayerActivity : AppCompatActivity() {
                 video.seekTo(saved)
             }
             prepared.isLooping = false
+            if (expectsHdr && !com.mmtube.app.util.DisplaySupport.canRenderHdr(this)) {
+                android.widget.Toast.makeText(
+                    this,
+                    R.string.player_hdr_unsupported,
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
             video.start()
             applySpeed()
             updatePlayLabel()
@@ -233,12 +242,20 @@ class PlayerActivity : AppCompatActivity() {
     companion object {
         private const val EXTRA_ID = "player_id"
         private const val EXTRA_TITLE = "player_title"
+        private const val EXTRA_HDR = "player_hdr"
 
-        fun start(context: Context, uri: Uri, title: String, id: String) {
+        fun start(
+            context: Context,
+            uri: Uri,
+            title: String,
+            id: String,
+            isHdr: Boolean = false
+        ) {
             val intent = Intent(context, PlayerActivity::class.java).apply {
                 data = uri
                 putExtra(EXTRA_ID, id)
                 putExtra(EXTRA_TITLE, title)
+                putExtra(EXTRA_HDR, isHdr)
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)

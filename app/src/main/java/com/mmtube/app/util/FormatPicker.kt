@@ -50,8 +50,13 @@ object FormatPicker {
                 it.contains("original", true) || it.contains("source", true)
             }
         ) 1.06 else 1.0
+        // Prefer formats near a useful bits-per-pixel target: above it the
+        // extra bytes are usually invisible, below it detail is being lost.
+        val closeness = 1.0 / (1.0 + kotlin.math.abs(perPixel - 0.16) / 0.16)
+        val bppFactor = (0.85 + 0.15 * closeness) * if (perPixel > 0.5) 0.82 else 1.0
         return (bitrate + perPixel * 90.0) * fpsBonus * hdrBonus *
-            codecBonus * sourceBonus * (1.0 + min(format.height, 4320) / 9000.0)
+            codecBonus * sourceBonus * bppFactor *
+            (1.0 + min(format.height, 4320) / 9000.0)
     }
 
     fun choose(

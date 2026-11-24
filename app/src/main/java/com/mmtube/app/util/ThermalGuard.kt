@@ -21,4 +21,12 @@ object ThermalGuard {
         celsius(context) >= 41f -> 8
         else -> 0
     }
+
+    /** Optional rate limit in MB/s while the device is hot (0 = unlimited). */
+    fun rateCapMb(context: Context): Int = when {
+        celsius(context) >= 45f -> 6
+        celsius(context) >= 41f -> 12
+        else -> 0
+    }
+
 }
