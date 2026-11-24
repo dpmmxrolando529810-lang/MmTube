@@ -279,6 +279,20 @@ fun SettingsScreen(
                 checked = ui.settings.preserveAudioDynamics,
                 onChange = vm::setPreserveAudioDynamics
             )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_multichannel),
+                description = context.getString(R.string.settings_multichannel_desc),
+                checked = ui.settings.preferMultichannel,
+                onChange = vm::setPreferMultichannel
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.FolderOpen,
+                label = context.getString(R.string.settings_auto_storage),
+                description = context.getString(R.string.settings_auto_storage_desc),
+                checked = ui.settings.autoStorage,
+                onChange = vm::setAutoStorage
+            )
             SettingsValueRow(
                 icon = Icons.Rounded.Description,
                 label = context.getString(R.string.settings_audio_format),

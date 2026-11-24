@@ -369,7 +369,8 @@ private fun WhatsNewDialog(version: String, onDismiss: () -> Unit) {
         "Format fallback, YouTube client fallback, HDR→MKV, Opus/FLAC, range check, parallel streams",
         " yt-dlp 2026.11.23 နဲ့ FFmpeg 9.1 stable သို့ upgrade လုပ်ထားပြီး (fast-start လည်း ပါတယ်)",
         "Format အမှတ်မှာ codec/source metadata ပါဝင်၊ ဖုန်းက HDR မပံ့ပိုးရင် SDR ကို ရွေးပေးတယ်",
-        "Direct HTTPS progressive ရွေးချယ်မှု၊ RTT အလိုက် chunk၊ storage-write အလိုက် concurrency, probe payload လျှော့ချ"
+        "Direct HTTPS progressive ရွေးချယ်မှု၊ RTT အလိုက် chunk၊ storage-write အလိုက် concurrency, probe payload လျှော့ချ",
+        "HDR color metadata ပြန်စစ်, surround audio ရွေးခွင့်, preallocation, thermal-aware speed, အမြန်ဆုံး temp storage"
     )
     AlertDialog(
         onDismissRequest = onDismiss,

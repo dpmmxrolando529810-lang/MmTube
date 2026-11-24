@@ -179,7 +179,8 @@ data class MediaFormatOption(
     /** https / http / m3u8 / http_dash_segments — direct https avoids muxing. */
     val protocol: String? = null,
     val ext: String? = null,
-    val isProgressive: Boolean = false
+    val isProgressive: Boolean = false,
+    val channels: Int = 0
 )
 
 data class BatchFailure(val url: String, val reason: String)
@@ -352,5 +353,7 @@ data class SettingsSnapshot(
     val adaptiveProfile: Boolean = true,
     val parallelStreams: Boolean = false,
     val preserveAudioDynamics: Boolean = false,
-    val autoChunk: Boolean = true
+    val autoChunk: Boolean = true,
+    val preferMultichannel: Boolean = false,
+    val autoStorage: Boolean = true
 )

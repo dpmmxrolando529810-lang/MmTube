@@ -445,7 +445,8 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             val smart = com.mmtube.app.util.FormatPicker.choose(
                 probe,
                 mode,
-                com.mmtube.app.util.DisplaySupport.canRenderHdr(context)
+                com.mmtube.app.util.DisplaySupport.canRenderHdr(context),
+                _ui.value.settings.preferMultichannel
             )
             val remembered = sourceKey?.let { com.mmtube.app.util.FormatMemory.get(context, it) }
             val formatId = when {
@@ -1682,6 +1683,14 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     fun clearCookies() {
         com.mmtube.app.util.CookieStore.clear(context)
         event(UiEvent.Message(context.getString(R.string.cookies_cleared)))
+    }
+
+    fun setPreferMultichannel(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setPreferMultichannel(enabled) }
+    }
+
+    fun setAutoStorage(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setAutoStorage(enabled) }
     }
 
     fun setPreserveAudioDynamics(enabled: Boolean) {

@@ -57,7 +57,8 @@ object FormatPicker {
     fun choose(
         result: ProbeResult,
         mode: DownloadMode,
-        hdrSupported: Boolean = false
+        hdrSupported: Boolean = false,
+        preferMultichannel: Boolean = false
     ): Choice? {
         if (mode == DownloadMode.MP3) return null
         val cap = when (mode) {
@@ -69,7 +70,16 @@ object FormatPicker {
             .filter { it.isVideo && it.height in 1..cap }
             .sortedByDescending { score(it, hdrSupported) }
         val primary = videos.firstOrNull() ?: return null
-        val audios = result.formats.filter { !it.isVideo }.sortedByDescending { it.tbr }
+        val audios = result.formats.filter { !it.isVideo }.let { list ->
+            if (preferMultichannel) {
+                list.sortedWith(
+                    compareByDescending<com.mmtube.app.data.MediaFormatOption> { it.channels }
+                        .thenByDescending { it.tbr }
+                )
+            } else {
+                list.sortedByDescending { it.tbr }
+            }
+        }
         val audio = audios.firstOrNull()
 
         // A direct progressive https file avoids two downloads + an mux. Only

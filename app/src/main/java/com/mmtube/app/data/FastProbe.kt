@@ -116,7 +116,7 @@ class FastProbe(private val context: Context) {
             if (ageFallback) {
                 "youtube:player_client=web_embedded,ios_producer,android"
             } else {
-                "youtube:player_client=android,ios,tv,web_safari,mweb"
+                "youtube:player_client=android,ios,tv,web_safari,mweb;formats=duplicate"
             }
         ) + cookieOptions + listOf(url)
     }

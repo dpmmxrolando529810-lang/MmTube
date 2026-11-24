@@ -597,4 +597,8 @@ Firebase project: %4$s</string>
     <string name="settings_auto_chunk_desc">Choose 1/2/4 MB automatically from server response time</string>
     <string name="settings_preserve_audio">Keep original audio dynamics</string>
     <string name="settings_preserve_audio_desc">Skip loudness normalization for Opus/FLAC/MP3</string>
+    <string name="settings_multichannel">Prefer surround audio</string>
+    <string name="settings_multichannel_desc">Pick 5.1/7.1 streams when available instead of the highest bitrate stereo</string>
+    <string name="settings_auto_storage">Fastest temp storage</string>
+    <string name="settings_auto_storage_desc">Benchmark internal storage vs SD card once a day and use the faster one</string>
 </resources>

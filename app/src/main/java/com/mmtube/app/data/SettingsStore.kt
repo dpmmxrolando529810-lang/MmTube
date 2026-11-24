@@ -57,6 +57,8 @@ class SettingsStore(private val context: Context) {
         val PARALLEL_STREAMS = booleanPreferencesKey("parallel_streams")
         val PRESERVE_AUDIO = booleanPreferencesKey("preserve_audio_dynamics")
         val AUTO_CHUNK = booleanPreferencesKey("auto_chunk")
+        val PREFER_MULTICHANNEL = booleanPreferencesKey("prefer_multichannel")
+        val AUTO_STORAGE = booleanPreferencesKey("auto_storage")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -117,7 +119,9 @@ class SettingsStore(private val context: Context) {
             adaptiveProfile = this[Keys.ADAPTIVE_PROFILE] ?: true,
             parallelStreams = this[Keys.PARALLEL_STREAMS] ?: false,
             preserveAudioDynamics = this[Keys.PRESERVE_AUDIO] ?: false,
-            autoChunk = this[Keys.AUTO_CHUNK] ?: true
+            autoChunk = this[Keys.AUTO_CHUNK] ?: true,
+            preferMultichannel = this[Keys.PREFER_MULTICHANNEL] ?: false,
+            autoStorage = this[Keys.AUTO_STORAGE] ?: true
         )
     }
 
@@ -203,6 +207,14 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setUpdateDismissedVersion(v: String) {
         context.settingsDataStore.edit { it[Keys.UPDATE_DISMISSED] = v }
+    }
+
+    suspend fun setPreferMultichannel(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.PREFER_MULTICHANNEL] = enabled }
+    }
+
+    suspend fun setAutoStorage(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.AUTO_STORAGE] = enabled }
     }
 
     suspend fun setPreserveAudioDynamics(enabled: Boolean) {

@@ -597,4 +597,8 @@ Firebase project: %4$s</string>
     <string name="settings_auto_chunk_desc">ဆာဗာ ပြန်ဖြေတာနှေး/မြန်ကိုလိုက်ပြီး 1/2/4 MB ကိုယ်တိုင်ရွေးပေးမယ်</string>
     <string name="settings_preserve_audio">မူရင်း အသံအတိုးအကျယ် ထားမယ်</string>
     <string name="settings_preserve_audio_desc">Opus/FLAC/MP3 အတွက် loudness normalization မလုပ်တော့ဘူး</string>
+    <string name="settings_multichannel">Surround အသံ ဦးစားပေး</string>
+    <string name="settings_multichannel_desc">ရှိရင် 5.1/7.1 stream ကို ရွေးမယ် (bitrate မြင့် stereo အစား)</string>
+    <string name="settings_auto_storage">အမြန်ဆုံး temp storage</string>
+    <string name="settings_auto_storage_desc">တစ်နေ့တစ်ခါ internal နဲ့ SD card ကို တိုင်းပြီး ပိုမြန်တာကို သုံးပေးမယ်</string>
 </resources>

@@ -15,12 +15,16 @@ import com.mmtube.app.data.Platform
 import com.mmtube.app.data.QuotaManager
 import com.mmtube.app.data.SettingsStore
 import com.mmtube.app.util.CookieStore
+import com.mmtube.app.util.FastAlloc
 import com.mmtube.app.util.FormatMemory
 import com.mmtube.app.util.Formatters
 import com.mmtube.app.util.MediaVerifier
 import com.mmtube.app.util.NetworkProfile
+import com.mmtube.app.util.ProbeVerifier
 import com.mmtube.app.util.RangeProbe
+import com.mmtube.app.util.StorageSpeed
 import com.mmtube.app.util.StreamMerger
+import com.mmtube.app.util.ThermalGuard
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import kotlinx.coroutines.CancellationException
@@ -172,6 +176,7 @@ class DownloadController(
     private var storageBoundCount = 0
     private var lastWriteSampleAt = 0L
     private var lastWriteBytes = 0L
+    private var thermalPenalty = 0
 
     /** Adjusts fragments from measured speed, retries and diminishing returns. */
     private fun tunedConcurrency(base: Int): Int {
@@ -181,7 +186,8 @@ class DownloadController(
             retries == 0 && plateauCount == 0
         ) 8 else 0
         val storagePenalty = if (storageBoundCount >= 2) 8 else 0
-        return (base + boost - retries * 4 - plateau - storagePenalty).coerceIn(8, 40)
+        return (base + boost - retries * 4 - plateau - storagePenalty - thermalPenalty)
+            .coerceIn(8, 40)
     }
 
     /** Detects a slow storage device that cannot keep up with the network. */
@@ -258,6 +264,7 @@ class DownloadController(
                 observedRetries = 0
                 plateauCount = 0
                 storageBoundCount = 0
+                thermalPenalty = ThermalGuard.penalty(context)
                 lastWriteSampleAt = 0L
                 lastWriteBytes = 0L
                 val network = NetworkProfile.current(context)
@@ -288,8 +295,19 @@ class DownloadController(
                     network = network,
                     adaptive = settingsSnapshot.adaptiveProfile
                 )
-                val directory = downloadDirectory(config.speedMode).apply { mkdirs() }
-                val file = downloadWithFallback(request, directory, turbo, config, startedAt)
+                val directory = downloadDirectory(config.speedMode, settingsSnapshot.autoStorage)
+                    .apply { mkdirs() }
+                var file = downloadWithFallback(request, directory, turbo, config, startedAt)
+                if (request.preferMkv) {
+                    val color = ProbeVerifier.inspect(context, file)
+                    if (color != null && !color.isHdr) {
+                        val hdrFile = File(directory, "hdr-${startedAt}.mkv")
+                        if (StreamMerger.remuxWithHdrTags(context, file, hdrFile)) {
+                            runCatching { file.delete() }
+                            file = hdrFile
+                        }
+                    }
+                }
                 _state.value = DownloadState.Saving(request.title, request.mode)
                 val exported = exporter.export(
                     file = file,
@@ -594,6 +612,7 @@ class DownloadController(
         val audio = findOutput(audioDir, DownloadMode.MP3, startedAt) ?: return null
         val extension = if (request.preferMkv) "mkv" else "mp4"
         val output = File(directory, "merged-${startedAt}.$extension")
+        FastAlloc.reserve(output, video.length() + audio.length())
         if (!StreamMerger.merge(context, video, audio, output)) {
             runCatching { video.delete(); audio.delete() }
             return null
@@ -747,7 +766,7 @@ class DownloadController(
             if (cookies != null) addOption("--cookies", cookies)
             addOption(
                 "--extractor-args",
-                "youtube:player_client=android,ios,tv,web_safari,mweb"
+                "youtube:player_client=android,ios,tv,web_safari,mweb;formats=duplicate"
             )
             if (!turbo && config.supportsRanges) {
                 // Chunked requests help direct (non-segmented) servers that
@@ -814,46 +833,56 @@ class DownloadController(
     }
 
     /** Remove leftovers from failed/cancelled downloads so they do not eat storage. */
+    private fun allTempDirs(): List<File> = listOf(
+        downloadDirectory(false, false),
+        downloadDirectory(true, false)
+    ).distinctBy { it.absolutePath }
+
     private fun cleanupTempFiles(olderThanMs: Long) {
-        runCatching {
-            val now = System.currentTimeMillis()
-            downloadDirectory().listFiles()
-                ?.filter { it.isFile }
-                ?.filter { file ->
-                    val name = file.name.lowercase()
-                    name.endsWith(".part") || name.endsWith(".ytdl") ||
-                        name.endsWith(".aria2") || name.endsWith(".temp") ||
-                        name.endsWith(".tmp")
-                }
-                ?.filter { now - it.lastModified() >= olderThanMs }
-                ?.forEach { runCatching { it.delete() } }
+        val now = System.currentTimeMillis()
+        allTempDirs().forEach { dir ->
+            runCatching {
+                dir.listFiles()
+                    ?.filter { it.isFile }
+                    ?.filter { file ->
+                        val name = file.name.lowercase()
+                        name.endsWith(".part") || name.endsWith(".ytdl") ||
+                            name.endsWith(".aria2") || name.endsWith(".temp") ||
+                            name.endsWith(".tmp")
+                    }
+                    ?.filter { now - it.lastModified() >= olderThanMs }
+                    ?.forEach { runCatching { it.delete() } }
+            }
         }
     }
 
     fun tempBytes(): Long = runCatching {
-        downloadDirectory().listFiles()?.filter { it.isFile }?.sumOf { it.length() } ?: 0L
+        allTempDirs().sumOf { dir -> dir.listFiles()?.filter { it.isFile }?.sumOf { it.length() } ?: 0L }
     }.getOrDefault(0L)
 
     fun clearTempFiles(): Int {
         var removed = 0
-        runCatching {
-            downloadDirectory().listFiles()?.filter { it.isFile }?.forEach { file ->
-                val name = file.name.lowercase()
-                if (name.endsWith(".part") || name.endsWith(".ytdl") ||
-                    name.endsWith(".aria2") || name.endsWith(".temp") || name.endsWith(".tmp")
-                ) {
-                    if (runCatching { file.delete() }.getOrDefault(false)) removed++
+        allTempDirs().forEach { dir ->
+            runCatching {
+                dir.listFiles()?.filter { it.isFile }?.forEach { file ->
+                    val name = file.name.lowercase()
+                    if (name.endsWith(".part") || name.endsWith(".ytdl") ||
+                        name.endsWith(".aria2") || name.endsWith(".temp") || name.endsWith(".tmp")
+                    ) {
+                        if (runCatching { file.delete() }.getOrDefault(false)) removed++
+                    }
                 }
             }
         }
         return removed
     }
 
-    private fun downloadDirectory(fast: Boolean = false): File {
-        val base = if (fast) {
-            context.filesDir
-        } else {
-            context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir
+    private fun downloadDirectory(fast: Boolean, autoStorage: Boolean): File {
+        val base = when {
+            fast && autoStorage -> StorageSpeed.fastestTemp(context)
+            fast -> context.filesDir
+            else -> context.getExternalFilesDir(Environment.DIRECTORY_MOVIES)
+                ?: context.filesDir
         }
         return File(base, "MMTube")
     }
