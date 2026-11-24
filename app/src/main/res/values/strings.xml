@@ -593,4 +593,8 @@ Firebase project: %4$s</string>
     <string name="settings_parallel_streams">Parallel streams</string>
     <string name="settings_parallel_streams_desc">Download video and audio at the same time, then mux (large files; more CPU)</string>
     <string name="settings_audio_format">Audio format</string>
+    <string name="settings_auto_chunk">Adaptive chunk size</string>
+    <string name="settings_auto_chunk_desc">Choose 1/2/4 MB automatically from server response time</string>
+    <string name="settings_preserve_audio">Keep original audio dynamics</string>
+    <string name="settings_preserve_audio_desc">Skip loudness normalization for Opus/FLAC/MP3</string>
 </resources>

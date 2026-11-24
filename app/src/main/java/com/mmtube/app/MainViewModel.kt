@@ -442,7 +442,11 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             val mode = _ui.value.mode
             val selected = probe.formats.firstOrNull { it.id == _ui.value.selectedFormatId }
             val sourceKey = UrlUtils.canonicalKey(probe.webpageUrl ?: probe.url)
-            val smart = com.mmtube.app.util.FormatPicker.choose(probe, mode)
+            val smart = com.mmtube.app.util.FormatPicker.choose(
+                probe,
+                mode,
+                com.mmtube.app.util.DisplaySupport.canRenderHdr(context)
+            )
             val remembered = sourceKey?.let { com.mmtube.app.util.FormatMemory.get(context, it) }
             val formatId = when {
                 mode == DownloadMode.MP3 -> null
@@ -483,13 +487,18 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 formatId = formatId,
                 expectedHeight = expectedHeight,
                 expectedFps = expectedFps,
-                formatIsVideo = if (formatId?.contains("+") == true) true
+                formatIsVideo = if (usedSmart && smart?.complete == true) false
+                    else if (formatId?.contains("+") == true) true
                     else selected?.isVideo ?: true,
                 alternates = if (usedSmart) smart?.alternates.orEmpty() else emptyList(),
                 preferMkv = if (usedSmart) smart?.hdr ?: false else selected?.hdr ?: false,
                 audioFormat = state.settings.audioFormat,
                 adaptiveProfile = state.settings.adaptiveProfile,
-                parallelStreams = state.settings.parallelStreams
+                parallelStreams = state.settings.parallelStreams,
+                estimatedBytes = probe.estimatedBytes,
+                memoryKey = sourceKey.orEmpty(),
+                preserveAudio = state.settings.preserveAudioDynamics,
+                autoChunk = state.settings.autoChunk
             )
             DownloadService.start(context, request)
             refreshStorageInfo()
@@ -516,7 +525,9 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             qualityLabel = context.getString(R.string.fast_start_quality),
             audioFormat = _ui.value.settings.audioFormat,
             adaptiveProfile = _ui.value.settings.adaptiveProfile,
-            parallelStreams = _ui.value.settings.parallelStreams
+            parallelStreams = _ui.value.settings.parallelStreams,
+            preserveAudio = _ui.value.settings.preserveAudioDynamics,
+            autoChunk = _ui.value.settings.autoChunk
         )
         DownloadService.start(context, request)
         event(UiEvent.Message(context.getString(R.string.fast_start_started)))
@@ -683,7 +694,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     durationSeconds = result.durationSeconds,
                     qualityLabel = qualityLabel,
                     expectedHeight = if (mode == DownloadMode.MP3) 0 else result.maxHeight,
-                    expectedFps = if (mode == DownloadMode.MP3) 0 else result.maxFps
+                    expectedFps = if (mode == DownloadMode.MP3) 0 else result.maxFps,
+                    estimatedBytes = result.estimatedBytes,
+                    preserveAudio = _ui.value.settings.preserveAudioDynamics,
+                    autoChunk = _ui.value.settings.autoChunk
                 )
                 DownloadService.start(context, request)
                 queued += 1
@@ -1668,6 +1682,14 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     fun clearCookies() {
         com.mmtube.app.util.CookieStore.clear(context)
         event(UiEvent.Message(context.getString(R.string.cookies_cleared)))
+    }
+
+    fun setPreserveAudioDynamics(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setPreserveAudioDynamics(enabled) }
+    }
+
+    fun setAutoChunk(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setAutoChunk(enabled) }
     }
 
     fun setAudioFormat(value: String) {

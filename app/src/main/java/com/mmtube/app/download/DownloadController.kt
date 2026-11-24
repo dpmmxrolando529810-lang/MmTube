@@ -15,6 +15,7 @@ import com.mmtube.app.data.Platform
 import com.mmtube.app.data.QuotaManager
 import com.mmtube.app.data.SettingsStore
 import com.mmtube.app.util.CookieStore
+import com.mmtube.app.util.FormatMemory
 import com.mmtube.app.util.Formatters
 import com.mmtube.app.util.MediaVerifier
 import com.mmtube.app.util.NetworkProfile
@@ -60,6 +61,10 @@ data class DownloadRequest(
     val audioFormat: String = "mp3",
     val adaptiveProfile: Boolean = true,
     val parallelStreams: Boolean = false,
+    val estimatedBytes: Long = 0L,
+    val memoryKey: String = "",
+    val preserveAudio: Boolean = false,
+    val autoChunk: Boolean = true,
     /** Stable identity for reorderable queue UI. */
     val queueId: String = java.util.UUID.randomUUID().toString()
 )
@@ -164,6 +169,9 @@ class DownloadController(
     private var previousSpeed = 0L
     private var previousConcurrency = 0
     private var plateauCount = 0
+    private var storageBoundCount = 0
+    private var lastWriteSampleAt = 0L
+    private var lastWriteBytes = 0L
 
     /** Adjusts fragments from measured speed, retries and diminishing returns. */
     private fun tunedConcurrency(base: Int): Int {
@@ -172,7 +180,25 @@ class DownloadController(
         val boost = if (measuredSpeedBytes >= 8L * 1024 * 1024 &&
             retries == 0 && plateauCount == 0
         ) 8 else 0
-        return (base + boost - retries * 4 - plateau).coerceIn(8, 40)
+        val storagePenalty = if (storageBoundCount >= 2) 8 else 0
+        return (base + boost - retries * 4 - plateau - storagePenalty).coerceIn(8, 40)
+    }
+
+    /** Detects a slow storage device that cannot keep up with the network. */
+    private fun sampleWriteSpeed(directory: File, now: Long): Long {
+        val bytes = runCatching {
+            directory.listFiles()?.filter { it.isFile }?.sumOf { it.length() } ?: 0L
+        }.getOrDefault(0L)
+        val previousAt = lastWriteSampleAt
+        lastWriteSampleAt = now
+        if (previousAt == 0L || now - previousAt < 2_000L || bytes < lastWriteBytes) {
+            lastWriteBytes = bytes
+            return 0L
+        }
+        val elapsed = now - previousAt
+        val speed = (bytes - lastWriteBytes) * 1000L / elapsed.coerceAtLeast(1L)
+        lastWriteBytes = bytes
+        return speed
     }
 
     private fun noteThroughput(concurrency: Int) {
@@ -230,6 +256,10 @@ class DownloadController(
                 val settingsSnapshot = settingsStore.snapshot()
                 val turbo = settingsSnapshot.turbo
                 observedRetries = 0
+                plateauCount = 0
+                storageBoundCount = 0
+                lastWriteSampleAt = 0L
+                lastWriteBytes = 0L
                 val network = NetworkProfile.current(context)
                 val profileKey = if (settingsSnapshot.adaptiveProfile) {
                     NetworkProfile.learned(context, network) ?: settingsSnapshot.turboProfile
@@ -241,13 +271,20 @@ class DownloadController(
                     "aggressive" -> 40
                     else -> 24
                 }
+                val range = RangeProbe.check(request.url)
+                val autoChunk = when {
+                    range.rttMs > 400L -> 4
+                    range.rttMs > 150L -> 2
+                    else -> 1
+                }
                 val config = SpeedConfig(
                     concurrency = base,
-                    chunkMb = settingsSnapshot.chunkMb,
+                    chunkMb = if (request.autoChunk && settingsSnapshot.autoChunk) autoChunk
+                    else settingsSnapshot.chunkMb,
                     speedMode = settingsSnapshot.speedMode,
                     audioFormat = settingsSnapshot.audioFormat,
                     parallelStreams = settingsSnapshot.parallelStreams,
-                    supportsRanges = RangeProbe.supports(request.url),
+                    supportsRanges = range.supported,
                     network = network,
                     adaptive = settingsSnapshot.adaptiveProfile
                 )
@@ -295,6 +332,11 @@ class DownloadController(
                 runCatching { quotaManager.consume() }
                     .onFailure { Log.w(TAG, "Could not consume quota", it) }
                 _state.value = DownloadState.Completed(item)
+                if (request.memoryKey.isNotBlank() && request.alternates.isNotEmpty() &&
+                    request.estimatedBytes > 0L && exported.sizeBytes < request.estimatedBytes * 70 / 100
+                ) {
+                    FormatMemory.put(context, request.memoryKey, request.alternates.first())
+                }
                 if (config.adaptive && measuredSpeedBytes > 0L) {
                     val learned = when {
                         measuredSpeedBytes >= 6L * 1024 * 1024 -> "aggressive"
@@ -613,6 +655,10 @@ class DownloadController(
                             if (speed > 0L) {
                                 measuredSpeedBytes = speed
                                 noteThroughput(tunedConcurrency(config.concurrency))
+                                val writeSpeed = sampleWriteSpeed(directory, now)
+                                if (writeSpeed in 1..(speed * 6 / 10)) {
+                                    storageBoundCount += 1
+                                }
                             }
                             val total = Formatters.parseTotal(line).takeIf { it > 0 }
                                 ?: previous?.totalBytes ?: 0L
@@ -721,11 +767,13 @@ class DownloadController(
                 addOption("--extract-audio")
                 addOption("--audio-format", config.audioFormat)
                 if (config.audioFormat != "flac") addOption("--audio-quality", "0")
-                // Even out loudness between tracks (single-pass EBU R128).
-                addOption(
-                    "--postprocessor-args",
-                    "ffmpeg:-af loudnorm=I=-16:TP=-1.5:LRA=11"
-                )
+                if (!request.preserveAudio) {
+                    // Even out loudness between tracks (single-pass EBU R128).
+                    addOption(
+                        "--postprocessor-args",
+                        "ffmpeg:-af loudnorm=I=-16:TP=-1.5:LRA=11"
+                    )
+                }
             } else {
                 addOption(
                     "--merge-output-format",

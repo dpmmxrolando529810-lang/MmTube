@@ -317,7 +317,11 @@ class DownloadService : Service() {
             preferMkv = getBooleanExtra(EXTRA_PREFER_MKV, false),
             audioFormat = getStringExtra(EXTRA_AUDIO_FORMAT) ?: "mp3",
             adaptiveProfile = getBooleanExtra(EXTRA_ADAPTIVE_PROFILE, true),
-            parallelStreams = getBooleanExtra(EXTRA_PARALLEL_STREAMS, false)
+            parallelStreams = getBooleanExtra(EXTRA_PARALLEL_STREAMS, false),
+            estimatedBytes = getLongExtra(EXTRA_ESTIMATED_BYTES, 0L),
+            memoryKey = getStringExtra(EXTRA_MEMORY_KEY).orEmpty(),
+            preserveAudio = getBooleanExtra(EXTRA_PRESERVE_AUDIO, false),
+            autoChunk = getBooleanExtra(EXTRA_AUTO_CHUNK, true)
         )
     }
 
@@ -344,6 +348,10 @@ class DownloadService : Service() {
         private const val EXTRA_AUDIO_FORMAT = "audio_format"
         private const val EXTRA_ADAPTIVE_PROFILE = "adaptive_profile"
         private const val EXTRA_PARALLEL_STREAMS = "parallel_streams"
+        private const val EXTRA_ESTIMATED_BYTES = "estimated_bytes"
+        private const val EXTRA_MEMORY_KEY = "memory_key"
+        private const val EXTRA_PRESERVE_AUDIO = "preserve_audio"
+        private const val EXTRA_AUTO_CHUNK = "auto_chunk"
 
         fun start(context: Context, request: DownloadRequest) {
             val intent = Intent(context, DownloadService::class.java).apply {
@@ -364,6 +372,10 @@ class DownloadService : Service() {
                 putExtra(EXTRA_AUDIO_FORMAT, request.audioFormat)
                 putExtra(EXTRA_ADAPTIVE_PROFILE, request.adaptiveProfile)
                 putExtra(EXTRA_PARALLEL_STREAMS, request.parallelStreams)
+                putExtra(EXTRA_ESTIMATED_BYTES, request.estimatedBytes)
+                putExtra(EXTRA_MEMORY_KEY, request.memoryKey)
+                putExtra(EXTRA_PRESERVE_AUDIO, request.preserveAudio)
+                putExtra(EXTRA_AUTO_CHUNK, request.autoChunk)
             }
             ContextCompat.startForegroundService(context, intent)
         }

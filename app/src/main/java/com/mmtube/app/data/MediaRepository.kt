@@ -66,9 +66,39 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
         }
     }
 
+    /** Drops huge unused fields (thumbnails, captions, descriptions, comments). */
+    private fun slimJson(json: String): String = runCatching {
+        val root = YoutubeDL.objectMapper.readTree(json)
+        if (!root.isObject) return json
+        val rootObject = root as com.fasterxml.jackson.databind.node.ObjectNode
+        val keepTop = setOf(
+            "id", "title", "fulltitle", "duration", "uploader", "uploader_id",
+            "thumbnail", "extractor_key", "extractor", "webpage_url", "width",
+            "height", "file_size", "file_size_approx", "formats"
+        )
+        val fields = root.fields().asSequence().toList()
+        fields.forEach { (name, _) -> if (name !in keepTop) rootObject.remove(name) }
+        val array = root.path("formats")
+        if (array.isArray) {
+            val keepFormat = setOf(
+                "format_id", "format_note", "height", "width", "fps", "tbr", "abr",
+                "vcodec", "acodec", "codecs", "dynamic_range", "filesize",
+                "filesize_approx", "protocol", "ext"
+            )
+            for (node in array) {
+                if (!node.isObject) continue
+                val objectNode = node as com.fasterxml.jackson.databind.node.ObjectNode
+                objectNode.fields().asSequence().toList().forEach { (name, _) ->
+                    if (name !in keepFormat) objectNode.remove(name)
+                }
+            }
+        }
+        YoutubeDL.objectMapper.writeValueAsString(root)
+    }.getOrDefault(json)
+
     private fun parse(json: String): VideoInfo {
         return runCatching {
-            YoutubeDL.objectMapper.readValue(json, VideoInfo::class.java)
+            YoutubeDL.objectMapper.readValue(slimJson(json), VideoInfo::class.java)
         }.getOrElse {
             throw MmtubeException(ErrorKind.GENERIC, "Could not parse media information", it)
         }
@@ -194,6 +224,10 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
                 ?: node?.path("format_note")?.takeUnless { it.isMissingNode || it.isNull }?.asText()
             val dynamicRange = node?.path("dynamic_range")?.takeUnless { it.isMissingNode || it.isNull }?.asText().orEmpty()
             val codec = format.vcodec?.lowercase().orEmpty()
+            val protocol = node?.path("protocol")?.takeUnless { it.isMissingNode || it.isNull }
+                ?.asText()
+            val ext = node?.path("ext")?.takeUnless { it.isMissingNode || it.isNull }?.asText()
+                ?: format.ext
             val hdr = note.orEmpty().contains("hdr", true) ||
                 dynamicRange.contains("hdr", true) ||
                 codec.contains("vp9.2") ||
@@ -211,7 +245,11 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
                     ?: format.fileSizeApproximate.takeIf { it > 0 } ?: 0L,
                 isVideo = video,
                 note = note,
-                hdr = hdr
+                hdr = hdr,
+                protocol = protocol,
+                ext = ext,
+                isProgressive = video && !format.acodec.isNullOrBlank() &&
+                    format.acodec != "none"
             )
         }.distinctBy { it.id }.let { all ->
             val videos = all.filter { it.isVideo }.sortedWith(

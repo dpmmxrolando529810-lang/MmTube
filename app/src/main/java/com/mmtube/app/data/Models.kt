@@ -175,7 +175,11 @@ data class MediaFormatOption(
     /** yt-dlp format_note, e.g. "HDR" or "1080p60". */
     val note: String? = null,
     /** True for HDR / 10-bit formats (VP9.2, AV1 profile 2, HEVC 10-bit). */
-    val hdr: Boolean = false
+    val hdr: Boolean = false,
+    /** https / http / m3u8 / http_dash_segments — direct https avoids muxing. */
+    val protocol: String? = null,
+    val ext: String? = null,
+    val isProgressive: Boolean = false
 )
 
 data class BatchFailure(val url: String, val reason: String)
@@ -346,5 +350,7 @@ data class SettingsSnapshot(
     /** mp3 | opus | flac */
     val audioFormat: String = "mp3",
     val adaptiveProfile: Boolean = true,
-    val parallelStreams: Boolean = false
+    val parallelStreams: Boolean = false,
+    val preserveAudioDynamics: Boolean = false,
+    val autoChunk: Boolean = true
 )

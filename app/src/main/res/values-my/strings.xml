@@ -593,4 +593,8 @@ Firebase project: %4$s</string>
     <string name="settings_parallel_streams">Stream နှစ်ခု တပြိုင်</string>
     <string name="settings_parallel_streams_desc">ဗီဒီယိုနဲ့ အသံကို တပြိုင်ဒေါင်းပြီးမှ တွဲပေးမယ် (ဖိုင်ကြီးရင် အကျိုးရှိ၊ CPU ပိုကုန်)</string>
     <string name="settings_audio_format">အသံ ဖိုင်အမျိုးအစား</string>
+    <string name="settings_auto_chunk">အလိုအလျောက် chunk အရွယ်</string>
+    <string name="settings_auto_chunk_desc">ဆာဗာ ပြန်ဖြေတာနှေး/မြန်ကိုလိုက်ပြီး 1/2/4 MB ကိုယ်တိုင်ရွေးပေးမယ်</string>
+    <string name="settings_preserve_audio">မူရင်း အသံအတိုးအကျယ် ထားမယ်</string>
+    <string name="settings_preserve_audio_desc">Opus/FLAC/MP3 အတွက် loudness normalization မလုပ်တော့ဘူး</string>
 </resources>

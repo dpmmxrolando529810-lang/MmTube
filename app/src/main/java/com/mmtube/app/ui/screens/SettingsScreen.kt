@@ -265,6 +265,20 @@ fun SettingsScreen(
                 checked = ui.settings.parallelStreams,
                 onChange = vm::setParallelStreams
             )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Speed,
+                label = context.getString(R.string.settings_auto_chunk),
+                description = context.getString(R.string.settings_auto_chunk_desc),
+                checked = ui.settings.autoChunk,
+                onChange = vm::setAutoChunk
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_preserve_audio),
+                description = context.getString(R.string.settings_preserve_audio_desc),
+                checked = ui.settings.preserveAudioDynamics,
+                onChange = vm::setPreserveAudioDynamics
+            )
             SettingsValueRow(
                 icon = Icons.Rounded.Description,
                 label = context.getString(R.string.settings_audio_format),

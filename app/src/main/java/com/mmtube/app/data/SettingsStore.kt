@@ -55,6 +55,8 @@ class SettingsStore(private val context: Context) {
         val AUDIO_FORMAT = stringPreferencesKey("audio_format")
         val ADAPTIVE_PROFILE = booleanPreferencesKey("adaptive_profile")
         val PARALLEL_STREAMS = booleanPreferencesKey("parallel_streams")
+        val PRESERVE_AUDIO = booleanPreferencesKey("preserve_audio_dynamics")
+        val AUTO_CHUNK = booleanPreferencesKey("auto_chunk")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -113,7 +115,9 @@ class SettingsStore(private val context: Context) {
                 it in listOf("mp3", "opus", "flac")
             } ?: "mp3",
             adaptiveProfile = this[Keys.ADAPTIVE_PROFILE] ?: true,
-            parallelStreams = this[Keys.PARALLEL_STREAMS] ?: false
+            parallelStreams = this[Keys.PARALLEL_STREAMS] ?: false,
+            preserveAudioDynamics = this[Keys.PRESERVE_AUDIO] ?: false,
+            autoChunk = this[Keys.AUTO_CHUNK] ?: true
         )
     }
 
@@ -199,6 +203,14 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setUpdateDismissedVersion(v: String) {
         context.settingsDataStore.edit { it[Keys.UPDATE_DISMISSED] = v }
+    }
+
+    suspend fun setPreserveAudioDynamics(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.PRESERVE_AUDIO] = enabled }
+    }
+
+    suspend fun setAutoChunk(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.AUTO_CHUNK] = enabled }
     }
 
     suspend fun setAudioFormat(value: String) {
