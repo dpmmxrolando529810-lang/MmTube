@@ -341,6 +341,55 @@ fun SettingsScreen(
                 checked = ui.settings.forceIpv4,
                 onChange = vm::setForceIpv4
             )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_embed_chapters),
+                description = context.getString(R.string.settings_embed_chapters_desc),
+                checked = ui.settings.embedChapters,
+                onChange = vm::setEmbedChapters
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_multi_streams),
+                description = context.getString(R.string.settings_multi_streams_desc),
+                checked = ui.settings.multiVideoStreams,
+                onChange = vm::setMultiVideoStreams
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_multi_audio),
+                description = context.getString(R.string.settings_multi_audio_desc),
+                checked = ui.settings.multiAudioStreams,
+                onChange = vm::setMultiAudioStreams
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_keep_fragments),
+                description = context.getString(R.string.settings_keep_fragments_desc),
+                checked = ui.settings.keepFragments,
+                onChange = vm::setKeepFragments
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_hls_mpegts),
+                description = context.getString(R.string.settings_hls_mpegts_desc),
+                checked = ui.settings.hlsUseMpegts,
+                onChange = vm::setHlsMpegts
+            )
+            OutlinedTextField(
+                value = ui.settings.proxyUrl,
+                onValueChange = vm::setProxyUrl,
+                singleLine = true,
+                label = { Text(context.getString(R.string.settings_proxy_url)) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            )
+            OutlinedTextField(
+                value = ui.settings.sourceAddress,
+                onValueChange = vm::setSourceAddress,
+                singleLine = true,
+                label = { Text(context.getString(R.string.settings_source_address)) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            )
             SettingsValueRow(
                 icon = Icons.Rounded.Speed,
                 label = context.getString(R.string.settings_throttled_rate),

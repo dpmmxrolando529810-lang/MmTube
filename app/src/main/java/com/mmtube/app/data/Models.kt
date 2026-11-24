@@ -364,5 +364,12 @@ data class SettingsSnapshot(
     val checkFormats: Boolean = false,
     val bufferSizeKb: Int = 0,
     val forceIpv4: Boolean = false,
-    val sortForce: Boolean = false
+    val sortForce: Boolean = false,
+    val embedChapters: Boolean = false,
+    val multiVideoStreams: Boolean = false,
+    val multiAudioStreams: Boolean = false,
+    val keepFragments: Boolean = false,
+    val hlsUseMpegts: Boolean = false,
+    val proxyUrl: String = "",
+    val sourceAddress: String = ""
 )

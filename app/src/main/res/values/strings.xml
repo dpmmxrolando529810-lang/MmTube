@@ -617,4 +617,16 @@ Firebase project: %4$s</string>
     <string name="settings_buffer_size">Download buffer size</string>
     <string name="settings_off">Off</string>
     <string name="settings_default">Default</string>
+    <string name="settings_embed_chapters">Embed chapters</string>
+    <string name="settings_embed_chapters_desc">Write chapter markers into the saved file when the source has them</string>
+    <string name="settings_multi_streams">Multiple video streams</string>
+    <string name="settings_multi_streams_desc">Merge alternate video tracks (e.g. HDR + SDR) into one file</string>
+    <string name="settings_multi_audio">Multiple audio tracks</string>
+    <string name="settings_multi_audio_desc">Keep all audio languages instead of only the best one</string>
+    <string name="settings_keep_fragments">Keep downloaded fragments</string>
+    <string name="settings_keep_fragments_desc">Keep DASH/HLS parts for resume (uses more storage)</string>
+    <string name="settings_hls_mpegts">HLS as MPEG-TS</string>
+    <string name="settings_hls_mpegts_desc">Lower corruption risk and allow playback while downloading</string>
+    <string name="settings_proxy_url">Proxy URL (optional)</string>
+    <string name="settings_source_address">Source address (optional IP)</string>
 </resources>

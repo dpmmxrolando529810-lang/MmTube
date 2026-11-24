@@ -507,7 +507,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 bufferSizeKb = state.settings.bufferSizeKb,
                 forceIpv4 = state.settings.forceIpv4,
                 sortForce = state.settings.sortForce
-            )
+            ).let(::applyAdvancedOptions)
             DownloadService.start(context, request)
             refreshStorageInfo()
         }
@@ -555,7 +555,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             bufferSizeKb = _ui.value.settings.bufferSizeKb,
             forceIpv4 = _ui.value.settings.forceIpv4,
             sortForce = _ui.value.settings.sortForce
-        )
+        ).let(::applyAdvancedOptions)
         DownloadService.start(context, request)
         event(UiEvent.Message(context.getString(R.string.fast_start_started)))
     }
@@ -745,7 +745,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     bufferSizeKb = _ui.value.settings.bufferSizeKb,
                     forceIpv4 = _ui.value.settings.forceIpv4,
                     sortForce = _ui.value.settings.sortForce
-                )
+                ).let(::applyAdvancedOptions)
                 batchRequests += request
                 queued += 1
             }
@@ -1738,6 +1738,49 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setLoudnessTarget(value: Int) {
         viewModelScope.launch { container.settings.setLoudnessTarget(value) }
+    }
+
+    private fun applyAdvancedOptions(
+        request: com.mmtube.app.download.DownloadRequest
+    ): com.mmtube.app.download.DownloadRequest {
+        val settings = _ui.value.settings
+        return request.copy(
+            embedChapters = settings.embedChapters,
+            multiVideoStreams = settings.multiVideoStreams,
+            multiAudioStreams = settings.multiAudioStreams,
+            keepFragments = settings.keepFragments,
+            hlsUseMpegts = settings.hlsUseMpegts,
+            proxyUrl = settings.proxyUrl,
+            sourceAddress = settings.sourceAddress
+        )
+    }
+
+    fun setEmbedChapters(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setEmbedChapters(enabled) }
+    }
+
+    fun setMultiVideoStreams(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setMultiVideoStreams(enabled) }
+    }
+
+    fun setMultiAudioStreams(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setMultiAudioStreams(enabled) }
+    }
+
+    fun setKeepFragments(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setKeepFragments(enabled) }
+    }
+
+    fun setHlsMpegts(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setHlsMpegts(enabled) }
+    }
+
+    fun setProxyUrl(value: String) {
+        viewModelScope.launch { container.settings.setProxyUrl(value) }
+    }
+
+    fun setSourceAddress(value: String) {
+        viewModelScope.launch { container.settings.setSourceAddress(value) }
     }
 
     fun setThrottledRate(kb: Int) {

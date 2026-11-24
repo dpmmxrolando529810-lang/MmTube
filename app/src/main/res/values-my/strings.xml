@@ -617,4 +617,16 @@ Firebase project: %4$s</string>
     <string name="settings_buffer_size">ဒေါင်းလုဒ် buffer အရွယ်</string>
     <string name="settings_off">ပိတ်</string>
     <string name="settings_default">မူရင်း</string>
+    <string name="settings_embed_chapters">Chapter ထည့်ပေး</string>
+    <string name="settings_embed_chapters_desc">မူရင်းမှာ chapter ရှိရင် သိမ်းထားတဲ့ ဖိုင်ထဲ ထည့်ပေးမယ်</string>
+    <string name="settings_multi_streams">ဗီဒီယို stream စုံ</string>
+    <string name="settings_multi_streams_desc">HDR + SDR လို alternate track တွေ တစ်ဖိုင်တည်း ထည့်ပေးမယ်</string>
+    <string name="settings_multi_audio">အသံ track စုံ</string>
+    <string name="settings_multi_audio_desc">အကောင်းဆုံးတစ်ခုအစား ဘာသာစုံ အသံတွေ ထားပေးမယ်</string>
+    <string name="settings_keep_fragments">ဒေါင်းထားတဲ့ အပိုင်းတွေ ထားမယ်</string>
+    <string name="settings_keep_fragments_desc">Resume အတွက် DASH/HLS အပိုင်းတွေ မဖျက်ဘဲ ထား (storage ပိုကုန်)</string>
+    <string name="settings_hls_mpegts">HLS ကို MPEG-TS အဖြစ်</string>
+    <string name="settings_hls_mpegts_desc">ဖိုင်ပျက်နှုန်း လျှော့ပြီး ဒေါင်းနေတုန်း ကြည့်လို့ရ</string>
+    <string name="settings_proxy_url">Proxy URL (ရွေးချယ်)</string>
+    <string name="settings_source_address">Source address (IP, ရွေးချယ်)</string>
 </resources>

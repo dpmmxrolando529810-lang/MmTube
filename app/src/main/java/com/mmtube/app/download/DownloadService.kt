@@ -369,7 +369,14 @@ class DownloadService : Service() {
             checkFormats = getBooleanExtra(EXTRA_CHECK_FORMATS, false),
             bufferSizeKb = getIntExtra(EXTRA_BUFFER_KB, 0),
             forceIpv4 = getBooleanExtra(EXTRA_FORCE_IPV4, false),
-            sortForce = getBooleanExtra(EXTRA_SORT_FORCE, false)
+            sortForce = getBooleanExtra(EXTRA_SORT_FORCE, false),
+            embedChapters = getBooleanExtra(EXTRA_EMBED_CHAPTERS, false),
+            multiVideoStreams = getBooleanExtra(EXTRA_MULTI_VIDEO, false),
+            multiAudioStreams = getBooleanExtra(EXTRA_MULTI_AUDIO, false),
+            keepFragments = getBooleanExtra(EXTRA_KEEP_FRAGMENTS, false),
+            hlsUseMpegts = getBooleanExtra(EXTRA_HLS_MPEGTS, false),
+            proxyUrl = getStringExtra(EXTRA_PROXY_URL).orEmpty(),
+            sourceAddress = getStringExtra(EXTRA_SOURCE_ADDRESS).orEmpty()
         )
     }
 
@@ -409,6 +416,13 @@ class DownloadService : Service() {
         private const val EXTRA_FORCE_IPV4 = "force_ipv4"
         private const val EXTRA_SORT_FORCE = "sort_force"
         private const val EXTRA_REQUESTS = "requests_json"
+        private const val EXTRA_EMBED_CHAPTERS = "embed_chapters"
+        private const val EXTRA_MULTI_VIDEO = "multi_video"
+        private const val EXTRA_MULTI_AUDIO = "multi_audio"
+        private const val EXTRA_KEEP_FRAGMENTS = "keep_fragments"
+        private const val EXTRA_HLS_MPEGTS = "hls_mpegts"
+        private const val EXTRA_PROXY_URL = "proxy_url"
+        private const val EXTRA_SOURCE_ADDRESS = "source_address"
 
         fun start(context: Context, request: DownloadRequest) {
             val intent = Intent(context, DownloadService::class.java).apply {
@@ -440,6 +454,13 @@ class DownloadService : Service() {
                 putExtra(EXTRA_BUFFER_KB, request.bufferSizeKb)
                 putExtra(EXTRA_FORCE_IPV4, request.forceIpv4)
                 putExtra(EXTRA_SORT_FORCE, request.sortForce)
+                putExtra(EXTRA_EMBED_CHAPTERS, request.embedChapters)
+                putExtra(EXTRA_MULTI_VIDEO, request.multiVideoStreams)
+                putExtra(EXTRA_MULTI_AUDIO, request.multiAudioStreams)
+                putExtra(EXTRA_KEEP_FRAGMENTS, request.keepFragments)
+                putExtra(EXTRA_HLS_MPEGTS, request.hlsUseMpegts)
+                putExtra(EXTRA_PROXY_URL, request.proxyUrl)
+                putExtra(EXTRA_SOURCE_ADDRESS, request.sourceAddress)
             }
             ContextCompat.startForegroundService(context, intent)
         }

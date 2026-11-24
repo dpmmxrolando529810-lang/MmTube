@@ -66,6 +66,13 @@ class SettingsStore(private val context: Context) {
         val BUFFER_KB = intPreferencesKey("buffer_size_kb")
         val FORCE_IPV4 = booleanPreferencesKey("force_ipv4")
         val SORT_FORCE = booleanPreferencesKey("sort_force")
+        val EMBED_CHAPTERS = booleanPreferencesKey("embed_chapters")
+        val MULTI_VIDEO = booleanPreferencesKey("multi_video")
+        val MULTI_AUDIO = booleanPreferencesKey("multi_audio")
+        val KEEP_FRAGMENTS = booleanPreferencesKey("keep_fragments")
+        val HLS_MPEGTS = booleanPreferencesKey("hls_mpegts")
+        val PROXY_URL = stringPreferencesKey("proxy_url")
+        val SOURCE_ADDRESS = stringPreferencesKey("source_address")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -139,7 +146,14 @@ class SettingsStore(private val context: Context) {
                 it in listOf(0, 16, 64, 256)
             } ?: 0,
             forceIpv4 = this[Keys.FORCE_IPV4] ?: false,
-            sortForce = this[Keys.SORT_FORCE] ?: false
+            sortForce = this[Keys.SORT_FORCE] ?: false,
+            embedChapters = this[Keys.EMBED_CHAPTERS] ?: false,
+            multiVideoStreams = this[Keys.MULTI_VIDEO] ?: false,
+            multiAudioStreams = this[Keys.MULTI_AUDIO] ?: false,
+            keepFragments = this[Keys.KEEP_FRAGMENTS] ?: false,
+            hlsUseMpegts = this[Keys.HLS_MPEGTS] ?: false,
+            proxyUrl = this[Keys.PROXY_URL] ?: "",
+            sourceAddress = this[Keys.SOURCE_ADDRESS] ?: ""
         )
     }
 
@@ -225,6 +239,34 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setUpdateDismissedVersion(v: String) {
         context.settingsDataStore.edit { it[Keys.UPDATE_DISMISSED] = v }
+    }
+
+    suspend fun setEmbedChapters(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.EMBED_CHAPTERS] = enabled }
+    }
+
+    suspend fun setMultiVideoStreams(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.MULTI_VIDEO] = enabled }
+    }
+
+    suspend fun setMultiAudioStreams(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.MULTI_AUDIO] = enabled }
+    }
+
+    suspend fun setKeepFragments(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.KEEP_FRAGMENTS] = enabled }
+    }
+
+    suspend fun setHlsMpegts(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.HLS_MPEGTS] = enabled }
+    }
+
+    suspend fun setProxyUrl(value: String) {
+        context.settingsDataStore.edit { it[Keys.PROXY_URL] = value.trim() }
+    }
+
+    suspend fun setSourceAddress(value: String) {
+        context.settingsDataStore.edit { it[Keys.SOURCE_ADDRESS] = value.trim() }
     }
 
     suspend fun setSortForce(enabled: Boolean) {

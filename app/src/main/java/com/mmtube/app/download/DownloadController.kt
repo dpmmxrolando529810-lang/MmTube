@@ -77,6 +77,13 @@ data class DownloadRequest(
     val bufferSizeKb: Int = 0,
     val forceIpv4: Boolean = false,
     val sortForce: Boolean = false,
+    val embedChapters: Boolean = false,
+    val multiVideoStreams: Boolean = false,
+    val multiAudioStreams: Boolean = false,
+    val keepFragments: Boolean = false,
+    val hlsUseMpegts: Boolean = false,
+    val proxyUrl: String = "",
+    val sourceAddress: String = "",
     /** Stable identity for reorderable queue UI. */
     val queueId: String = java.util.UUID.randomUUID().toString()
 )
@@ -346,7 +353,10 @@ class DownloadController(
                         )
                     }
                 }
-                cleanupTempFiles(olderThanMs = 10 * 60 * 1000L)
+                cleanupTempFiles(
+                    olderThanMs = 10 * 60 * 1000L,
+                    keepFragments = request.keepFragments
+                )
                 val item = HistoryItem(
                     id = UUID.randomUUID().toString(),
                     title = request.title,
@@ -799,6 +809,15 @@ class DownloadController(
             }
             if (request.forceIpv4) addOption("--force-ipv4")
             if (request.sortForce) addOption("--format-sort-force")
+            if (request.embedChapters) addOption("--embed-chapters")
+            if (request.multiVideoStreams) addOption("--video-multistreams")
+            if (request.multiAudioStreams) addOption("--audio-multistreams")
+            if (request.keepFragments) addOption("--keep-fragments")
+            if (request.hlsUseMpegts) addOption("--hls-use-mpegts")
+            if (request.proxyUrl.isNotBlank()) addOption("--proxy", request.proxyUrl)
+            if (request.sourceAddress.isNotBlank()) {
+                addOption("--source-address", request.sourceAddress)
+            }
             if (config.rateLimitMb > 0) {
                 addOption("--limit-rate", "${config.rateLimitMb}M")
             }
@@ -890,7 +909,8 @@ class DownloadController(
         downloadDirectory(true, false)
     ).distinctBy { it.absolutePath }
 
-    private fun cleanupTempFiles(olderThanMs: Long) {
+    private fun cleanupTempFiles(olderThanMs: Long, keepFragments: Boolean = false) {
+        if (keepFragments) return
         val now = System.currentTimeMillis()
         allTempDirs().forEach { dir ->
             runCatching {
