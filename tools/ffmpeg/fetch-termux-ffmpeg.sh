@@ -1,5 +1,5 @@
 #!/bin/bash
-# Downloads Termux FFmpeg 9.0.2 and its runtime library closure for all
+# Downloads Termux FFmpeg 9.1 and its runtime library closure for all
 # Android ABIs, then repacks it into the libffmpeg.zip.so layout used by
 # MMTube's vendored FFmpeg init (see tools/ffmpeg/FFmpeg.kt).
 #
@@ -49,4 +49,4 @@ python3 "$SCRIPT_DIR/repack.py" "$WORK/rootfs" "$JNI_OUT"
 if [ "$KEEP_WORK" = "0" ]; then
   rm -rf "$WORK"
 fi
-echo "FFmpeg 9.0.2 ready in $JNI_OUT"
+echo "FFmpeg 9.1 ready in $JNI_OUT"

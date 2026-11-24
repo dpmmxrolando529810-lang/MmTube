@@ -52,8 +52,8 @@ fun envOrProp(name: String, default: String = ""): String {
 fun quoted(value: String): String =
     "\"" + value.replace("\\", "\\\\").replace("\"", "\\\"") + "\""
 
-val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 29
-val appVersionName = (project.findProperty("versionName") as String?) ?: "1.12.0"
+val appVersionCode = (project.findProperty("versionCode") as String?)?.toIntOrNull() ?: 30
+val appVersionName = (project.findProperty("versionName") as String?) ?: "1.13.0"
 val keystorePath = envOrProp("KEYSTORE_PATH", "keystore/mmtube-demo.p12")
 
 android {
@@ -206,7 +206,7 @@ dependencies {
     implementation("androidx.credentials:credentials-play-services-auth:1.3.0")
     implementation("com.google.android.libraries.identity.googleid:googleid:1.1.0")
 
-    // yt-dlp + Python + aria2c (youtubedl-android). FFmpeg 9.0.2 (Termux build)
+    // yt-dlp + Python + aria2c (youtubedl-android). FFmpeg 9.1 (Termux build)
     // is fetched and repacked by tools/ffmpeg/fetch-termux-ffmpeg.sh into jniLibs.
     implementation("io.github.junkfood02.youtubedl-android:library:0.18.1")
     implementation("io.github.junkfood02.youtubedl-android:aria2c:0.18.1")

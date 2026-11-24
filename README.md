@@ -30,7 +30,7 @@ Both apps ship from the same codebase and are built together in CI.
 | Component | Version | Source |
 |-----------|---------|--------|
 | yt-dlp | **2026.10.26** | `app/src/main/res/raw/ytdlp` (bundled; auto-updates to latest stable from GitHub) |
-| FFmpeg | **9.0.2 "Lei"** | Termux build, repacked into `jniLibs` by `tools/ffmpeg/fetch-termux-ffmpeg.sh` |
+| FFmpeg | **9.1 "Lei"** | Termux build, repacked into `jniLibs` by `tools/ffmpeg/fetch-termux-ffmpeg.sh` |
 | youtubedl-android | 0.18.1 | bundles Python + aria2c; latest release on Maven Central |
 | aria2c | bundled with youtubedl-android 0.18.1 | turbo downloads |
 - **True free tier** — guests: 1 local download per 24h. Signed-in free users: 1 download per 24h, synced through Firestore usage counters.
@@ -45,7 +45,7 @@ Both apps ship from the same codebase and are built together in CI.
 
 - **Android 7.0 (API 24) or newer.** The download engine (Python + native libs from youtubedl-android and the FFmpeg bundle) requires API 24+; older versions are not supported.
 - 3–4 GB free RAM recommended on first launch while the engine unpacks.
-- The universal APK contains `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` native libraries and FFmpeg 9.0.2, so it is large (~400 MB).
+- The universal APK contains `arm64-v8a`, `armeabi-v7a`, `x86_64` and `x86` native libraries and FFmpeg 9.1, so it is large (~400 MB).
 - **Target SDK 35**, compiled against the Android 15 toolchain.
 
 ---
@@ -155,7 +155,7 @@ Tapping **Download update** fetches the APK to app storage, then **Install** lau
 
 ## Local build (optional, needs Android SDK)
 
-Requires `bash`, `curl`, `dpkg-deb` and `python3` — the FFmpeg 9.0.2 bundle is
+Requires `bash`, `curl`, `dpkg-deb` and `python3` — the FFmpeg 9.1 bundle is
 fetched from the Termux repository and repacked on your machine, **it is not
 committed to git** (it would add ~330 MB):
 

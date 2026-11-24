@@ -367,7 +367,7 @@ private fun WhatsNewDialog(version: String, onDismiss: () -> Unit) {
         "အလိုအလျောက် speed/retry အလိုက် concurrency ညှိပေးပြီး file အရည်အသွေး ပြန်စစ်ပေးတယ်",
         "Format ကို yt-dlp sort အစား app ကိုယ်တိုင် bitrate/codec/HDR အမှတ်တွက်ရွေးတယ်",
         "Format fallback, YouTube client fallback, HDR→MKV, Opus/FLAC, range check, parallel streams",
-        " yt-dlp 2026.11.23 သို့ upgrade လုပ်ထားပြီး (fast-start လည်း ပါတယ်)"
+        " yt-dlp 2026.11.23 နဲ့ FFmpeg 9.1 stable သို့ upgrade လုပ်ထားပြီး (fast-start လည်း ပါတယ်)"
     )
     AlertDialog(
         onDismissRequest = onDismiss,

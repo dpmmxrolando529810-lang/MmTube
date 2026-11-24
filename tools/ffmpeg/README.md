@@ -1,6 +1,6 @@
-# FFmpeg 9.0.2 "Lei" bundle for MMTube
+# FFmpeg 9.1 bundle for MMTube
 
-MMTube ships **FFmpeg 9.0.2 "Lei"** (latest stable, released 2026-09-18),
+MMTube ships **FFmpeg 9.1** (latest stable from Termux as of 2026-11),
 repacked from [Termux](https://packages.termux.dev/apt/termux-main/pool/main/f/ffmpeg/)
 into the `libffmpeg.zip.so` layout consumed by the vendored `com.yausername.ffmpeg.FFmpeg`
 (extracted to `noBackupFilesDir` on first launch).
@@ -14,7 +14,7 @@ bash tools/ffmpeg/fetch-termux-ffmpeg.sh
 
 This:
 
-1. Downloads Termux's `ffmpeg_9.0.2-1` plus its full runtime library closure
+1. Downloads Termux's `ffmpeg_9.1` plus its full runtime library closure
    for `aarch64`, `arm`, `i686` and `x86_64` (via a throwaway apt config with
    an empty dpkg status database),
 2. Extracts each `.deb` and computes the **NEEDED shared-library closure**

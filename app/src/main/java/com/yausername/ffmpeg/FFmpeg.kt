@@ -55,7 +55,7 @@ object FFmpeg {
             ffmpegDir.mkdirs()
             unzip(zip, ffmpegDir)
             prefs.edit().putString(KEY_VERSION, version).apply()
-            Log.i(TAG, "FFmpeg 9.0.2 extracted ($version bytes)")
+            Log.i(TAG, "FFmpeg 9.1 extracted ($version bytes)")
         }
         alignLibcxx(packagesDir, ffmpegDir)
         pruneSystemShadows(packagesDir, ffmpegDir)
@@ -101,7 +101,7 @@ object FFmpeg {
     /**
      * youtubedl-android's Python and aria2c bundles ship an older
      * libc++_shared.so (clang 18) and their usr/lib directories come before
-     * FFmpeg's on LD_LIBRARY_PATH. Termux FFmpeg 9.0.2 (libplacebo, clang 19)
+     * FFmpeg's on LD_LIBRARY_PATH. Termux FFmpeg 9.1 (libplacebo, clang 19)
      * needs the newer libc++, so replace every packaged copy with ours.
      */
     private fun alignLibcxx(packagesDir: File, ffmpegDir: File) {

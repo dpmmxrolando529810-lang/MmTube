@@ -18,7 +18,7 @@ keystore/*.keystore
 keystore/release.p12
 !keystore/mmtube-demo.p12
 
-# Repacked Termux FFmpeg 9.0.2 binaries (fetched by tools/ffmpeg/fetch-termux-ffmpeg.sh)
+# Repacked Termux FFmpeg 9.1 binaries (fetched by tools/ffmpeg/fetch-termux-ffmpeg.sh)
 /app/src/main/jniLibs/
 /tools/ffmpeg/build/
 
