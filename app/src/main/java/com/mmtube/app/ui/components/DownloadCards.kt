@@ -26,6 +26,7 @@ import androidx.compose.material.icons.rounded.DeleteOutline
 import androidx.compose.material.icons.rounded.DownloadForOffline
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.HourglassTop
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Share
@@ -275,7 +276,10 @@ fun HistoryRow(
     onDelete: () -> Unit,
     modifier: Modifier = Modifier,
     selected: Boolean = false,
-    onToggleSelect: (() -> Unit)? = null
+    onToggleSelect: (() -> Unit)? = null,
+    onCopyLink: (() -> Unit)? = null,
+    onShareLink: (() -> Unit)? = null,
+    onRename: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val audio = item.mode == "mp3" || item.mimeType.startsWith("audio")
@@ -358,6 +362,52 @@ fun HistoryRow(
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Rounded.DeleteOutline, contentDescription = context.getString(R.string.action_delete), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (onCopyLink != null || onShareLink != null || onRename != null) {
+                var menuOpen by androidx.compose.runtime.remember {
+                    androidx.compose.runtime.mutableStateOf(false)
+                }
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
+                        Icon(
+                            Icons.Rounded.MoreVert,
+                            contentDescription = context.getString(R.string.history_more),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    androidx.compose.material3.DropdownMenu(
+                        expanded = menuOpen,
+                        onDismissRequest = { menuOpen = false }
+                    ) {
+                        onCopyLink?.let { action ->
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text(context.getString(R.string.history_copy_link)) },
+                                onClick = {
+                                    menuOpen = false
+                                    action()
+                                }
+                            )
+                        }
+                        onShareLink?.let { action ->
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text(context.getString(R.string.history_share_link)) },
+                                onClick = {
+                                    menuOpen = false
+                                    action()
+                                }
+                            )
+                        }
+                        onRename?.let { action ->
+                            androidx.compose.material3.DropdownMenuItem(
+                                text = { Text(context.getString(R.string.history_rename)) },
+                                onClick = {
+                                    menuOpen = false
+                                    action()
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
     }

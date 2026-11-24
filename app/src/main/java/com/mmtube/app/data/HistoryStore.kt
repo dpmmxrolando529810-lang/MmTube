@@ -39,6 +39,10 @@ class HistoryStore(private val context: Context) {
         }
     }
 
+    suspend fun replace(item: HistoryItem) {
+        update { current -> current.map { if (it.id == item.id) item else it } }
+    }
+
     suspend fun remove(id: String) {
         update { current -> current.filterNot { it.id == id } }
     }

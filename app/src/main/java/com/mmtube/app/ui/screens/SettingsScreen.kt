@@ -33,6 +33,7 @@ import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FolderOpen
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.NotificationsActive
@@ -237,6 +238,32 @@ fun SettingsScreen(
             }
         }
 
+        SettingsGroup(
+            context.getString(R.string.settings_backup),
+            visibleIf = qMatch(query, listOf("backup", "restore", "export", "import", "အရန်", "ပြန်လည်"))
+        ) {
+            val exportBackup = rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/json")
+            ) { uri -> if (uri != null) vm.exportBackup(uri) }
+            val importBackup = rememberLauncherForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
+            ) { uri -> if (uri != null) vm.importBackup(uri) }
+            SettingsClickRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_backup_export),
+                value = context.getString(R.string.settings_backup_export_desc),
+                onClick = { exportBackup.launch("mmtube-backup.json") }
+            )
+            SettingsClickRow(
+                icon = Icons.Rounded.Refresh,
+                label = context.getString(R.string.settings_backup_import),
+                value = context.getString(R.string.settings_backup_import_desc),
+                onClick = {
+                    importBackup.launch(arrayOf("application/json", "text/plain", "*/*"))
+                }
+            )
+        }
+
         SettingsGroup(context.getString(R.string.settings_engine), visibleIf = qMatch(query, listOf("engine", "yt-dlp", "update", "အင်ဂျင်", "version", "update engine"))) {
             val engineValue = when (val e = ui.engine) {
                 is EngineState.Ready -> e.version ?: context.getString(R.string.settings_engine_ready)
@@ -362,6 +389,14 @@ fun SettingsScreen(
                 checked = ui.settings.chimeEnabled,
                 onChange = vm::setChimeEnabled
             )
+            if (!ui.notificationsEnabled) {
+                Text(
+                    context.getString(R.string.notification_perm_denied_hint),
+                    style = MmtubeType.LabelSmall,
+                    color = MmtubePalette.Amber,
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 4.dp)
+                )
+            }
             SettingsClickRow(
                 icon = Icons.Rounded.NotificationsActive,
                 label = context.getString(R.string.notification_permission),

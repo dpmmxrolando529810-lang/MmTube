@@ -16,6 +16,12 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 
+data class RenamedMedia(
+    val uri: Uri,
+    val localPath: String?,
+    val displayName: String
+)
+
 data class ExportedMedia(
     val uri: Uri,
     val displayName: String,
@@ -52,6 +58,51 @@ class MediaExporter(private val context: Context) {
         } else {
             fallback(file, mime, size, folder)
         }
+    }
+
+    /** Rename the stored file while keeping its extension. */
+    suspend fun rename(item: HistoryItem, requested: String): RenamedMedia? = withContext(Dispatchers.IO) {
+        val currentName = item.localPath?.let { File(it).name }
+            ?: item.uri.substringAfterLast('/').substringBefore('?')
+        val ext = currentName.substringAfterLast('.', "")
+            .takeIf { it.isNotBlank() && it.length <= 5 }
+        val safe = requested.trim()
+            .replace(Regex("[\\/:*?\"<>|\n\r\t]"), "_")
+            .take(80)
+            .trim()
+        if (safe.isBlank()) return@withContext null
+        val newName = if (ext != null && !safe.lowercase().endsWith("." + ext.lowercase())) {
+            "$safe.$ext"
+        } else {
+            safe
+        }
+
+        val path = item.localPath
+        if (!path.isNullOrBlank()) {
+            val file = File(path)
+            if (file.exists()) {
+                val parent = file.parentFile ?: return@withContext null
+                val target = uniqueFile(parent, newName)
+                if (!file.renameTo(target)) return@withContext null
+                val uri = runCatching {
+                    FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.fileprovider",
+                        target
+                    )
+                }.getOrNull() ?: Uri.fromFile(target)
+                return@withContext RenamedMedia(uri, target.absolutePath, target.name)
+            }
+        }
+
+        val values = ContentValues().apply {
+            put(MediaStore.MediaColumns.DISPLAY_NAME, newName)
+        }
+        val uri = Uri.parse(item.uri)
+        val updated = runCatching {
+            context.contentResolver.update(uri, values, null, null)
+        }.getOrDefault(0)
+        if (updated > 0) RenamedMedia(uri, item.localPath, newName) else null
     }
 
     suspend fun delete(item: HistoryItem): Boolean = withContext(Dispatchers.IO) {

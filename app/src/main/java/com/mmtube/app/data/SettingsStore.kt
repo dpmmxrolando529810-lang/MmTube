@@ -48,6 +48,7 @@ class SettingsStore(private val context: Context) {
         val UPDATE_DISMISSED = stringPreferencesKey("update_dismissed_version")
         val DOWNLOAD_FOLDER = stringPreferencesKey("download_folder")
         val DOWNLOAD_FOLDER_VOLUME = stringPreferencesKey("download_folder_volume")
+        val LAST_MODE = stringPreferencesKey("last_mode")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -95,7 +96,8 @@ class SettingsStore(private val context: Context) {
             installPromptedVersion = this[Keys.INSTALL_PROMPTED] ?: "",
             dismissedUpdateVersion = this[Keys.UPDATE_DISMISSED] ?: "",
             downloadFolder = this[Keys.DOWNLOAD_FOLDER] ?: "",
-            downloadFolderVolume = this[Keys.DOWNLOAD_FOLDER_VOLUME] ?: "external_primary"
+            downloadFolderVolume = this[Keys.DOWNLOAD_FOLDER_VOLUME] ?: "external_primary",
+            lastMode = this[Keys.LAST_MODE] ?: ""
         )
     }
 
@@ -181,6 +183,10 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setUpdateDismissedVersion(v: String) {
         context.settingsDataStore.edit { it[Keys.UPDATE_DISMISSED] = v }
+    }
+
+    suspend fun setLastMode(mode: String) {
+        context.settingsDataStore.edit { it[Keys.LAST_MODE] = mode }
     }
 
     suspend fun setDownloadFolder(uri: String, volume: String = "external_primary") {

@@ -36,6 +36,7 @@ import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.HighQuality
 import androidx.compose.material.icons.rounded.HourglassTop
@@ -898,6 +899,7 @@ private fun PreviewSection(
                 if (!result.audioOnly && ui.mode != com.mmtube.app.data.DownloadMode.MP3 && result.formats.isNotEmpty()) {
                     FormatPickerRow(ui = ui, vm = vm, formats = result.formats)
                 }
+                TitleEditorRow(ui = ui, vm = vm, defaultTitle = result.title)
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1016,6 +1018,85 @@ private fun StatChipInline(text: String) {
             style = MmtubeType.LabelLarge.copy(fontSize = 11.sp),
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+        )
+    }
+}
+
+@Composable
+private fun TitleEditorRow(
+    ui: MainUiState,
+    vm: MainViewModel,
+    defaultTitle: String
+) {
+    val context = LocalContext.current
+    var showDialog by remember { mutableStateOf(false) }
+    var draft by remember { mutableStateOf("") }
+    val current = ui.customTitle.ifBlank { defaultTitle }
+    FrostedCard(
+        modifier = Modifier.fillMaxWidth().clickable {
+            draft = current
+            showDialog = true
+        },
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                Icons.Rounded.Description,
+                contentDescription = null,
+                tint = MmtubePalette.Aqua,
+                modifier = Modifier.size(18.dp)
+            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    context.getString(R.string.filename_label),
+                    style = MmtubeType.LabelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    current,
+                    style = MmtubeType.LabelLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1
+                )
+            }
+            Text(
+                context.getString(R.string.filename_edit),
+                style = MmtubeType.LabelSmall,
+                color = MmtubePalette.Aqua
+            )
+        }
+    }
+    if (showDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(context.getString(R.string.filename_label)) },
+            text = {
+                androidx.compose.material3.OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it.take(120) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        vm.setCustomTitle(draft.trim())
+                        showDialog = false
+                    }
+                ) {
+                    Text(context.getString(R.string.action_save), color = MmtubePalette.Aqua)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showDialog = false }) {
+                    Text(context.getString(R.string.action_cancel), color = MmtubePalette.Danger)
+                }
+            }
         )
     }
 }

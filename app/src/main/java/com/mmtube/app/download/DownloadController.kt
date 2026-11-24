@@ -71,6 +71,10 @@ class DownloadController(
     var pausedRequest: DownloadRequest? = null
         private set
 
+    /** When true the queue is held: the active download is paused and the next
+     *  item will not start automatically until the user resumes. */
+    val queuePaused = kotlinx.coroutines.flow.MutableStateFlow(false)
+
     /** Downloads waiting to start — surfaced for the reorderable queue UI. */
     val queue: kotlinx.coroutines.flow.MutableStateFlow<List<DownloadRequest>> =
         kotlinx.coroutines.flow.MutableStateFlow(queueStore.load())
@@ -124,6 +128,18 @@ class DownloadController(
         return removed
     }
 
+    /** Start the next queued item unless the user paused the queue. */
+    private fun maybeStartNext() {
+        if (queuePaused.value) return
+        if (_state.value is DownloadState.Paused) return
+        dequeueHead()?.let { queued ->
+            scope.launch {
+                kotlinx.coroutines.delay(400L)
+                start(queued)
+            }
+        }
+    }
+
     private fun dequeueHead(): DownloadRequest? {
         val list = queue.value
         if (list.isEmpty()) return null
@@ -132,9 +148,16 @@ class DownloadController(
         return head
     }
 
-    fun start(request: DownloadRequest) {
+    fun start(request: DownloadRequest, force: Boolean = false) {
+        if (!force && queuePaused.value && !request.resume) {
+            updateQueue(queue.value + request)
+            return
+        }
         if (job?.isActive == true) { updateQueue(queue.value + request); return }
-        if (_state.value is DownloadState.Paused) { updateQueue(queue.value + request); return }
+        if (!force && _state.value is DownloadState.Paused && !request.resume) {
+            updateQueue(queue.value + request)
+            return
+        }
         currentRequest = request
         queueStore.saveActive(request)
         _state.value = DownloadState.Preparing(request.title, request.mode)
@@ -182,40 +205,21 @@ class DownloadController(
                     .onFailure { Log.w(TAG, "Could not consume quota", it) }
                 _state.value = DownloadState.Completed(item)
                 // Auto-start the next queued download.
-                val queued = dequeueHead()
-                if (queued != null) {
-                    scope.launch {
-                        kotlinx.coroutines.delay(400L)
-                        start(queued)
-                    }
-                }
+                maybeStartNext()
             } catch (cancelled: CancellationException) {
-                if (_state.value !is DownloadState.Cancelled) {
+                if (_state.value !is DownloadState.Cancelled &&
+                    _state.value !is DownloadState.Paused
+                ) {
                     _state.value = DownloadState.Cancelled
                 }
-                dequeueHead()?.let { queued ->
-                    scope.launch {
-                        kotlinx.coroutines.delay(400L)
-                        start(queued)
-                    }
-                }
+                maybeStartNext()
             } catch (cancelled: YoutubeDL.CanceledException) {
                 _state.value = DownloadState.Cancelled
-                dequeueHead()?.let { queued ->
-                    scope.launch {
-                        kotlinx.coroutines.delay(400L)
-                        start(queued)
-                    }
-                }
+                maybeStartNext()
             } catch (error: Throwable) {
                 if (_state.value is DownloadState.Cancelled) return@launch
                 Log.w(TAG, "Download failed", error)
-                dequeueHead()?.let { queued ->
-                    scope.launch {
-                        kotlinx.coroutines.delay(400L)
-                        start(queued)
-                    }
-                }
+                maybeStartNext()
                 val kind = (error as? MmtubeException)?.kind ?: ErrorKind.DOWNLOAD
                 _state.value = DownloadState.Failed(
                     title = request.title,
@@ -260,7 +264,23 @@ class DownloadController(
     fun resume() {
         val request = pausedRequest ?: return
         pausedRequest = null
-        start(request.copy(resume = true))
+        start(request.copy(resume = true), force = true)
+    }
+
+    /** Hold the whole queue: pause the active download and stop auto-start. */
+    fun pauseQueue() {
+        queuePaused.value = true
+        if (job?.isActive == true) pause()
+    }
+
+    /** Release the queue and continue with the paused or next download. */
+    fun resumeQueue() {
+        queuePaused.value = false
+        if (pausedRequest != null) {
+            resume()
+        } else if (job?.isActive != true) {
+            dequeueHead()?.let { start(it) }
+        }
     }
 
     /** Called when Android 14+ ends a long-running data-sync foreground service.
@@ -336,9 +356,13 @@ class DownloadController(
                 val transient = isTransient(error)
                 if (!turboFallback && (!transient || attempt == maxAttempts - 1)) throw error
                 val line = if (turboFallback) {
-                    "Turbo failed — retrying with the native downloader"
+                    context.getString(com.mmtube.app.R.string.download_retry_turbo)
                 } else {
-                    "Connection lost — retrying (${attempt + 1}/$maxAttempts)"
+                    context.getString(
+                        com.mmtube.app.R.string.download_retry_connection,
+                        attempt + 1,
+                        maxAttempts
+                    )
                 }
                 Log.w(TAG, "$line: ${error.message}", error)
                 _state.value = DownloadState.Running(
@@ -354,9 +378,14 @@ class DownloadController(
                 kotlinx.coroutines.delay(if (turboFallback) 400L else 2_000L * (attempt + 1))
             }
         }
-        if (sawError) throw MmtubeException(ErrorKind.DOWNLOAD, "Download failed after $maxAttempts attempts")
+        if (sawError) {
+            throw MmtubeException(
+                ErrorKind.DOWNLOAD,
+                context.getString(com.mmtube.app.R.string.download_failed_attempts, maxAttempts)
+            )
+        }
         return findOutput(directory, request.mode, startedAt)
-            ?: throw MmtubeException(ErrorKind.DOWNLOAD, "Downloaded file was not found")
+            ?: throw MmtubeException(ErrorKind.DOWNLOAD, context.getString(com.mmtube.app.R.string.download_file_missing))
     }
 
     private fun isTransient(error: Throwable): Boolean {

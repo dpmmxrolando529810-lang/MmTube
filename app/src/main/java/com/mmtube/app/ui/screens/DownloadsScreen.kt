@@ -69,6 +69,8 @@ fun DownloadsScreen(
     var sort by remember { mutableStateOf(0) }
     var selection by remember { mutableStateOf(setOf<String>()) }
     var deleteSelectedConfirm by remember { mutableStateOf(false) }
+    var renameTarget by remember { mutableStateOf<HistoryItem?>(null) }
+    var renameText by remember { mutableStateOf("") }
 
     val active = ui.download
     val hasActive = active is DownloadState.Preparing || active is DownloadState.Running ||
@@ -89,7 +91,7 @@ fun DownloadsScreen(
             else -> list.sortedByDescending { it.createdAt }
         }
     }
-    val totalBytes = ui.history.sumOf { it.sizeBytes }
+    val totalBytes = if (ui.downloadedBytes > 0L) ui.downloadedBytes else ui.history.sumOf { it.sizeBytes }
     val selectedItems = ui.history.filter { it.id in selection }
 
     LazyColumn(
@@ -126,10 +128,25 @@ fun DownloadsScreen(
         }
         if (ui.queue.isNotEmpty()) {
             item {
-                SectionHeader(
-                    title = context.getString(R.string.queue_section, ui.queue.size),
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 0.dp)
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SectionHeader(
+                        title = context.getString(R.string.queue_section, ui.queue.size),
+                        modifier = Modifier.weight(1f)
+                    )
+                    androidx.compose.material3.TextButton(
+                        onClick = if (ui.queuePaused) vm::resumeQueue else vm::pauseQueue
+                    ) {
+                        Text(
+                            context.getString(
+                                if (ui.queuePaused) R.string.queue_resume_all else R.string.queue_pause_all
+                            ),
+                            color = MmtubePalette.Aqua
+                        )
+                    }
+                }
             }
             item {
                 QueuedDownloadsCard(queue = ui.queue, vm = vm)
@@ -278,6 +295,12 @@ fun DownloadsScreen(
                     selected = item.id in selection,
                     onToggleSelect = {
                         selection = if (item.id in selection) selection - item.id else selection + item.id
+                    },
+                    onCopyLink = { vm.copyHistoryLink(item) },
+                    onShareLink = { vm.shareHistoryLink(item) },
+                    onRename = {
+                        renameTarget = item
+                        renameText = item.title
                     }
                 )
             }
@@ -308,6 +331,36 @@ fun DownloadsScreen(
             },
             onDismiss = { clearAllConfirm = false },
             danger = true
+        )
+    }
+    renameTarget?.let { item ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { renameTarget = null },
+            title = { Text(context.getString(R.string.history_rename)) },
+            text = {
+                androidx.compose.material3.OutlinedTextField(
+                    value = renameText,
+                    onValueChange = { renameText = it },
+                    singleLine = true,
+                    label = { Text(context.getString(R.string.filename_label)) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        vm.renameHistory(item, renameText)
+                        renameTarget = null
+                    }
+                ) {
+                    Text(context.getString(R.string.action_save), color = MmtubePalette.Aqua)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { renameTarget = null }) {
+                    Text(context.getString(R.string.action_cancel), color = MmtubePalette.Danger)
+                }
+            }
         )
     }
     if (deleteSelectedConfirm) {

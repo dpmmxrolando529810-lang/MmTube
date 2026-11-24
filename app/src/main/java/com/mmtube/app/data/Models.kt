@@ -174,6 +174,13 @@ data class MediaFormatOption(
     val isVideo: Boolean
 )
 
+data class BatchFailure(val url: String, val reason: String)
+
+data class BatchReport(
+    val queued: Int,
+    val failures: List<BatchFailure>
+)
+
 data class ProbeResult(
     val url: String,
     val title: String,
@@ -319,5 +326,7 @@ data class SettingsSnapshot(
     val dismissedUpdateVersion: String = "",
     /** SAF tree URI (or preset value) chosen for downloaded files. */
     val downloadFolder: String = "",
-    val downloadFolderVolume: String = "external_primary"
+    val downloadFolderVolume: String = "external_primary",
+    /** Last quality mode picked by the user, remembered across links. */
+    val lastMode: String = ""
 )

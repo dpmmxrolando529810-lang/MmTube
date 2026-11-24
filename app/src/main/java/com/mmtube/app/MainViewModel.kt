@@ -49,6 +49,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class MainTab { HOME, DOWNLOADS, ACCOUNT }
 
@@ -89,7 +90,13 @@ data class MainUiState(
     val showCelebration: Boolean = false,
     val selectedFormatId: String? = null,
     val duplicatePrompt: com.mmtube.app.data.HistoryItem? = null,
-    val tempBytes: Long = 0L
+    val tempBytes: Long = 0L,
+    val downloadedBytes: Long = 0L,
+    val customTitle: String = "",
+    val clipboardLink: String? = null,
+    val batchReport: com.mmtube.app.data.BatchReport? = null,
+    val queuePaused: Boolean = false,
+    val notificationsEnabled: Boolean = true
 ) {
     val termsAccepted: Boolean get() = settings.acceptedTerms
 }
@@ -117,6 +124,11 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         viewModelScope.launch {
             container.settings.settings.collect { snapshot ->
                 _ui.update { it.copy(settings = snapshot) }
+            }
+        }
+        viewModelScope.launch {
+            container.downloads.queuePaused.collect { paused ->
+                _ui.update { it.copy(queuePaused = paused) }
             }
         }
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
@@ -178,6 +190,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             _ui.update { it.copy(reduceMotion = snap.reduceMotion) }
         }
         refreshStorageInfo()
+        refreshNotificationState()
         // What's New: show once per version upgrade.
         viewModelScope.launch {
             val snap = container.settings.snapshot()
@@ -341,7 +354,8 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                         it.copy(
                             link = result.url,
                             probe = ProbeUi.Success(result),
-                            mode = if (result.audioOnly) DownloadMode.MP3 else DownloadMode.MAX,
+                            mode = if (result.audioOnly) DownloadMode.MP3 else preferredMode(),
+                            customTitle = "",
                             selectedFormatId = null,
                             detected = result.platform,
                             pendingAutoDownload = false
@@ -361,6 +375,18 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun selectMode(mode: DownloadMode) {
         _ui.update { it.copy(mode = mode) }
+        viewModelScope.launch {
+            runCatching { container.settings.setLastMode(mode.key) }
+        }
+    }
+
+    private fun preferredMode(): DownloadMode {
+        val saved = _ui.value.settings.lastMode
+        return if (saved.isBlank()) DownloadMode.MAX else DownloadMode.fromKey(saved)
+    }
+
+    fun setCustomTitle(value: String) {
+        _ui.update { it.copy(customTitle = value.take(120)) }
     }
 
     fun startDownload() {
@@ -380,7 +406,16 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             val source = probe.webpageUrl ?: probe.url
             val duplicate = runCatching { container.history.snapshot() }
                 .getOrDefault(emptyList())
-                .firstOrNull { it.sourceUrl.isNotBlank() && it.sourceUrl == source }
+                .firstOrNull { item ->
+                    when {
+                        item.sourceUrl.isNotBlank() -> UrlUtils.sameVideo(item.sourceUrl, source)
+                        // History saved before sourceUrl existed: fall back to title + duration.
+                        item.title.trim().equals(probe.title.trim(), ignoreCase = true) &&
+                            (probe.durationSeconds <= 0 || item.durationSeconds <= 0 ||
+                                kotlin.math.abs(item.durationSeconds - probe.durationSeconds) <= 2)
+                        else -> false
+                    }
+                }
             if (duplicate != null && duplicateAck != source) {
                 _ui.update { it.copy(duplicatePrompt = duplicate) }
                 return@launch
@@ -401,7 +436,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             val mode = _ui.value.mode
             val request = DownloadRequest(
                 url = probe.webpageUrl ?: probe.url,
-                title = probe.title,
+                title = state.customTitle.trim().ifBlank { probe.title },
                 platform = probe.platform,
                 mode = mode,
                 thumbnail = probe.thumbnail,
@@ -439,9 +474,62 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun refreshStorageInfo() {
         viewModelScope.launch {
-            val bytes = runCatching { container.downloads.tempBytes() }.getOrDefault(0L)
-            _ui.update { it.copy(tempBytes = bytes) }
+            val temp = runCatching { container.downloads.tempBytes() }.getOrDefault(0L)
+            val history = runCatching { container.history.snapshot() }.getOrDefault(emptyList())
+            val downloaded = history.sumOf { item ->
+                val path = item.localPath
+                if (!path.isNullOrBlank()) {
+                    runCatching { File(path).length() }.getOrDefault(0L).takeIf { it > 0L }
+                        ?: item.sizeBytes
+                } else {
+                    item.sizeBytes
+                }
+            }
+            _ui.update { it.copy(tempBytes = temp, downloadedBytes = downloaded) }
         }
+    }
+
+    fun refreshNotificationState() {
+        val enabled = runCatching {
+            androidx.core.app.NotificationManagerCompat.from(context).areNotificationsEnabled()
+        }.getOrDefault(true)
+        _ui.update { it.copy(notificationsEnabled = enabled) }
+    }
+
+    /** Called from the UI on every resume; reads clipboard only while foregrounded. */
+    fun onAppForeground() {
+        refreshNotificationState()
+        refreshStorageInfo()
+        checkClipboard()
+    }
+
+    private var lastClipboardSuggestion: String? = null
+
+    private fun checkClipboard() {
+        val text = runCatching {
+            val manager = context.getSystemService(android.content.ClipboardManager::class.java)
+            manager?.primaryClip?.takeIf { it.itemCount > 0 }
+                ?.getItemAt(0)?.coerceToText(context)?.toString()
+        }.getOrNull()
+        val url = UrlUtils.extractUrl(text) ?: return
+        if (UrlUtils.detectPlatform(url) == Platform.OTHER) return
+        if (url == lastClipboardSuggestion) return
+        lastClipboardSuggestion = url
+        _ui.update { it.copy(clipboardLink = url) }
+    }
+
+    fun useClipboardLink() {
+        val link = _ui.value.clipboardLink ?: return
+        _ui.update { it.copy(clipboardLink = null) }
+        pasteLink(link)
+    }
+
+    fun dismissClipboardLink() {
+        _ui.update { it.copy(clipboardLink = null) }
+    }
+
+    fun dismissBatchReport() {
+        _ui.update { it.copy(batchReport = null) }
     }
 
     fun clearTempFiles() {
@@ -464,24 +552,60 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
         }
         viewModelScope.launch {
             var queued = 0
+            val failures = mutableListOf<com.mmtube.app.data.BatchFailure>()
+            val seen = mutableSetOf<String>()
+            val history = runCatching { container.history.snapshot() }.getOrDefault(emptyList())
             for (rawUrl in urls) {
-                val normalized = UrlUtils.normalize(rawUrl) ?: continue
-                container.media.probe(normalized).getOrNull()?.let { result ->
-                    val mode = if (result.audioOnly) DownloadMode.MP3 else DownloadMode.MAX
-                    val qualityLabel = if (mode == DownloadMode.MP3) "MP3"
-                        else com.mmtube.app.util.Formatters.qualityLabel(result.maxHeight, result.maxFps)
-                    val request = com.mmtube.app.download.DownloadRequest(
-                        url = result.webpageUrl ?: result.url,
-                        title = result.title,
-                        platform = result.platform,
-                        mode = mode,
-                        thumbnail = result.thumbnail,
-                        durationSeconds = result.durationSeconds,
-                        qualityLabel = qualityLabel
+                val normalized = UrlUtils.normalize(rawUrl)
+                if (normalized == null) {
+                    failures += com.mmtube.app.data.BatchFailure(
+                        rawUrl,
+                        context.getString(R.string.batch_reason_invalid)
                     )
-                    DownloadService.start(context, request)
-                    queued += 1
+                    continue
                 }
+                val key = UrlUtils.canonicalKey(normalized) ?: normalized
+                if (!seen.add(key)) {
+                    failures += com.mmtube.app.data.BatchFailure(
+                        rawUrl,
+                        context.getString(R.string.batch_reason_same_link)
+                    )
+                    continue
+                }
+                val probe = container.media.probe(normalized)
+                val result = probe.getOrNull()
+                if (result == null) {
+                    val kind = (probe.exceptionOrNull() as? MmtubeException)?.kind ?: ErrorKind.GENERIC
+                    failures += com.mmtube.app.data.BatchFailure(rawUrl, errorText(kind))
+                    continue
+                }
+                val duplicate = history.firstOrNull { item ->
+                    item.sourceUrl.isNotBlank() && UrlUtils.sameVideo(item.sourceUrl, normalized)
+                }
+                if (duplicate != null) {
+                    failures += com.mmtube.app.data.BatchFailure(
+                        rawUrl,
+                        context.getString(R.string.batch_reason_duplicate)
+                    )
+                    continue
+                }
+                val mode = if (result.audioOnly) DownloadMode.MP3 else preferredMode()
+                val qualityLabel = if (mode == DownloadMode.MP3) "MP3"
+                    else com.mmtube.app.util.Formatters.qualityLabel(result.maxHeight, result.maxFps)
+                val request = com.mmtube.app.download.DownloadRequest(
+                    url = result.webpageUrl ?: result.url,
+                    title = result.title,
+                    platform = result.platform,
+                    mode = mode,
+                    thumbnail = result.thumbnail,
+                    durationSeconds = result.durationSeconds,
+                    qualityLabel = qualityLabel
+                )
+                DownloadService.start(context, request)
+                queued += 1
+            }
+            _ui.update {
+                it.copy(batchReport = com.mmtube.app.data.BatchReport(queued, failures))
             }
             event(UiEvent.Message(context.getString(R.string.batch_queued, queued)))
         }
@@ -1186,9 +1310,188 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     // ---------- History ----------
 
     fun openHistory(item: HistoryItem) {
+        if (item.mimeType.startsWith("video")) {
+            runCatching {
+                PlayerActivity.start(context, Uri.parse(item.uri), item.title, item.id)
+            }.onSuccess { return }.onFailure {
+                Log.w("MMTube", "Player launch failed", it)
+            }
+        }
         val opened = context.openFile(Uri.parse(item.uri), item.mimeType)
         if (!opened) {
             event(UiEvent.Message(context.getString(R.string.download_open_failed)))
+        }
+    }
+
+    fun copyHistoryLink(item: HistoryItem) {
+        val link = item.sourceUrl
+        if (link.isBlank()) {
+            event(UiEvent.Message(context.getString(R.string.history_no_link)))
+            return
+        }
+        runCatching { context.copyText("MMTube", link) }
+        event(UiEvent.Message(context.getString(R.string.link_copied)))
+    }
+
+    fun shareHistoryLink(item: HistoryItem) {
+        if (item.sourceUrl.isBlank()) {
+            event(UiEvent.Message(context.getString(R.string.history_no_link)))
+            return
+        }
+        runCatching {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "text/plain"
+                putExtra(Intent.EXTRA_TEXT, item.sourceUrl)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(
+                Intent.createChooser(intent, item.title)
+                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            )
+        }
+    }
+
+    fun renameHistory(item: HistoryItem, newName: String) {
+        val name = newName.trim()
+        if (name.isBlank()) return
+        viewModelScope.launch {
+            val renamed = runCatching { container.exporter.rename(item, name) }.getOrNull()
+            if (renamed == null) {
+                event(UiEvent.Message(context.getString(R.string.history_rename_failed)))
+            } else {
+                container.history.replace(
+                    item.copy(
+                        title = renamed.displayName.substringBeforeLast('.'),
+                        uri = renamed.uri.toString(),
+                        localPath = renamed.localPath
+                    )
+                )
+                refreshStorageInfo()
+                event(UiEvent.Message(context.getString(R.string.history_renamed)))
+            }
+        }
+    }
+
+    fun pauseQueue() = container.downloads.pauseQueue()
+
+    fun resumeQueue() = container.downloads.resumeQueue()
+
+    fun exportBackup(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val ok = runCatching {
+                val history = container.history.snapshot()
+                val settings = _ui.value.settings
+                val root = org.json.JSONObject()
+                root.put("app", "MMTube")
+                root.put("version", 1)
+                val s = org.json.JSONObject()
+                s.put("theme", settings.theme.name)
+                s.put("language", settings.language)
+                s.put("turbo", settings.turbo)
+                s.put("dynamicColor", settings.dynamicColor)
+                s.put("colorblindProfile", settings.colorblindProfile)
+                s.put("reduceMotion", settings.reduceMotion)
+                s.put("downloadFolder", settings.downloadFolder)
+                s.put("lastMode", settings.lastMode)
+                root.put("settings", s)
+                val array = org.json.JSONArray()
+                history.forEach { item ->
+                    array.put(org.json.JSONObject().apply {
+                        put("id", item.id)
+                        put("title", item.title)
+                        put("sourceUrl", item.sourceUrl)
+                        put("platform", item.platform)
+                        put("quality", item.quality)
+                        put("sizeBytes", item.sizeBytes)
+                        put("mimeType", item.mimeType)
+                        put("uri", item.uri)
+                        put("localPath", item.localPath ?: "")
+                        put("thumbnail", item.thumbnail ?: "")
+                        put("durationSeconds", item.durationSeconds)
+                        put("createdAt", item.createdAt)
+                        put("mode", item.mode)
+                        put("savedToGallery", item.savedToGallery)
+                    })
+                }
+                root.put("history", array)
+                context.contentResolver.openOutputStream(uri)?.use { output ->
+                    output.write(root.toString(2).toByteArray(Charsets.UTF_8))
+                } ?: error("Cannot open backup file")
+            }
+            withContext(Dispatchers.Main) {
+                event(UiEvent.Message(
+                    context.getString(if (ok.isSuccess) R.string.backup_exported else R.string.backup_failed)
+                ))
+            }
+        }
+    }
+
+    fun importBackup(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = runCatching {
+                val text = context.contentResolver.openInputStream(uri)
+                    ?.bufferedReader()?.use { it.readText() } ?: error("Cannot read backup")
+                val root = org.json.JSONObject(text)
+                val array = root.optJSONArray("history") ?: org.json.JSONArray()
+                var imported = 0
+                for (i in 0 until array.length()) {
+                    val o = array.optJSONObject(i) ?: continue
+                    val title = o.optString("title").takeIf { it.isNotBlank() } ?: continue
+                    val item = HistoryItem(
+                        id = o.optString("id").takeIf { it.isNotBlank() } ?: java.util.UUID.randomUUID().toString(),
+                        title = title,
+                        sourceUrl = o.optString("sourceUrl"),
+                        platform = o.optString("platform", Platform.OTHER.name),
+                        quality = o.optString("quality"),
+                        sizeBytes = o.optLong("sizeBytes"),
+                        mimeType = o.optString("mimeType", "video/mp4"),
+                        uri = o.optString("uri"),
+                        localPath = o.optString("localPath").takeIf { it.isNotBlank() },
+                        thumbnail = o.optString("thumbnail").takeIf { it.isNotBlank() },
+                        durationSeconds = o.optInt("durationSeconds"),
+                        createdAt = o.optLong("createdAt", System.currentTimeMillis()),
+                        mode = o.optString("mode", "max"),
+                        savedToGallery = o.optBoolean("savedToGallery")
+                    )
+                    container.history.add(item)
+                    imported++
+                }
+                root.optJSONObject("settings")?.let { saved ->
+                    if (saved.has("theme")) {
+                        runCatching {
+                            container.settings.setTheme(ThemeMode.valueOf(saved.optString("theme")))
+                        }
+                    }
+                    if (saved.has("language")) {
+                        val tag = saved.optString("language")
+                        container.settings.setLanguage(tag)
+                        val locales = if (tag.isBlank()) LocaleListCompat.getEmptyLocaleList()
+                        else LocaleListCompat.forLanguageTags(tag)
+                        withContext(Dispatchers.Main) {
+                            AppCompatDelegate.setApplicationLocales(locales)
+                        }
+                    }
+                    if (saved.has("turbo")) container.settings.setTurbo(saved.optBoolean("turbo"))
+                    if (saved.has("dynamicColor")) container.settings.setDynamicColor(saved.optBoolean("dynamicColor"))
+                    if (saved.has("colorblindProfile")) {
+                        container.settings.setColorblindProfile(saved.optString("colorblindProfile"))
+                    }
+                    if (saved.has("reduceMotion")) container.settings.setReduceMotion(saved.optBoolean("reduceMotion"))
+                    if (saved.has("downloadFolder")) {
+                        container.settings.setDownloadFolder(saved.optString("downloadFolder"))
+                    }
+                    if (saved.has("lastMode")) container.settings.setLastMode(saved.optString("lastMode"))
+                }
+                imported
+            }
+            withContext(Dispatchers.Main) {
+                result.onSuccess { count ->
+                    refreshStorageInfo()
+                    event(UiEvent.Message(context.getString(R.string.backup_imported, count)))
+                }.onFailure {
+                    event(UiEvent.Message(context.getString(R.string.backup_failed)))
+                }
+            }
         }
     }
 

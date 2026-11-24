@@ -91,6 +91,17 @@ fun AppRoot(
     onExit: () -> Unit
 ) {
     val ui by viewModel.ui.collectAsStateWithLifecycle()
+    val appContext = LocalContext.current
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.onAppForeground()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     MmtubeTheme(
         themeMode = ui.settings.theme,
@@ -214,11 +225,11 @@ fun AppRoot(
             if (ui.forceUpdate) {
                 AlertDialog(
                     onDismissRequest = { /* blocking */ },
-                    title = { Text("Update required") },
-                    text = { Text("ဒီ version က အဟောင်းဖြစ်သွားပြီ — အသစ် update အဆင်မပြေရင် app အသုံးမပြုနိုင်တော့ပါ။ GitHub releases မှ နောက်ဆုံးဗားရှင်းကို ဒေါင်းလုဒ်လုပ်ပါ။") },
+                    title = { Text(appContext.getString(R.string.update_required_title)) },
+                    text = { Text(appContext.getString(R.string.update_required_body)) },
                     confirmButton = {
                         TextButton(onClick = { viewModel.openUpdatePage() }) {
-                            Text("Update လုပ်ရန်", color = MmtubePalette.Aqua)
+                            Text(appContext.getString(R.string.update_required_action), color = MmtubePalette.Aqua)
                         }
                     }
                 )
@@ -235,6 +246,59 @@ fun AppRoot(
                         }
                     },
                     containerColor = Color(0xFF0C3B2F)
+                )
+            }
+            val clipboardLink = ui.clipboardLink
+            if (clipboardLink != null) {
+                AlertDialog(
+                    onDismissRequest = viewModel::dismissClipboardLink,
+                    title = { Text(appContext.getString(R.string.clipboard_title)) },
+                    text = { Text(clipboardLink) },
+                    confirmButton = {
+                        TextButton(onClick = viewModel::useClipboardLink) {
+                            Text(appContext.getString(R.string.clipboard_use), color = MmtubePalette.Aqua)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = viewModel::dismissClipboardLink) {
+                            Text(appContext.getString(R.string.action_cancel), color = MmtubePalette.Danger)
+                        }
+                    }
+                )
+            }
+            val batchReport = ui.batchReport
+            if (batchReport != null && (batchReport.failures.isNotEmpty() || batchReport.queued == 0)) {
+                AlertDialog(
+                    onDismissRequest = viewModel::dismissBatchReport,
+                    title = { Text(appContext.getString(R.string.batch_report_title)) },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                appContext.getString(R.string.batch_report_queued, batchReport.queued)
+                            )
+                            batchReport.failures.take(8).forEach { failure ->
+                                Text(
+                                    "• " + failure.url.take(60) + " — " + failure.reason,
+                                    style = MmtubeType.LabelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            if (batchReport.failures.size > 8) {
+                                Text(
+                                    appContext.getString(
+                                        R.string.batch_report_more,
+                                        batchReport.failures.size - 8
+                                    ),
+                                    style = MmtubeType.LabelSmall
+                                )
+                            }
+                        }
+                    },
+                    confirmButton = {
+                        TextButton(onClick = viewModel::dismissBatchReport) {
+                            Text(appContext.getString(R.string.action_ok), color = MmtubePalette.Aqua)
+                        }
+                    }
                 )
             }
             val duplicate = ui.duplicatePrompt
@@ -290,12 +354,13 @@ fun AppRoot(
 private fun WhatsNewDialog(version: String, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val items = listOf(
-        "Format picker နဲ့ လိုချင်တဲ့ resolution / fps / codec ကို တိတိကျကျ ရွေးနိုင်တယ်",
-        "သိမ်းဆည်းမယ့် folder ကို ကိုယ်ကြိုက်ရာ ရွေးနိုင်တယ်",
-        "ငွေပေးချေမှု အတည်ပြု/ငြင်းပယ်ချက်ကို app ပိတ်ထားလည်း notification နဲ့ သိနိုင်တယ်",
-        "Network ပြတ်ရင် အလိုအလျောက် ပြန်ကြိုးစားပြီး မလုံးတဲ့ ဖိုင်တွေ ရှင်းပေးတယ်",
-        "တူတဲ့ link ထပ်ဒေါင်းမယ်ဆို သတိပေးတယ်; မှတ်တမ်းမှာ ရှာ/ရွေးဖျက်/စီလို့ရတယ်",
-        "Admin မှာ အများကြီး ငြင်းပယ်နိုင်ပြီး နောက်ကျနေတဲ့ payment တွေ ပိုထင်ရှားတယ်"
+        "App ထဲမှာတင် ဗီဒီယို ကြည့်နိုင်ပြီး ရပ်ခဲ့တဲ့နေရာက ဆက်ကြည့်နိုင်တယ် (speed / PiP ပါ)",
+        "Clipboard ထဲမှာ link ရှိရင် app ဖွင့်တာနဲ့ ဒေါင်းမလားလို့ မေးတယ်",
+        "မဒေါင်းခင် ဖိုင်အမည်ကို ကြိုတင်ပြင်နိုင်တယ်",
+        "History နဲ့ settings ကို backup ထုတ်/ပြန်ထည့် လုပ်နိုင်တယ်",
+        "Queue ကို အားလုံး pause/resume လုပ်နိုင်တယ်",
+        "Batch link တွေမှာ မရတဲ့ link ကို အကြောင်းပြချက်နဲ့ ပြတယ်",
+        "မှတ်တမ်းမှာ link ကူး/မျှဝေ၊ ဖိုင်အမည် ပြင်နိုင်တယ်"
     )
     AlertDialog(
         onDismissRequest = onDismiss,
