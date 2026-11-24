@@ -320,6 +320,67 @@ fun SettingsScreen(
                 checked = ui.settings.verifyDownloads,
                 onChange = vm::setVerifyDownloads
             )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_check_formats),
+                description = context.getString(R.string.settings_check_formats_desc),
+                checked = ui.settings.checkFormats,
+                onChange = vm::setCheckFormats
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_sort_force),
+                description = context.getString(R.string.settings_sort_force_desc),
+                checked = ui.settings.sortForce,
+                onChange = vm::setSortForce
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_force_ipv4),
+                description = context.getString(R.string.settings_force_ipv4_desc),
+                checked = ui.settings.forceIpv4,
+                onChange = vm::setForceIpv4
+            )
+            SettingsValueRow(
+                icon = Icons.Rounded.Speed,
+                label = context.getString(R.string.settings_throttled_rate),
+                value = if (ui.settings.throttledRateKb == 0) {
+                    context.getString(R.string.settings_off)
+                } else {
+                    "${ui.settings.throttledRateKb} KB/s"
+                }
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+                listOf(0, 100, 200, 500).forEach { kb ->
+                    androidx.compose.material3.TextButton(
+                        onClick = { vm.setThrottledRate(kb) },
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                            contentColor = if (ui.settings.throttledRateKb == kb) MmtubePalette.Aqua
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) { Text(if (kb == 0) context.getString(R.string.settings_off) else "$kb K") }
+                }
+            }
+            SettingsValueRow(
+                icon = Icons.Rounded.Speed,
+                label = context.getString(R.string.settings_buffer_size),
+                value = if (ui.settings.bufferSizeKb == 0) {
+                    context.getString(R.string.settings_default)
+                } else {
+                    "${ui.settings.bufferSizeKb} KB"
+                }
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+                listOf(0, 16, 64, 256).forEach { kb ->
+                    androidx.compose.material3.TextButton(
+                        onClick = { vm.setBufferSize(kb) },
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                            contentColor = if (ui.settings.bufferSizeKb == kb) MmtubePalette.Aqua
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) { Text(if (kb == 0) context.getString(R.string.settings_default) else "$kb K") }
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
                 listOf("mp3", "opus", "flac").forEach { audio ->
                     androidx.compose.material3.TextButton(

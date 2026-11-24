@@ -372,7 +372,8 @@ private fun WhatsNewDialog(version: String, onDismiss: () -> Unit) {
         "Direct HTTPS progressive ရွေးချယ်မှု၊ RTT အလိုက် chunk၊ storage-write အလိုက် concurrency, probe payload လျှော့ချ",
         "HDR color metadata ပြန်စစ်, surround audio ရွေးခွင့်, preallocation, thermal-aware speed, အမြန်ဆုံး temp storage",
         "Bits-per-pixel target, audio codec compatibility, player HDR warning, Retry-After, batch တစ် process တည်းနဲ့ analyze",
-        "10-bit SDR bonus, VFR check, LUFS target, host circuit breaker, prefetch, resume chunk alignment, verify toggle"
+        "10-bit SDR bonus, VFR check, LUFS target, host circuit breaker, prefetch, resume chunk alignment, verify toggle",
+        "Throttled-rate, check-formats, buffer tuning, IPv4, sort-force နဲ့ batch တစ် session တည်း"
     )
     AlertDialog(
         onDismissRequest = onDismiss,

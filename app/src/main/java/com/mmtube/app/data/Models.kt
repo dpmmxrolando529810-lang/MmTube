@@ -359,5 +359,10 @@ data class SettingsSnapshot(
     val preferMultichannel: Boolean = false,
     val autoStorage: Boolean = true,
     val loudnessTarget: Int = 16,
-    val verifyDownloads: Boolean = true
+    val verifyDownloads: Boolean = true,
+    val throttledRateKb: Int = 0,
+    val checkFormats: Boolean = false,
+    val bufferSizeKb: Int = 0,
+    val forceIpv4: Boolean = false,
+    val sortForce: Boolean = false
 )

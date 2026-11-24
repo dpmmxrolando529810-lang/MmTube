@@ -61,6 +61,11 @@ class SettingsStore(private val context: Context) {
         val AUTO_STORAGE = booleanPreferencesKey("auto_storage")
         val LOUDNESS = intPreferencesKey("loudness_target")
         val VERIFY = booleanPreferencesKey("verify_downloads")
+        val THROTTLED_RATE = intPreferencesKey("throttled_rate_kb")
+        val CHECK_FORMATS = booleanPreferencesKey("check_formats")
+        val BUFFER_KB = intPreferencesKey("buffer_size_kb")
+        val FORCE_IPV4 = booleanPreferencesKey("force_ipv4")
+        val SORT_FORCE = booleanPreferencesKey("sort_force")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -125,7 +130,16 @@ class SettingsStore(private val context: Context) {
             preferMultichannel = this[Keys.PREFER_MULTICHANNEL] ?: false,
             autoStorage = this[Keys.AUTO_STORAGE] ?: true,
             loudnessTarget = this[Keys.LOUDNESS]?.takeIf { it in listOf(14, 16, 18) } ?: 16,
-            verifyDownloads = this[Keys.VERIFY] ?: true
+            verifyDownloads = this[Keys.VERIFY] ?: true,
+            throttledRateKb = this[Keys.THROTTLED_RATE]?.takeIf {
+                it in listOf(0, 100, 200, 500)
+            } ?: 0,
+            checkFormats = this[Keys.CHECK_FORMATS] ?: false,
+            bufferSizeKb = this[Keys.BUFFER_KB]?.takeIf {
+                it in listOf(0, 16, 64, 256)
+            } ?: 0,
+            forceIpv4 = this[Keys.FORCE_IPV4] ?: false,
+            sortForce = this[Keys.SORT_FORCE] ?: false
         )
     }
 
@@ -211,6 +225,26 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setUpdateDismissedVersion(v: String) {
         context.settingsDataStore.edit { it[Keys.UPDATE_DISMISSED] = v }
+    }
+
+    suspend fun setSortForce(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.SORT_FORCE] = enabled }
+    }
+
+    suspend fun setThrottledRate(kb: Int) {
+        context.settingsDataStore.edit { it[Keys.THROTTLED_RATE] = kb }
+    }
+
+    suspend fun setCheckFormats(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.CHECK_FORMATS] = enabled }
+    }
+
+    suspend fun setBufferSize(kb: Int) {
+        context.settingsDataStore.edit { it[Keys.BUFFER_KB] = kb }
+    }
+
+    suspend fun setForceIpv4(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.FORCE_IPV4] = enabled }
     }
 
     suspend fun setLoudnessTarget(value: Int) {

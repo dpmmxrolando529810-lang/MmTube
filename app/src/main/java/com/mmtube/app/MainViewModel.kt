@@ -501,7 +501,12 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 preserveAudio = state.settings.preserveAudioDynamics,
                 autoChunk = state.settings.autoChunk,
                 loudnessTarget = state.settings.loudnessTarget,
-                verify = state.settings.verifyDownloads
+                verify = state.settings.verifyDownloads,
+                throttledRateKb = state.settings.throttledRateKb,
+                checkFormats = state.settings.checkFormats,
+                bufferSizeKb = state.settings.bufferSizeKb,
+                forceIpv4 = state.settings.forceIpv4,
+                sortForce = state.settings.sortForce
             )
             DownloadService.start(context, request)
             refreshStorageInfo()
@@ -544,7 +549,12 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             preserveAudio = _ui.value.settings.preserveAudioDynamics,
             autoChunk = _ui.value.settings.autoChunk,
             loudnessTarget = _ui.value.settings.loudnessTarget,
-            verify = _ui.value.settings.verifyDownloads
+            verify = _ui.value.settings.verifyDownloads,
+            throttledRateKb = _ui.value.settings.throttledRateKb,
+            checkFormats = _ui.value.settings.checkFormats,
+            bufferSizeKb = _ui.value.settings.bufferSizeKb,
+            forceIpv4 = _ui.value.settings.forceIpv4,
+            sortForce = _ui.value.settings.sortForce
         )
         DownloadService.start(context, request)
         event(UiEvent.Message(context.getString(R.string.fast_start_started)))
@@ -698,6 +708,7 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             val analysed = runCatching {
                 container.media.probeMany(candidates.map { it.first })
             }.getOrDefault(emptyMap())
+            val batchRequests = mutableListOf<com.mmtube.app.download.DownloadRequest>()
             for ((normalized, rawUrl) in candidates) {
                 val probe = analysed[normalized]
                 val result = probe?.getOrNull()
@@ -728,10 +739,20 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     autoChunk = _ui.value.settings.autoChunk,
                     memoryKey = UrlUtils.canonicalKey(normalized).orEmpty(),
                     loudnessTarget = _ui.value.settings.loudnessTarget,
-                    verify = _ui.value.settings.verifyDownloads
+                    verify = _ui.value.settings.verifyDownloads,
+                    throttledRateKb = _ui.value.settings.throttledRateKb,
+                    checkFormats = _ui.value.settings.checkFormats,
+                    bufferSizeKb = _ui.value.settings.bufferSizeKb,
+                    forceIpv4 = _ui.value.settings.forceIpv4,
+                    sortForce = _ui.value.settings.sortForce
                 )
-                DownloadService.start(context, request)
+                batchRequests += request
                 queued += 1
+            }
+            if (batchRequests.size == 1) {
+                DownloadService.start(context, batchRequests.first())
+            } else {
+                DownloadService.startBatch(context, batchRequests)
             }
             _ui.update {
                 it.copy(batchReport = com.mmtube.app.data.BatchReport(queued, failures))
@@ -1717,6 +1738,26 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setLoudnessTarget(value: Int) {
         viewModelScope.launch { container.settings.setLoudnessTarget(value) }
+    }
+
+    fun setThrottledRate(kb: Int) {
+        viewModelScope.launch { container.settings.setThrottledRate(kb) }
+    }
+
+    fun setCheckFormats(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setCheckFormats(enabled) }
+    }
+
+    fun setBufferSize(kb: Int) {
+        viewModelScope.launch { container.settings.setBufferSize(kb) }
+    }
+
+    fun setForceIpv4(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setForceIpv4(enabled) }
+    }
+
+    fun setSortForce(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setSortForce(enabled) }
     }
 
     fun setVerifyDownloads(enabled: Boolean) {

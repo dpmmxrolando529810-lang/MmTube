@@ -72,6 +72,11 @@ data class DownloadRequest(
     val autoChunk: Boolean = true,
     val loudnessTarget: Int = 16,
     val verify: Boolean = true,
+    val throttledRateKb: Int = 0,
+    val checkFormats: Boolean = false,
+    val bufferSizeKb: Int = 0,
+    val forceIpv4: Boolean = false,
+    val sortForce: Boolean = false,
     /** Stable identity for reorderable queue UI. */
     val queueId: String = java.util.UUID.randomUUID().toString()
 )
@@ -511,6 +516,14 @@ class DownloadController(
 
     fun isActive(): Boolean = job?.isActive == true
 
+    /** Queues a whole batch in one controller/session instead of N service starts. */
+    fun startBatch(requests: List<DownloadRequest>) {
+        if (requests.isEmpty()) return
+        val first = requests.first()
+        updateQueue(requests.drop(1) + queue.value)
+        start(first, force = true)
+    }
+
     private suspend fun downloadWithFallback(
         request: DownloadRequest,
         directory: File,
@@ -776,6 +789,16 @@ class DownloadController(
             addOption("--fragment-retries", "30")
             addOption("--extractor-retries", "3")
             addOption("--concurrent-fragments", concurrency.toString())
+            if (request.throttledRateKb > 0) {
+                addOption("--throttled-rate", "${request.throttledRateKb}K")
+            }
+            if (request.checkFormats) addOption("--check-formats")
+            if (request.bufferSizeKb > 0) {
+                addOption("--buffer-size", "${request.bufferSizeKb}K")
+                addOption("--resize-buffer")
+            }
+            if (request.forceIpv4) addOption("--force-ipv4")
+            if (request.sortForce) addOption("--format-sort-force")
             if (config.rateLimitMb > 0) {
                 addOption("--limit-rate", "${config.rateLimitMb}M")
             }

@@ -607,4 +607,14 @@ Firebase project: %4$s</string>
     <string name="settings_verify_downloads_desc">Check resolution, fps, audio and frame rate after saving (small speed cost)</string>
     <string name="quality_vfr">Variable frame rate detected (~%1$.1f fps)</string>
     <string name="batch_reason_host_blocked">Host %1$s is failing — skipped for now</string>
+    <string name="settings_check_formats">Check formats before download</string>
+    <string name="settings_check_formats_desc">Verify each format is downloadable (avoids late 403 errors, slower)</string>
+    <string name="settings_sort_force">Force our sort order</string>
+    <string name="settings_sort_force_desc">Ignore the site\'s own format preference entirely</string>
+    <string name="settings_force_ipv4">Force IPv4</string>
+    <string name="settings_force_ipv4_desc">Use IPv4 only when IPv6 routes are slow or broken</string>
+    <string name="settings_throttled_rate">Throttled-rate recovery</string>
+    <string name="settings_buffer_size">Download buffer size</string>
+    <string name="settings_off">Off</string>
+    <string name="settings_default">Default</string>
 </resources>
