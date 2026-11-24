@@ -227,7 +227,6 @@ class DownloadController(
                     throw MmtubeException(ErrorKind.ENGINE, "Engine not ready")
                 }
                 startWatchdog()
-                val directory = downloadDirectory(config.speedMode).apply { mkdirs() }
                 val settingsSnapshot = settingsStore.snapshot()
                 val turbo = settingsSnapshot.turbo
                 observedRetries = 0
@@ -242,17 +241,17 @@ class DownloadController(
                     "aggressive" -> 40
                     else -> 24
                 }
-                val supportsRanges = RangeProbe.supports(request.url)
                 val config = SpeedConfig(
                     concurrency = base,
                     chunkMb = settingsSnapshot.chunkMb,
                     speedMode = settingsSnapshot.speedMode,
                     audioFormat = settingsSnapshot.audioFormat,
                     parallelStreams = settingsSnapshot.parallelStreams,
-                    supportsRanges = supportsRanges,
+                    supportsRanges = RangeProbe.supports(request.url),
                     network = network,
                     adaptive = settingsSnapshot.adaptiveProfile
                 )
+                val directory = downloadDirectory(config.speedMode).apply { mkdirs() }
                 val file = downloadWithFallback(request, directory, turbo, config, startedAt)
                 _state.value = DownloadState.Saving(request.title, request.mode)
                 val exported = exporter.export(
