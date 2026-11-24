@@ -52,6 +52,9 @@ class SettingsStore(private val context: Context) {
         val TURBO_PROFILE = stringPreferencesKey("turbo_profile")
         val CHUNK_MB = intPreferencesKey("chunk_mb")
         val SPEED_MODE = booleanPreferencesKey("speed_mode")
+        val AUDIO_FORMAT = stringPreferencesKey("audio_format")
+        val ADAPTIVE_PROFILE = booleanPreferencesKey("adaptive_profile")
+        val PARALLEL_STREAMS = booleanPreferencesKey("parallel_streams")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -105,7 +108,12 @@ class SettingsStore(private val context: Context) {
                 it in listOf("standard", "balanced", "aggressive")
             } ?: "balanced",
             chunkMb = this[Keys.CHUNK_MB]?.takeIf { it in listOf(1, 2, 4) } ?: 1,
-            speedMode = this[Keys.SPEED_MODE] ?: false
+            speedMode = this[Keys.SPEED_MODE] ?: false,
+            audioFormat = this[Keys.AUDIO_FORMAT]?.takeIf {
+                it in listOf("mp3", "opus", "flac")
+            } ?: "mp3",
+            adaptiveProfile = this[Keys.ADAPTIVE_PROFILE] ?: true,
+            parallelStreams = this[Keys.PARALLEL_STREAMS] ?: false
         )
     }
 
@@ -191,6 +199,18 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setUpdateDismissedVersion(v: String) {
         context.settingsDataStore.edit { it[Keys.UPDATE_DISMISSED] = v }
+    }
+
+    suspend fun setAudioFormat(value: String) {
+        context.settingsDataStore.edit { it[Keys.AUDIO_FORMAT] = value }
+    }
+
+    suspend fun setAdaptiveProfile(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.ADAPTIVE_PROFILE] = enabled }
+    }
+
+    suspend fun setParallelStreams(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.PARALLEL_STREAMS] = enabled }
     }
 
     suspend fun setTurboProfile(profile: String) {

@@ -17,6 +17,9 @@ import com.mmtube.app.data.SettingsStore
 import com.mmtube.app.util.CookieStore
 import com.mmtube.app.util.Formatters
 import com.mmtube.app.util.MediaVerifier
+import com.mmtube.app.util.NetworkProfile
+import com.mmtube.app.util.RangeProbe
+import com.mmtube.app.util.StreamMerger
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import kotlinx.coroutines.CancellationException
@@ -26,6 +29,9 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
@@ -48,6 +54,12 @@ data class DownloadRequest(
     val expectedHeight: Int = 0,
     val expectedFps: Int = 0,
     val formatIsVideo: Boolean = true,
+    /** Alternate format specs tried on retry when the best format is unavailable. */
+    val alternates: List<String> = emptyList(),
+    val preferMkv: Boolean = false,
+    val audioFormat: String = "mp3",
+    val adaptiveProfile: Boolean = true,
+    val parallelStreams: Boolean = false,
     /** Stable identity for reorderable queue UI. */
     val queueId: String = java.util.UUID.randomUUID().toString()
 )
@@ -55,7 +67,12 @@ data class DownloadRequest(
 private data class SpeedConfig(
     val concurrency: Int,
     val chunkMb: Int,
-    val speedMode: Boolean
+    val speedMode: Boolean,
+    val audioFormat: String,
+    val parallelStreams: Boolean,
+    val supportsRanges: Boolean,
+    val network: String,
+    val adaptive: Boolean
 )
 
 class DownloadController(
@@ -144,12 +161,30 @@ class DownloadController(
     private var measuredSpeedBytes = 0L
     private var observedRetries = 0
     private var lastRetryLineAt = 0L
+    private var previousSpeed = 0L
+    private var previousConcurrency = 0
+    private var plateauCount = 0
 
-    /** Adjusts fragments from measured speed and retries; always bounded. */
+    /** Adjusts fragments from measured speed, retries and diminishing returns. */
     private fun tunedConcurrency(base: Int): Int {
         val retries = observedRetries.coerceAtMost(6)
-        val boost = if (measuredSpeedBytes >= 8L * 1024 * 1024 && retries == 0) 8 else 0
-        return (base + boost - retries * 4).coerceIn(8, 40)
+        val plateau = if (plateauCount >= 2) 8 else 0
+        val boost = if (measuredSpeedBytes >= 8L * 1024 * 1024 &&
+            retries == 0 && plateauCount == 0
+        ) 8 else 0
+        return (base + boost - retries * 4 - plateau).coerceIn(8, 40)
+    }
+
+    private fun noteThroughput(concurrency: Int) {
+        if (previousSpeed > 0L && measuredSpeedBytes in 1..(previousSpeed * 105 / 100) &&
+            concurrency >= previousConcurrency
+        ) {
+            plateauCount += 1
+        } else if (measuredSpeedBytes > previousSpeed * 110 / 100) {
+            plateauCount = 0
+        }
+        previousSpeed = measuredSpeedBytes
+        previousConcurrency = concurrency
     }
 
     private fun maybeStartNext() {
@@ -192,16 +227,32 @@ class DownloadController(
                     throw MmtubeException(ErrorKind.ENGINE, "Engine not ready")
                 }
                 startWatchdog()
-                val directory = downloadDirectory().apply { mkdirs() }
+                val directory = downloadDirectory(config.speedMode).apply { mkdirs() }
                 val settingsSnapshot = settingsStore.snapshot()
                 val turbo = settingsSnapshot.turbo
                 observedRetries = 0
-                val base = when (settingsSnapshot.turboProfile) {
+                val network = NetworkProfile.current(context)
+                val profileKey = if (settingsSnapshot.adaptiveProfile) {
+                    NetworkProfile.learned(context, network) ?: settingsSnapshot.turboProfile
+                } else {
+                    settingsSnapshot.turboProfile
+                }
+                val base = when (profileKey) {
                     "standard" -> 8
                     "aggressive" -> 40
                     else -> 24
                 }
-                val config = SpeedConfig(base, settingsSnapshot.chunkMb, settingsSnapshot.speedMode)
+                val supportsRanges = RangeProbe.supports(request.url)
+                val config = SpeedConfig(
+                    concurrency = base,
+                    chunkMb = settingsSnapshot.chunkMb,
+                    speedMode = settingsSnapshot.speedMode,
+                    audioFormat = settingsSnapshot.audioFormat,
+                    parallelStreams = settingsSnapshot.parallelStreams,
+                    supportsRanges = supportsRanges,
+                    network = network,
+                    adaptive = settingsSnapshot.adaptiveProfile
+                )
                 val file = downloadWithFallback(request, directory, turbo, config, startedAt)
                 _state.value = DownloadState.Saving(request.title, request.mode)
                 val exported = exporter.export(
@@ -217,7 +268,8 @@ class DownloadController(
                         context,
                         android.net.Uri.parse(exported.uri.toString()),
                         request.expectedHeight,
-                        request.expectedFps
+                        request.expectedFps,
+                        config.audioFormat
                     )
                 }.getOrNull()
                 cleanupTempFiles(olderThanMs = 10 * 60 * 1000L)
@@ -244,6 +296,14 @@ class DownloadController(
                 runCatching { quotaManager.consume() }
                     .onFailure { Log.w(TAG, "Could not consume quota", it) }
                 _state.value = DownloadState.Completed(item)
+                if (config.adaptive && measuredSpeedBytes > 0L) {
+                    val learned = when {
+                        measuredSpeedBytes >= 6L * 1024 * 1024 -> "aggressive"
+                        measuredSpeedBytes <= 700L * 1024 -> "standard"
+                        else -> "balanced"
+                    }
+                    NetworkProfile.remember(context, config.network, learned)
+                }
                 // Auto-start the next queued download.
                 maybeStartNext()
             } catch (cancelled: CancellationException) {
@@ -390,7 +450,27 @@ class DownloadController(
             val id = "download-${System.nanoTime()}-$attempt"
             processId = id
             try {
-                execute(request.copy(resume = attempt > 0), directory, id, useTurbo, config)
+                if (attempt == 0 && config.parallelStreams && config.supportsRanges &&
+                    request.mode != DownloadMode.MP3 && request.formatId?.contains("+") == true
+                ) {
+                    val merged = runCatching { downloadParallel(request, directory, config, startedAt) }
+                        .getOrNull()
+                    if (merged != null) {
+                        sawError = false
+                        break
+                    }
+                }
+                val attemptRequest = if (attempt > 0) {
+                    val alternate = request.alternates.getOrNull(attempt - 1)
+                    if (alternate != null) {
+                        request.copy(formatId = alternate, alternates = emptyList(), resume = false)
+                    } else {
+                        request.copy(resume = true)
+                    }
+                } else {
+                    request.copy(resume = false)
+                }
+                execute(attemptRequest, directory, id, useTurbo, config)
                 sawError = false
                 break
             } catch (cancelled: CancellationException) {
@@ -402,7 +482,9 @@ class DownloadController(
                 val turboFallback = useTurbo && attempt == 0
                 val transient = isTransient(error)
                 if (!turboFallback && (!transient || attempt == maxAttempts - 1)) throw error
-                val line = if (turboFallback) {
+                val line = if (request.alternates.getOrNull(attempt - 1) != null && !turboFallback) {
+                    context.getString(com.mmtube.app.R.string.download_retry_format)
+                } else if (turboFallback) {
                     context.getString(com.mmtube.app.R.string.download_retry_turbo)
                 } else {
                     context.getString(
@@ -435,6 +517,48 @@ class DownloadController(
         }
         return findOutput(directory, request.mode, startedAt)
             ?: throw MmtubeException(ErrorKind.DOWNLOAD, context.getString(com.mmtube.app.R.string.download_file_missing))
+    }
+
+    private suspend fun downloadParallel(
+        request: DownloadRequest,
+        directory: File,
+        config: SpeedConfig,
+        startedAt: Long
+    ): File? {
+        val parts = request.formatId?.split("+", limit = 2) ?: return null
+        if (parts.size != 2) return null
+        val videoDir = File(directory, "stream-v-${startedAt}").apply { mkdirs() }
+        val audioDir = File(directory, "stream-a-${startedAt}").apply { mkdirs() }
+        val videoRequest = request.copy(
+            formatId = parts[0],
+            formatIsVideo = false,
+            alternates = emptyList(),
+            resume = false,
+            title = request.title + " (video)"
+        )
+        val audioRequest = request.copy(
+            formatId = parts[1],
+            mode = DownloadMode.MP3,
+            alternates = emptyList(),
+            resume = false,
+            title = request.title + " (audio)"
+        )
+        coroutineScope {
+            listOf(
+                async { execute(videoRequest, videoDir, "pv-${startedAt}", false, config) },
+                async { execute(audioRequest, audioDir, "pa-${startedAt}", false, config) }
+            ).awaitAll()
+        }
+        val video = findOutput(videoDir, request.mode, startedAt) ?: return null
+        val audio = findOutput(audioDir, DownloadMode.MP3, startedAt) ?: return null
+        val extension = if (request.preferMkv) "mkv" else "mp4"
+        val output = File(directory, "merged-${startedAt}.$extension")
+        if (!StreamMerger.merge(context, video, audio, output)) {
+            runCatching { video.delete(); audio.delete() }
+            return null
+        }
+        runCatching { video.delete(); audio.delete() }
+        return output
     }
 
     private fun isTransient(error: Throwable): Boolean {
@@ -487,7 +611,10 @@ class DownloadController(
                             lastProgressUpdate = now
                             val previous = current as? DownloadState.Running
                             val speed = Formatters.parseSpeed(line)
-                            if (speed > 0L) measuredSpeedBytes = speed
+                            if (speed > 0L) {
+                                measuredSpeedBytes = speed
+                                noteThroughput(tunedConcurrency(config.concurrency))
+                            }
                             val total = Formatters.parseTotal(line).takeIf { it > 0 }
                                 ?: previous?.totalBytes ?: 0L
                             _state.value = DownloadState.Running(
@@ -511,10 +638,15 @@ class DownloadController(
 
     private fun requestFormat(request: DownloadRequest): Pair<String, String> {
         val selected = request.formatId?.takeIf { it.isNotBlank() }
-        if (selected != null && request.mode != DownloadMode.MP3) {
+        if (selected != null) {
+            // A combined "video+audio" spec or an exact stream id is already complete.
+            if (selected.contains("+") || !request.formatIsVideo ||
+                request.mode == DownloadMode.MP3
+            ) {
+                return selected to ""
+            }
             // A picked video format usually has no audio — keep the best audio track.
-            return if (request.formatIsVideo) "$selected+bestaudio/$selected/best" to ""
-            else selected to ""
+            return "$selected+bestaudio/$selected/best" to ""
         }
         if (request.mode == DownloadMode.MP3) {
             return "bestaudio/best" to "tbr:desc"
@@ -568,6 +700,15 @@ class DownloadController(
                 addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\{[^\{\}]*\}\s*${'$'}""")
             }
             if (cookies != null) addOption("--cookies", cookies)
+            addOption(
+                "--extractor-args",
+                "youtube:player_client=android,ios,tv,web_safari,mweb"
+            )
+            if (!turbo && config.supportsRanges) {
+                // Chunked requests help direct (non-segmented) servers that
+                // throttle one long connection.
+                addOption("--http-chunk-size", "${config.chunkMb}M")
+            }
             addOption("-o", output)
             if (request.resume) addOption("--continue")
             val (format, sort) = requestFormat(request)
@@ -579,17 +720,20 @@ class DownloadController(
                     addOption("--embed-thumbnail")
                 }
                 addOption("--extract-audio")
-                addOption("--audio-format", "mp3")
-                addOption("--audio-quality", "0")
+                addOption("--audio-format", config.audioFormat)
+                if (config.audioFormat != "flac") addOption("--audio-quality", "0")
                 // Even out loudness between tracks (single-pass EBU R128).
                 addOption(
                     "--postprocessor-args",
                     "ffmpeg:-af loudnorm=I=-16:TP=-1.5:LRA=11"
                 )
             } else {
-                addOption("--merge-output-format", "mp4")
+                addOption(
+                    "--merge-output-format",
+                    if (request.preferMkv) "mkv" else "mp4"
+                )
             }
-            if (turbo) {
+            if (turbo && config.supportsRanges) {
                 addOption("--downloader", "libaria2c.so")
                 addOption(
                     "--external-downloader-args",
@@ -658,10 +802,13 @@ class DownloadController(
         return removed
     }
 
-    private fun downloadDirectory(): File {
-        val external = context.getExternalFilesDir(Environment.DIRECTORY_MOVIES)
-            ?: context.filesDir
-        return File(external, "MMTube")
+    private fun downloadDirectory(fast: Boolean = false): File {
+        val base = if (fast) {
+            context.filesDir
+        } else {
+            context.getExternalFilesDir(Environment.DIRECTORY_MOVIES) ?: context.filesDir
+        }
+        return File(base, "MMTube")
     }
 
     companion object {

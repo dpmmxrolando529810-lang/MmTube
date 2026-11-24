@@ -311,7 +311,13 @@ class DownloadService : Service() {
             resume = getBooleanExtra(EXTRA_RESUME, false),
             expectedHeight = getIntExtra(EXTRA_EXPECTED_HEIGHT, 0),
             expectedFps = getIntExtra(EXTRA_EXPECTED_FPS, 0),
-            formatIsVideo = getBooleanExtra(EXTRA_FORMAT_IS_VIDEO, true)
+            formatIsVideo = getBooleanExtra(EXTRA_FORMAT_IS_VIDEO, true),
+            alternates = getStringExtra(EXTRA_ALTERNATES).orEmpty()
+                .split("||").filter { it.isNotBlank() },
+            preferMkv = getBooleanExtra(EXTRA_PREFER_MKV, false),
+            audioFormat = getStringExtra(EXTRA_AUDIO_FORMAT) ?: "mp3",
+            adaptiveProfile = getBooleanExtra(EXTRA_ADAPTIVE_PROFILE, true),
+            parallelStreams = getBooleanExtra(EXTRA_PARALLEL_STREAMS, false)
         )
     }
 
@@ -333,6 +339,11 @@ class DownloadService : Service() {
         private const val EXTRA_EXPECTED_HEIGHT = "expected_height"
         private const val EXTRA_EXPECTED_FPS = "expected_fps"
         private const val EXTRA_FORMAT_IS_VIDEO = "format_is_video"
+        private const val EXTRA_ALTERNATES = "alternates"
+        private const val EXTRA_PREFER_MKV = "prefer_mkv"
+        private const val EXTRA_AUDIO_FORMAT = "audio_format"
+        private const val EXTRA_ADAPTIVE_PROFILE = "adaptive_profile"
+        private const val EXTRA_PARALLEL_STREAMS = "parallel_streams"
 
         fun start(context: Context, request: DownloadRequest) {
             val intent = Intent(context, DownloadService::class.java).apply {
@@ -348,6 +359,11 @@ class DownloadService : Service() {
                 putExtra(EXTRA_EXPECTED_HEIGHT, request.expectedHeight)
                 putExtra(EXTRA_EXPECTED_FPS, request.expectedFps)
                 putExtra(EXTRA_FORMAT_IS_VIDEO, request.formatIsVideo)
+                putExtra(EXTRA_ALTERNATES, request.alternates.joinToString("||"))
+                putExtra(EXTRA_PREFER_MKV, request.preferMkv)
+                putExtra(EXTRA_AUDIO_FORMAT, request.audioFormat)
+                putExtra(EXTRA_ADAPTIVE_PROFILE, request.adaptiveProfile)
+                putExtra(EXTRA_PARALLEL_STREAMS, request.parallelStreams)
             }
             ContextCompat.startForegroundService(context, intent)
         }

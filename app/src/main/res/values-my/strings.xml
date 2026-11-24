@@ -582,4 +582,15 @@ Firebase project: %4$s</string>
     <string name="cookies_invalid">ဒီဖိုင်က မှန်ကန်တဲ့ cookies.txt မဟုတ်ပါ</string>
     <string name="cookies_cleared">Cookies ဖယ်ပြီး</string>
     <string name="settings_sd_warning">Removable card ထဲ သိမ်းထားလို့ ကူးယူရ နှေးပြီး မတည်ငြိမ်နိုင်ပါ။</string>
+    <string name="fast_start_action">အမြန်ဆုံး ဒေါင်းမယ် (preview မလုပ်ဘဲ)</string>
+    <string name="fast_start_title">MMTube ဒေါင်းလုဒ်</string>
+    <string name="fast_start_quality">အမြန်</string>
+    <string name="fast_start_started">Preview မလုပ်ဘဲ ဒေါင်းစလိုက်ပြီ</string>
+    <string name="download_retry_format">အကောင်းဆုံး format မရလို့ နောက်တစ်ခု စမ်းနေသည်</string>
+    <string name="audio_mismatch">အသံက %1$s အဖြစ် သိမ်းထားတယ်</string>
+    <string name="settings_adaptive_profile">အကောင်းဆုံး speed profile သင်ယူ</string>
+    <string name="settings_adaptive_profile_desc">ကွန်ရက်အမျိုးအစားအလိုက် အမြန်ဆုံး profile ကို မှတ်ထားမယ်</string>
+    <string name="settings_parallel_streams">Stream နှစ်ခု တပြိုင်</string>
+    <string name="settings_parallel_streams_desc">ဗီဒီယိုနဲ့ အသံကို တပြိုင်ဒေါင်းပြီးမှ တွဲပေးမယ် (ဖိုင်ကြီးရင် အကျိုးရှိ၊ CPU ပိုကုန်)</string>
+    <string name="settings_audio_format">အသံ ဖိုင်အမျိုးအစား</string>
 </resources>

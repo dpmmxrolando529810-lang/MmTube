@@ -717,6 +717,13 @@ private fun LinkCard(ui: MainUiState, vm: MainViewModel, onBatch: () -> Unit) {
             loading = analyzing,
             enabled = ui.link.isNotBlank() || analyzing
         )
+        androidx.compose.material3.TextButton(
+            onClick = { vm.fastStart(ui.link) },
+            enabled = ui.link.isNotBlank() && !analyzing,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(context.getString(R.string.fast_start_action), color = MmtubePalette.Amber)
+        }
     }
 }
 

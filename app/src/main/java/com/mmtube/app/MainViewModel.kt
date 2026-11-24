@@ -441,6 +441,37 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             }
             val mode = _ui.value.mode
             val selected = probe.formats.firstOrNull { it.id == _ui.value.selectedFormatId }
+            val sourceKey = UrlUtils.canonicalKey(probe.webpageUrl ?: probe.url)
+            val smart = com.mmtube.app.util.FormatPicker.choose(probe, mode)
+            val remembered = sourceKey?.let { com.mmtube.app.util.FormatMemory.get(context, it) }
+            val formatId = when {
+                mode == DownloadMode.MP3 -> null
+                _ui.value.selectedFormatId != null -> _ui.value.selectedFormatId
+                remembered != null -> remembered
+                smart != null -> smart.format
+                else -> null
+            }
+            val usedSmart = formatId != null && _ui.value.selectedFormatId == null &&
+                remembered == null && smart != null
+            if (formatId != null && _ui.value.selectedFormatId != null && sourceKey != null) {
+                com.mmtube.app.util.FormatMemory.put(context, sourceKey, formatId)
+            }
+            val expectedHeight = if (mode == DownloadMode.MP3 || remembered != null) {
+                0
+            } else if (usedSmart) {
+                smart.height
+            } else {
+                (selected?.height?.takeIf { it > 0 } ?: probe.maxHeight).let { height ->
+                    when (mode) {
+                        DownloadMode.P1080 -> kotlin.math.min(height, 1080)
+                        DownloadMode.P720 -> kotlin.math.min(height, 720)
+                        else -> height
+                    }
+                }
+            }
+            val expectedFps = if (mode == DownloadMode.MP3 || remembered != null) 0
+                else if (usedSmart) smart.fps
+                else selected?.fps?.takeIf { it > 0 } ?: probe.maxFps
             val request = DownloadRequest(
                 url = probe.webpageUrl ?: probe.url,
                 title = state.customTitle.trim().ifBlank { probe.title },
@@ -449,18 +480,16 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 thumbnail = probe.thumbnail,
                 durationSeconds = probe.durationSeconds,
                 qualityLabel = qualityLabel(probe, mode),
-                formatId = _ui.value.selectedFormatId,
-                expectedHeight = if (mode == DownloadMode.MP3) 0 else
-                    (selected?.height?.takeIf { it > 0 } ?: probe.maxHeight).let { height ->
-                        when (mode) {
-                            DownloadMode.P1080 -> kotlin.math.min(height, 1080)
-                            DownloadMode.P720 -> kotlin.math.min(height, 720)
-                            else -> height
-                        }
-                    },
-                expectedFps = if (mode == DownloadMode.MP3) 0
-                    else selected?.fps?.takeIf { it > 0 } ?: probe.maxFps,
-                formatIsVideo = selected?.isVideo ?: true
+                formatId = formatId,
+                expectedHeight = expectedHeight,
+                expectedFps = expectedFps,
+                formatIsVideo = if (formatId?.contains("+") == true) true
+                    else selected?.isVideo ?: true,
+                alternates = if (usedSmart) smart?.alternates.orEmpty() else emptyList(),
+                preferMkv = if (usedSmart) smart?.hdr ?: false else selected?.hdr ?: false,
+                audioFormat = state.settings.audioFormat,
+                adaptiveProfile = state.settings.adaptiveProfile,
+                parallelStreams = state.settings.parallelStreams
             )
             DownloadService.start(context, request)
             refreshStorageInfo()
@@ -468,6 +497,30 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     }
 
     private var duplicateAck: String? = null
+
+    /** Starts a download without waiting for the preview (fastest start). */
+    fun fastStart(raw: String? = null) {
+        val link = raw?.takeIf { it.isNotBlank() } ?: _ui.value.link
+        val url = UrlUtils.normalize(link)
+        if (url == null) {
+            event(UiEvent.Message(context.getString(R.string.batch_reason_invalid)))
+            return
+        }
+        val request = DownloadRequest(
+            url = url,
+            title = context.getString(R.string.fast_start_title),
+            platform = UrlUtils.detectPlatform(url) ?: Platform.OTHER,
+            mode = preferredMode(),
+            thumbnail = null,
+            durationSeconds = 0,
+            qualityLabel = context.getString(R.string.fast_start_quality),
+            audioFormat = _ui.value.settings.audioFormat,
+            adaptiveProfile = _ui.value.settings.adaptiveProfile,
+            parallelStreams = _ui.value.settings.parallelStreams
+        )
+        DownloadService.start(context, request)
+        event(UiEvent.Message(context.getString(R.string.fast_start_started)))
+    }
 
     fun selectFormat(id: String?) {
         _ui.update { it.copy(selectedFormatId = id) }
@@ -1615,6 +1668,18 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     fun clearCookies() {
         com.mmtube.app.util.CookieStore.clear(context)
         event(UiEvent.Message(context.getString(R.string.cookies_cleared)))
+    }
+
+    fun setAudioFormat(value: String) {
+        viewModelScope.launch { container.settings.setAudioFormat(value) }
+    }
+
+    fun setAdaptiveProfile(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setAdaptiveProfile(enabled) }
+    }
+
+    fun setParallelStreams(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setParallelStreams(enabled) }
     }
 
     fun setAutoAppUpdate(enabled: Boolean) {

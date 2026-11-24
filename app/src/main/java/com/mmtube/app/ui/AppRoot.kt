@@ -364,7 +364,10 @@ private fun WhatsNewDialog(version: String, onDismiss: () -> Unit) {
         "Admin app မှာ EN / MY ဘာသာစကား ပြောင်းနိုင်တယ်",
         "Format ရွေးရင် bitrate / codec / HDR ပြသပြီး ဖုန်းနဲ့ ကိုက်ညီမှု စစ်ပေးတယ်",
         "Cookies.txt ထည့်နိုင်တယ်; speed profile, chunk size, speed mode ရွေးနိုင်တယ်",
-        "အလိုအလျောက် speed/retry အလိုက် concurrency ညှိပေးပြီး file အရည်အသွေး ပြန်စစ်ပေးတယ်"
+        "အလိုအလျောက် speed/retry အလိုက် concurrency ညှိပေးပြီး file အရည်အသွေး ပြန်စစ်ပေးတယ်",
+        "Format ကို yt-dlp sort အစား app ကိုယ်တိုင် bitrate/codec/HDR အမှတ်တွက်ရွေးတယ်",
+        "Format fallback, YouTube client fallback, HDR→MKV, Opus/FLAC, range check, parallel streams",
+        " yt-dlp 2026.11.23 သို့ upgrade လုပ်ထားပြီး (fast-start လည်း ပါတယ်)"
     )
     AlertDialog(
         onDismissRequest = onDismiss,

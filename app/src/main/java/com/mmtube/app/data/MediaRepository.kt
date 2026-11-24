@@ -28,20 +28,15 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
             if (!engine.ensureReady()) {
                 throw MmtubeException(ErrorKind.ENGINE, "Engine not ready")
             }
-            // Fast path: yt-dlp without the JavaScript runtime. Falls back to the
-            // wrapper probe (QuickJS enabled) when the fast run fails or times
-            // out; after a timeout the fast path is parked for this session so a
-            // bad run can never make every analysis wait twice.
-            val json = if (fastProbeDisabled) {
-                probeWithLibrary(url, cookiesPath)
-            } else {
-                when (val run = fastProbe.run(url, cookiesPath = cookiesPath)) {
-                    is FastProbe.Result.Ok -> run.json
-                    FastProbe.Result.TimedOut -> {
-                        fastProbeDisabled = true
-                        probeWithLibrary(url, cookiesPath)
-                    }
-                    FastProbe.Result.Failed -> probeWithLibrary(url, cookiesPath)
+            val json = try {
+                probeJson(url, cookiesPath, ageFallback = false)
+            } catch (error: Throwable) {
+                val age = error is MmtubeException && error.kind == ErrorKind.AGE ||
+                    error.message?.contains("age", true) == true
+                if (age && cookiesPath != null) {
+                    probeJson(url, cookiesPath, ageFallback = true)
+                } else {
+                    throw error
                 }
             }
             val info = parse(json)
@@ -53,6 +48,24 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
         }
     }
 
+    private suspend fun probeJson(
+        url: String,
+        cookiesPath: String?,
+        ageFallback: Boolean
+    ): String {
+        // Fast path: yt-dlp without the JavaScript runtime. Falls back to the
+        // wrapper probe (QuickJS enabled) when the fast run fails or times out.
+        if (fastProbeDisabled) return probeWithLibrary(url, cookiesPath, ageFallback)
+        return when (val run = fastProbe.run(url, cookiesPath = cookiesPath, ageFallback = ageFallback)) {
+            is FastProbe.Result.Ok -> run.json
+            FastProbe.Result.TimedOut -> {
+                fastProbeDisabled = true
+                probeWithLibrary(url, cookiesPath, ageFallback)
+            }
+            FastProbe.Result.Failed -> probeWithLibrary(url, cookiesPath, ageFallback)
+        }
+    }
+
     private fun parse(json: String): VideoInfo {
         return runCatching {
             YoutubeDL.objectMapper.readValue(json, VideoInfo::class.java)
@@ -61,7 +74,11 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
         }
     }
 
-    private suspend fun probeWithLibrary(url: String, cookiesPath: String?): String {
+    private suspend fun probeWithLibrary(
+        url: String,
+        cookiesPath: String?,
+        ageFallback: Boolean = false
+    ): String {
         val request = YoutubeDLRequest(url).apply {
             addOption("--dump-json")
             addOption("--no-playlist")
@@ -73,6 +90,14 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
             addOption("--retries", "2")
             addOption("--extractor-retries", "2")
             if (cookiesPath != null) addOption("--cookies", cookiesPath)
+            addOption(
+                "--extractor-args",
+                if (ageFallback) {
+                    "youtube:player_client=web_embedded,ios_producer,android"
+                } else {
+                    "youtube:player_client=android,ios,tv,web_safari,mweb"
+                }
+            )
         }
         val processId = "probe-${System.nanoTime()}"
         val response = try {

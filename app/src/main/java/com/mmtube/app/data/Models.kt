@@ -342,5 +342,9 @@ data class SettingsSnapshot(
     /** aria2c chunk size in MB (1 / 2 / 4). */
     val chunkMb: Int = 1,
     /** Skip gallery export and metadata embedding for maximum speed. */
-    val speedMode: Boolean = false
+    val speedMode: Boolean = false,
+    /** mp3 | opus | flac */
+    val audioFormat: String = "mp3",
+    val adaptiveProfile: Boolean = true,
+    val parallelStreams: Boolean = false
 )

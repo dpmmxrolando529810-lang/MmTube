@@ -582,4 +582,15 @@ Firebase project: %4$s</string>
     <string name="cookies_invalid">That file is not a valid cookies.txt</string>
     <string name="cookies_cleared">Cookies removed</string>
     <string name="settings_sd_warning">Storage is on a removable card — copying there is slower and less reliable.</string>
+    <string name="fast_start_action">Fast download (skip preview)</string>
+    <string name="fast_start_title">MMTube download</string>
+    <string name="fast_start_quality">Fast</string>
+    <string name="fast_start_started">Download started without preview</string>
+    <string name="download_retry_format">Best format unavailable — trying the next one</string>
+    <string name="audio_mismatch">Audio saved as %1$s</string>
+    <string name="settings_adaptive_profile">Learn best speed profile</string>
+    <string name="settings_adaptive_profile_desc">Remember the fastest profile for each network type</string>
+    <string name="settings_parallel_streams">Parallel streams</string>
+    <string name="settings_parallel_streams_desc">Download video and audio at the same time, then mux (large files; more CPU)</string>
+    <string name="settings_audio_format">Audio format</string>
 </resources>

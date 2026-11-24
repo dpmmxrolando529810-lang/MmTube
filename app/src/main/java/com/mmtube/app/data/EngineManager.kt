@@ -65,7 +65,7 @@ class EngineManager(private val context: Context) {
         return mutex.withLock {
             runCatching {
                 withContext(Dispatchers.IO) {
-                    // Latest stable from GitHub (currently 2026.10.26).
+                    // Latest stable from GitHub (currently 2026.11.23).
                     YoutubeDL.getInstance().updateYoutubeDL(context, YoutubeDL.UpdateChannel.STABLE)
                 }
                 val version = readVersion() ?: "updated"
@@ -122,8 +122,8 @@ class EngineManager(private val context: Context) {
     companion object {
         private const val TAG = "EngineManager"
 
-        // yt-dlp 2026.10.26 bundled in the APK; bump together with res/raw/ytdlp.
-        const val PINNED_YTDLP = "2026.10.26"
+        // yt-dlp 2026.11.23 bundled in the APK; bump together with res/raw/ytdlp.
+        const val PINNED_YTDLP = "2026.11.23"
 
         private const val ENGINE_PREFS = "mmtube_engine"
         private const val KEY_YTDLP_PINNED = "mmtube_ytdlp_pinned"

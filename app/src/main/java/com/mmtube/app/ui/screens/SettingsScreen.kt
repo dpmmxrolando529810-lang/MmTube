@@ -251,6 +251,40 @@ fun SettingsScreen(
                 checked = ui.settings.speedMode,
                 onChange = vm::setSpeedMode
             )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Speed,
+                label = context.getString(R.string.settings_adaptive_profile),
+                description = context.getString(R.string.settings_adaptive_profile_desc),
+                checked = ui.settings.adaptiveProfile,
+                onChange = vm::setAdaptiveProfile
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Speed,
+                label = context.getString(R.string.settings_parallel_streams),
+                description = context.getString(R.string.settings_parallel_streams_desc),
+                checked = ui.settings.parallelStreams,
+                onChange = vm::setParallelStreams
+            )
+            SettingsValueRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_audio_format),
+                value = when (ui.settings.audioFormat) {
+                    "opus" -> "Opus"
+                    "flac" -> "FLAC (lossless)"
+                    else -> "MP3"
+                }
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+                listOf("mp3", "opus", "flac").forEach { audio ->
+                    androidx.compose.material3.TextButton(
+                        onClick = { vm.setAudioFormat(audio) },
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                            contentColor = if (ui.settings.audioFormat == audio) MmtubePalette.Aqua
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) { Text(audio.uppercase()) }
+                }
+            }
             var cookiesSet by remember { mutableStateOf(com.mmtube.app.util.CookieStore.hasCookies(context)) }
             val pickCookies = rememberLauncherForActivityResult(
                 androidx.activity.result.contract.ActivityResultContracts.OpenDocument()
