@@ -343,6 +343,13 @@ fun SettingsScreen(
             )
             SettingsSwitchRow(
                 icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_single_process_batch),
+                description = context.getString(R.string.settings_single_process_batch_desc),
+                checked = ui.settings.singleProcessBatch,
+                onChange = vm::setSingleProcessBatch
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
                 label = context.getString(R.string.settings_embed_chapters),
                 description = context.getString(R.string.settings_embed_chapters_desc),
                 checked = ui.settings.embedChapters,

@@ -629,4 +629,7 @@ Firebase project: %4$s</string>
     <string name="settings_hls_mpegts_desc">ဖိုင်ပျက်နှုန်း လျှော့ပြီး ဒေါင်းနေတုန်း ကြည့်လို့ရ</string>
     <string name="settings_proxy_url">Proxy URL (ရွေးချယ်)</string>
     <string name="settings_source_address">Source address (IP, ရွေးချယ်)</string>
+    <string name="batch_progress_title">Batch ဒေါင်းလုဒ်</string>
+    <string name="settings_single_process_batch">တစ် process တည်း batch (စမ်းသုံး)</string>
+    <string name="settings_single_process_batch_desc">link အားလုံးကို yt-dlp တစ်ခုတည်းနဲ့ ဒေါင်းမယ်; ဖိုင်အလိုက် progress မျှသုံးမယ်</string>
 </resources>

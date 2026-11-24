@@ -371,5 +371,6 @@ data class SettingsSnapshot(
     val keepFragments: Boolean = false,
     val hlsUseMpegts: Boolean = false,
     val proxyUrl: String = "",
-    val sourceAddress: String = ""
+    val sourceAddress: String = "",
+    val singleProcessBatch: Boolean = false
 )

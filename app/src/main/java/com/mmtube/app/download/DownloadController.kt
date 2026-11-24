@@ -506,6 +506,171 @@ class DownloadController(
         }
     }
 
+    /**
+     * Experimental: downloads a whole batch with ONE yt-dlp process by
+     * passing all URLs to YoutubeDLRequest(List<String>). Progress is shared,
+     * so per-file mapping is best-effort.
+     */
+    fun startBatchSingleProcess(requests: List<DownloadRequest>) {
+        if (requests.isEmpty()) return
+        if (job?.isActive == true) {
+            updateQueue(queue.value + requests)
+            return
+        }
+        val first = requests.first()
+        job = scope.launch {
+            val startedAt = System.currentTimeMillis()
+            var lastItem: HistoryItem? = null
+            processId = "batch-${startedAt}"
+            try {
+                if (!engine.ensureReady()) {
+                    throw MmtubeException(ErrorKind.ENGINE, "Engine not ready")
+                }
+                startWatchdog()
+                val settings = settingsStore.snapshot()
+                val network = NetworkProfile.current(context)
+                val profileKey = if (settings.adaptiveProfile) {
+                    NetworkProfile.learned(context, network) ?: settings.turboProfile
+                } else {
+                    settings.turboProfile
+                }
+                val base = when (profileKey) {
+                    "standard" -> 8
+                    "aggressive" -> 40
+                    else -> 24
+                }
+                val range = RangeProbe.check(first.url)
+                val autoChunk = when {
+                    range.rttMs > 400L -> 4
+                    range.rttMs > 150L -> 2
+                    else -> 1
+                }
+                val config = SpeedConfig(
+                    concurrency = base,
+                    chunkMb = if (first.autoChunk && settings.autoChunk) autoChunk
+                    else settings.chunkMb,
+                    speedMode = settings.speedMode,
+                    audioFormat = settings.audioFormat,
+                    parallelStreams = false,
+                    supportsRanges = range.supported,
+                    network = network,
+                    adaptive = settings.adaptiveProfile,
+                    rateLimitMb = ThermalGuard.rateCapMb(context)
+                )
+                val directory = downloadDirectory(config.speedMode, settings.autoStorage)
+                    .apply { mkdirs() }
+                _state.value = DownloadState.Preparing(first.title, first.mode)
+
+                val baseRequest = buildRequest(first, directory, settings.turbo, config)
+                val options = baseRequest.buildCommand().toMutableList()
+                if (options.isNotEmpty()) options.removeAt(options.lastIndex)
+                val batchRequest = YoutubeDLRequest(requests.map { it.url })
+                batchRequest.addCommands(options)
+
+                withContext(Dispatchers.IO) {
+                    YoutubeDL.getInstance().execute(
+                        batchRequest,
+                        processId = "batch-${startedAt}",
+                        redirectErrorStream = false
+                    ) { progress, eta, rawLine ->
+                        val now = System.currentTimeMillis()
+                        lastRawLineAt = now
+                        val line = rawLine
+                            .replace(Regex("\u001B\\[[;\\d]*m"), "")
+                            .trim()
+                        val current = _state.value
+                        if (current !is DownloadState.Cancelled &&
+                            System.currentTimeMillis() - lastProgressUpdate >= 140L
+                        ) {
+                            lastProgressUpdate = System.currentTimeMillis()
+                            val speed = Formatters.parseSpeed(line)
+                            if (speed > 0L) measuredSpeedBytes = speed
+                            _state.value = DownloadState.Running(
+                                title = context.getString(com.mmtube.app.R.string.batch_progress_title),
+                                mode = first.mode,
+                                progress = progress.coerceIn(0f, 100f),
+                                etaSeconds = eta,
+                                speedBytes = speed,
+                                totalBytes = Formatters.parseTotal(line).takeIf { it > 0 }
+                                    ?: 0L,
+                                line = line.take(180),
+                                concurrency = tunedConcurrency(config.concurrency)
+                            )
+                        }
+                    }
+                }
+
+                val outputs = directory.listFiles()
+                    ?.filter { it.isFile && it.length() > 0L }
+                    ?.filter { file ->
+                        val ext = file.extension.lowercase()
+                        ext in setOf("mp4", "mkv", "webm", "mov", "mp3", "m4a", "opus", "aac", "flac")
+                    }
+                    ?.filter { it.lastModified() >= startedAt - 5_000L }
+                    ?.sortedBy { it.lastModified() }
+                    .orEmpty()
+
+                outputs.forEachIndexed { index, file ->
+                    val source = requests.getOrNull(index) ?: first
+                    val exported = exporter.export(
+                        file = file,
+                        mode = source.mode,
+                        platform = source.platform,
+                        relativeBase = settings.downloadFolder.takeIf { it.isNotBlank() },
+                        volumeName = settings.downloadFolderVolume,
+                        fast = config.speedMode
+                    )
+                    val item = HistoryItem(
+                        id = UUID.randomUUID().toString(),
+                        title = source.title.ifBlank { file.nameWithoutExtension },
+                        sourceUrl = source.url,
+                        platform = source.platform.name,
+                        quality = source.qualityLabel,
+                        sizeBytes = exported.sizeBytes,
+                        mimeType = exported.mimeType,
+                        uri = exported.uri.toString(),
+                        localPath = exported.localPath,
+                        thumbnail = source.thumbnail,
+                        durationSeconds = source.durationSeconds,
+                        createdAt = System.currentTimeMillis(),
+                        mode = source.mode.key,
+                        savedToGallery = exported.savedToGallery,
+                        qualityNote = if (source.verify) {
+                            runCatching {
+                                MediaVerifier.mismatchNote(
+                                    context,
+                                    android.net.Uri.parse(exported.uri.toString()),
+                                    source.expectedHeight,
+                                    source.expectedFps,
+                                    config.audioFormat
+                                )
+                            }.getOrNull()
+                        } else {
+                            null
+                        }
+                    )
+                    runCatching { historyStore.add(item) }
+                    runCatching { quotaManager.consume() }
+                    lastItem = item
+                }
+                if (lastItem == null) {
+                    throw MmtubeException(ErrorKind.DOWNLOAD, "No files were produced")
+                }
+                _state.value = DownloadState.Completed(lastItem!!)
+            } catch (cancelled: CancellationException) {
+                _state.value = DownloadState.Cancelled
+            } catch (cancelled: YoutubeDL.CanceledException) {
+                _state.value = DownloadState.Cancelled
+            } catch (error: Throwable) {
+                Log.w(TAG, "Batch process failed", error)
+                val kind = (error as? MmtubeException)?.kind ?: ErrorKind.DOWNLOAD
+                _state.value = DownloadState.Failed(first.title, kind, error.message)
+            } finally {
+                processId = null
+            }
+        }
+    }
+
     /** Consumes (clears) the paused snapshot and returns it, if any. */
     fun consumePausedRequest(): DownloadRequest? {
         val req = pausedRequest ?: return null

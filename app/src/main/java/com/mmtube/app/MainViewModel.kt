@@ -751,6 +751,8 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             }
             if (batchRequests.size == 1) {
                 DownloadService.start(context, batchRequests.first())
+            } else if (_ui.value.settings.singleProcessBatch) {
+                DownloadService.startBatchSingleProcess(context, batchRequests)
             } else {
                 DownloadService.startBatch(context, batchRequests)
             }
@@ -1777,6 +1779,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setProxyUrl(value: String) {
         viewModelScope.launch { container.settings.setProxyUrl(value) }
+    }
+
+    fun setSingleProcessBatch(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setSingleProcessBatch(enabled) }
     }
 
     fun setSourceAddress(value: String) {

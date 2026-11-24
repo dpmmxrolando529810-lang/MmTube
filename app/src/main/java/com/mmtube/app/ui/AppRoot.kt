@@ -374,7 +374,8 @@ private fun WhatsNewDialog(version: String, onDismiss: () -> Unit) {
         "Bits-per-pixel target, audio codec compatibility, player HDR warning, Retry-After, batch တစ် process တည်းနဲ့ analyze",
         "10-bit SDR bonus, VFR check, LUFS target, host circuit breaker, prefetch, resume chunk alignment, verify toggle",
         "Throttled-rate, check-formats, buffer tuning, IPv4, sort-force နဲ့ batch တစ် session တည်း",
-        "Chapter/multi-stream/multi-audio/keep-fragments/HLS-TS/proxy/source-address ထည့်ပေးထားပါတယ်"
+        "Chapter/multi-stream/multi-audio/keep-fragments/HLS-TS/proxy/source-address ထည့်ပေးထားပါတယ်",
+        "Batch ကို yt-dlp တစ် process တည်းနဲ့ ဒေါင်းတဲ့ experimental option ပါဝင်"
     )
     AlertDialog(
         onDismissRequest = onDismiss,

@@ -113,6 +113,37 @@ class DownloadService : Service() {
                 controller.startBatch(requests)
             }
 
+            ACTION_START_BATCH_SINGLE -> {
+                val requests = runCatching {
+                    Json.decodeFromString<List<DownloadRequest>>(
+                        intent.getStringExtra(EXTRA_REQUESTS).orEmpty()
+                    )
+                }.getOrDefault(emptyList())
+                if (requests.isEmpty()) {
+                    stopSelf()
+                    return START_NOT_STICKY
+                }
+                batchMode = true
+                finished = false
+                startForegroundNow(requests.first())
+                acquireWakeLock()
+                observer?.cancel()
+                observer = scope.launch {
+                    controller.state.collectLatest { state ->
+                        if (state is DownloadState.Idle) return@collectLatest
+                        updateNotification(state)
+                        if (state is DownloadState.Completed ||
+                            state is DownloadState.Failed ||
+                            state is DownloadState.Cancelled ||
+                            state is DownloadState.Paused
+                        ) {
+                            finishService()
+                        }
+                    }
+                }
+                controller.startBatchSingleProcess(requests)
+            }
+
             ACTION_CANCEL -> {
                 controller.cancel()
                 finishService()
@@ -387,6 +418,7 @@ class DownloadService : Service() {
         const val ACTION_START = "com.mmtube.app.action.START_DOWNLOAD"
         const val ACTION_CANCEL = "com.mmtube.app.action.CANCEL_DOWNLOAD"
         const val ACTION_START_BATCH = "com.mmtube.app.action.START_BATCH"
+        const val ACTION_START_BATCH_SINGLE = "com.mmtube.app.action.START_BATCH_SINGLE"
 
         private const val EXTRA_URL = "url"
         private const val EXTRA_TITLE = "title"
@@ -469,6 +501,15 @@ class DownloadService : Service() {
             if (requests.isEmpty()) return
             val intent = Intent(context, DownloadService::class.java).apply {
                 action = ACTION_START_BATCH
+                putExtra(EXTRA_REQUESTS, Json.encodeToString(requests))
+            }
+            ContextCompat.startForegroundService(context, intent)
+        }
+
+        fun startBatchSingleProcess(context: Context, requests: List<DownloadRequest>) {
+            if (requests.isEmpty()) return
+            val intent = Intent(context, DownloadService::class.java).apply {
+                action = ACTION_START_BATCH_SINGLE
                 putExtra(EXTRA_REQUESTS, Json.encodeToString(requests))
             }
             ContextCompat.startForegroundService(context, intent)

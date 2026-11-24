@@ -629,4 +629,7 @@ Firebase project: %4$s</string>
     <string name="settings_hls_mpegts_desc">Lower corruption risk and allow playback while downloading</string>
     <string name="settings_proxy_url">Proxy URL (optional)</string>
     <string name="settings_source_address">Source address (optional IP)</string>
+    <string name="batch_progress_title">Batch download</string>
+    <string name="settings_single_process_batch">One-process batch (experimental)</string>
+    <string name="settings_single_process_batch_desc">Download all links with a single yt-dlp process; per-file progress is shared</string>
 </resources>
