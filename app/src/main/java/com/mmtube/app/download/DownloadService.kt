@@ -321,7 +321,9 @@ class DownloadService : Service() {
             estimatedBytes = getLongExtra(EXTRA_ESTIMATED_BYTES, 0L),
             memoryKey = getStringExtra(EXTRA_MEMORY_KEY).orEmpty(),
             preserveAudio = getBooleanExtra(EXTRA_PRESERVE_AUDIO, false),
-            autoChunk = getBooleanExtra(EXTRA_AUTO_CHUNK, true)
+            autoChunk = getBooleanExtra(EXTRA_AUTO_CHUNK, true),
+            loudnessTarget = getIntExtra(EXTRA_LOUDNESS, 16),
+            verify = getBooleanExtra(EXTRA_VERIFY, true)
         )
     }
 
@@ -352,6 +354,8 @@ class DownloadService : Service() {
         private const val EXTRA_MEMORY_KEY = "memory_key"
         private const val EXTRA_PRESERVE_AUDIO = "preserve_audio"
         private const val EXTRA_AUTO_CHUNK = "auto_chunk"
+        private const val EXTRA_LOUDNESS = "loudness"
+        private const val EXTRA_VERIFY = "verify"
 
         fun start(context: Context, request: DownloadRequest) {
             val intent = Intent(context, DownloadService::class.java).apply {
@@ -376,6 +380,8 @@ class DownloadService : Service() {
                 putExtra(EXTRA_MEMORY_KEY, request.memoryKey)
                 putExtra(EXTRA_PRESERVE_AUDIO, request.preserveAudio)
                 putExtra(EXTRA_AUTO_CHUNK, request.autoChunk)
+                putExtra(EXTRA_LOUDNESS, request.loudnessTarget)
+                putExtra(EXTRA_VERIFY, request.verify)
             }
             ContextCompat.startForegroundService(context, intent)
         }

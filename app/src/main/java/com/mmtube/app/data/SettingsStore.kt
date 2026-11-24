@@ -59,6 +59,8 @@ class SettingsStore(private val context: Context) {
         val AUTO_CHUNK = booleanPreferencesKey("auto_chunk")
         val PREFER_MULTICHANNEL = booleanPreferencesKey("prefer_multichannel")
         val AUTO_STORAGE = booleanPreferencesKey("auto_storage")
+        val LOUDNESS = intPreferencesKey("loudness_target")
+        val VERIFY = booleanPreferencesKey("verify_downloads")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -121,7 +123,9 @@ class SettingsStore(private val context: Context) {
             preserveAudioDynamics = this[Keys.PRESERVE_AUDIO] ?: false,
             autoChunk = this[Keys.AUTO_CHUNK] ?: true,
             preferMultichannel = this[Keys.PREFER_MULTICHANNEL] ?: false,
-            autoStorage = this[Keys.AUTO_STORAGE] ?: true
+            autoStorage = this[Keys.AUTO_STORAGE] ?: true,
+            loudnessTarget = this[Keys.LOUDNESS]?.takeIf { it in listOf(14, 16, 18) } ?: 16,
+            verifyDownloads = this[Keys.VERIFY] ?: true
         )
     }
 
@@ -207,6 +211,14 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setUpdateDismissedVersion(v: String) {
         context.settingsDataStore.edit { it[Keys.UPDATE_DISMISSED] = v }
+    }
+
+    suspend fun setLoudnessTarget(value: Int) {
+        context.settingsDataStore.edit { it[Keys.LOUDNESS] = value.coerceIn(14, 18) }
+    }
+
+    suspend fun setVerifyDownloads(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.VERIFY] = enabled }
     }
 
     suspend fun setPreferMultichannel(enabled: Boolean) {

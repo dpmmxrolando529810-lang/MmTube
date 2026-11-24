@@ -603,4 +603,8 @@ Firebase project: %4$s</string>
     <string name="settings_auto_storage_desc">Benchmark internal storage vs SD card once a day and use the faster one</string>
     <string name="audio_codec_unsupported">This phone cannot play that audio format — using MP3 instead</string>
     <string name="player_hdr_unsupported">This video is HDR but this screen cannot show HDR — colors may look flat</string>
+    <string name="settings_verify_downloads">Verify saved files</string>
+    <string name="settings_verify_downloads_desc">Check resolution, fps, audio and frame rate after saving (small speed cost)</string>
+    <string name="quality_vfr">Variable frame rate detected (~%1$.1f fps)</string>
+    <string name="batch_reason_host_blocked">Host %1$s is failing — skipped for now</string>
 </resources>

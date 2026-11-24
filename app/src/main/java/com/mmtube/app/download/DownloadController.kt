@@ -70,6 +70,8 @@ data class DownloadRequest(
     val memoryKey: String = "",
     val preserveAudio: Boolean = false,
     val autoChunk: Boolean = true,
+    val loudnessTarget: Int = 16,
+    val verify: Boolean = true,
     /** Stable identity for reorderable queue UI. */
     val queueId: String = java.util.UUID.randomUUID().toString()
 )
@@ -319,7 +321,7 @@ class DownloadController(
                     volumeName = settingsSnapshot.downloadFolderVolume,
                     fast = config.speedMode
                 )
-                val qualityNote = runCatching {
+                var qualityNote = if (request.verify) runCatching {
                     MediaVerifier.mismatchNote(
                         context,
                         android.net.Uri.parse(exported.uri.toString()),
@@ -327,7 +329,18 @@ class DownloadController(
                         request.expectedFps,
                         config.audioFormat
                     )
-                }.getOrNull()
+                }.getOrNull() else null
+                if (request.verify && qualityNote == null &&
+                    exported.localPath != null
+                ) {
+                    val frames = ProbeVerifier.frameInfo(context, java.io.File(exported.localPath))
+                    if (frames?.variable == true) {
+                        qualityNote = context.getString(
+                            com.mmtube.app.R.string.quality_vfr,
+                            frames.avgFps
+                        )
+                    }
+                }
                 cleanupTempFiles(olderThanMs = 10 * 60 * 1000L)
                 val item = HistoryItem(
                     id = UUID.randomUUID().toString(),
@@ -799,7 +812,7 @@ class DownloadController(
                     // Even out loudness between tracks (single-pass EBU R128).
                     addOption(
                         "--postprocessor-args",
-                        "ffmpeg:-af loudnorm=I=-16:TP=-1.5:LRA=11"
+                        "ffmpeg:-af loudnorm=I=-${request.loudnessTarget}:TP=-1.5:LRA=11"
                     )
                 }
             } else {
@@ -809,10 +822,17 @@ class DownloadController(
                 )
             }
             if (turbo && config.supportsRanges) {
+                val sizeMb = request.estimatedBytes / (1024L * 1024L)
+                val alignedChunk = when {
+                    request.resume && sizeMb > 1024L -> 16
+                    request.resume && sizeMb > 400L -> 8
+                    request.resume && sizeMb > 100L -> 4
+                    else -> config.chunkMb
+                }
                 addOption("--downloader", "libaria2c.so")
                 addOption(
                     "--external-downloader-args",
-                    "aria2c:-x$concurrency -s$concurrency -k${config.chunkMb}M"
+                    "aria2c:-x$concurrency -s$concurrency -k${alignedChunk}M"
                 )
             }
         }

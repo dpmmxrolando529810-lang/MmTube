@@ -303,6 +303,24 @@ fun SettingsScreen(
                 }
             )
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+                listOf(14, 16, 18).forEach { target ->
+                    androidx.compose.material3.TextButton(
+                        onClick = { vm.setLoudnessTarget(target) },
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                            contentColor = if (ui.settings.loudnessTarget == target) MmtubePalette.Aqua
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) { Text("-$target LUFS") }
+                }
+            }
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_verify_downloads),
+                description = context.getString(R.string.settings_verify_downloads_desc),
+                checked = ui.settings.verifyDownloads,
+                onChange = vm::setVerifyDownloads
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
                 listOf("mp3", "opus", "flac").forEach { audio ->
                     androidx.compose.material3.TextButton(
                         onClick = { vm.setAudioFormat(audio) },

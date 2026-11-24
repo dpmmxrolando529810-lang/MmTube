@@ -46,6 +46,9 @@ object FormatPicker {
                 format.vcodec?.startsWith("h264", true) == true -> 0.99
             else -> 1.0
         }
+        val tenBitBonus = if (!format.hdr && format.bitDepth >= 10 &&
+            com.mmtube.app.util.FormatSupport.isPlayable(format.vcodec)
+        ) 1.06 else 1.0
         val sourceBonus = if (format.note.orEmpty().let {
                 it.contains("original", true) || it.contains("source", true)
             }
@@ -55,7 +58,7 @@ object FormatPicker {
         val closeness = 1.0 / (1.0 + kotlin.math.abs(perPixel - 0.16) / 0.16)
         val bppFactor = (0.85 + 0.15 * closeness) * if (perPixel > 0.5) 0.82 else 1.0
         return (bitrate + perPixel * 90.0) * fpsBonus * hdrBonus *
-            codecBonus * sourceBonus * bppFactor *
+            codecBonus * tenBitBonus * sourceBonus * bppFactor *
             (1.0 + min(format.height, 4320) / 9000.0)
     }
 

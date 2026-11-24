@@ -125,7 +125,7 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
             val keepFormat = setOf(
                 "format_id", "format_note", "height", "width", "fps", "tbr", "abr",
                 "vcodec", "acodec", "codecs", "dynamic_range", "filesize",
-                "filesize_approx", "protocol", "ext", "channels"
+                "filesize_approx", "protocol", "ext", "channels", "codecs"
             )
             for (node in array) {
                 if (!node.isObject) continue
@@ -272,6 +272,15 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
                 ?: format.ext
             val channels = node?.path("channels")?.takeUnless { it.isMissingNode || it.isNull }
                 ?.asInt() ?: 0
+            val codecTags = node?.path("codecs")?.takeUnless { it.isMissingNode || it.isNull }
+                ?.asText().orEmpty()
+            val depth = when {
+                codec.contains("vp9.2") || codecTags.contains("VP9.2", true) -> 10
+                codec.contains("av01.2") || codecTags.contains("AV01.2", true) -> 10
+                codec.contains("hvc1") || codec.contains("hev1") -> 10
+                note.orEmpty().contains("10-bit", true) -> 10
+                else -> 0
+            }
             val hdr = note.orEmpty().contains("hdr", true) ||
                 dynamicRange.contains("hdr", true) ||
                 codec.contains("vp9.2") ||
@@ -294,7 +303,8 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
                 ext = ext,
                 isProgressive = video && !format.acodec.isNullOrBlank() &&
                     format.acodec != "none",
-                channels = channels
+                channels = channels,
+                bitDepth = depth
             )
         }.distinctBy { it.id }.let { all ->
             val videos = all.filter { it.isVideo }.sortedWith(

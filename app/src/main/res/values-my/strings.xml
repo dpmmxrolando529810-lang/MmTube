@@ -603,4 +603,8 @@ Firebase project: %4$s</string>
     <string name="settings_auto_storage_desc">တစ်နေ့တစ်ခါ internal နဲ့ SD card ကို တိုင်းပြီး ပိုမြန်တာကို သုံးပေးမယ်</string>
     <string name="audio_codec_unsupported">ဒီဖုန်းက အဲ့ဒီအသံ format ကို မဖွင့်နိုင်လို့ MP3 ကို သုံးပေးထားပါတယ်</string>
     <string name="player_hdr_unsupported">ဒီဗီဒီယိုက HDR ဖြစ်ပေမယ့် ဒီမျက်နှာပြင်က HDR မပြနိုင်လို့ အရောင်တွေ ပြန်မှိန်နေနိုင်ပါတယ်</string>
+    <string name="settings_verify_downloads">သိမ်းထားတဲ့ ဖိုင်ပြန်စစ်</string>
+    <string name="settings_verify_downloads_desc">သိမ်းပြီးနောက် resolution/fps/audio/frame-rate ပြန်စစ်မယ် (အနည်းငယ် အချိန်ကုန်)</string>
+    <string name="quality_vfr">Frame rate မတည်ငြိမ်ဘူး (~%1$.1f fps)</string>
+    <string name="batch_reason_host_blocked">%1$s host က မရတော့လို့ ယာယီကျော်ထားပါတယ်</string>
 </resources>

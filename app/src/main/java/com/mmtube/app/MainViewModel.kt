@@ -499,7 +499,9 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 estimatedBytes = probe.estimatedBytes,
                 memoryKey = sourceKey.orEmpty(),
                 preserveAudio = state.settings.preserveAudioDynamics,
-                autoChunk = state.settings.autoChunk
+                autoChunk = state.settings.autoChunk,
+                loudnessTarget = state.settings.loudnessTarget,
+                verify = state.settings.verifyDownloads
             )
             DownloadService.start(context, request)
             refreshStorageInfo()
@@ -540,7 +542,9 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             adaptiveProfile = _ui.value.settings.adaptiveProfile,
             parallelStreams = _ui.value.settings.parallelStreams,
             preserveAudio = _ui.value.settings.preserveAudioDynamics,
-            autoChunk = _ui.value.settings.autoChunk
+            autoChunk = _ui.value.settings.autoChunk,
+            loudnessTarget = _ui.value.settings.loudnessTarget,
+            verify = _ui.value.settings.verifyDownloads
         )
         DownloadService.start(context, request)
         event(UiEvent.Message(context.getString(R.string.fast_start_started)))
@@ -678,8 +682,18 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     )
                     continue
                 }
+                val host = runCatching { java.net.URL(normalized).host }.getOrNull().orEmpty()
+                if (com.mmtube.app.util.CircuitBreaker.isOpen(normalized)) {
+                    failures += com.mmtube.app.data.BatchFailure(
+                        rawUrl,
+                        context.getString(R.string.batch_reason_host_blocked, host)
+                    )
+                    continue
+                }
                 candidates += normalized to rawUrl
             }
+            // Warm connections to the hosts we are about to use.
+            runCatching { com.mmtube.app.util.HostPrefetch.warm(candidates.map { it.first }) }
             // One yt-dlp process analyses the whole batch instead of one per link.
             val analysed = runCatching {
                 container.media.probeMany(candidates.map { it.first })
@@ -690,9 +704,11 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 if (result == null) {
                     val kind = (probe?.exceptionOrNull() as? MmtubeException)?.kind
                         ?: ErrorKind.GENERIC
+                    com.mmtube.app.util.CircuitBreaker.recordFailure(normalized)
                     failures += com.mmtube.app.data.BatchFailure(rawUrl, errorText(kind))
                     continue
                 }
+                com.mmtube.app.util.CircuitBreaker.recordSuccess(normalized)
                 val mode = if (result.audioOnly) DownloadMode.MP3 else preferredMode()
                 val qualityLabel = if (mode == DownloadMode.MP3) "MP3"
                     else com.mmtube.app.util.Formatters.qualityLabel(result.maxHeight, result.maxFps)
@@ -710,7 +726,9 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                     audioFormat = effectiveAudioFormat(),
                     preserveAudio = _ui.value.settings.preserveAudioDynamics,
                     autoChunk = _ui.value.settings.autoChunk,
-                    memoryKey = UrlUtils.canonicalKey(normalized).orEmpty()
+                    memoryKey = UrlUtils.canonicalKey(normalized).orEmpty(),
+                    loudnessTarget = _ui.value.settings.loudnessTarget,
+                    verify = _ui.value.settings.verifyDownloads
                 )
                 DownloadService.start(context, request)
                 queued += 1
@@ -1695,6 +1713,14 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
     fun clearCookies() {
         com.mmtube.app.util.CookieStore.clear(context)
         event(UiEvent.Message(context.getString(R.string.cookies_cleared)))
+    }
+
+    fun setLoudnessTarget(value: Int) {
+        viewModelScope.launch { container.settings.setLoudnessTarget(value) }
+    }
+
+    fun setVerifyDownloads(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setVerifyDownloads(enabled) }
     }
 
     fun setPreferMultichannel(enabled: Boolean) {

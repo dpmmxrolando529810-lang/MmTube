@@ -180,7 +180,8 @@ data class MediaFormatOption(
     val protocol: String? = null,
     val ext: String? = null,
     val isProgressive: Boolean = false,
-    val channels: Int = 0
+    val channels: Int = 0,
+    val bitDepth: Int = 0
 )
 
 data class BatchFailure(val url: String, val reason: String)
@@ -356,5 +357,7 @@ data class SettingsSnapshot(
     val preserveAudioDynamics: Boolean = false,
     val autoChunk: Boolean = true,
     val preferMultichannel: Boolean = false,
-    val autoStorage: Boolean = true
+    val autoStorage: Boolean = true,
+    val loudnessTarget: Int = 16,
+    val verifyDownloads: Boolean = true
 )
