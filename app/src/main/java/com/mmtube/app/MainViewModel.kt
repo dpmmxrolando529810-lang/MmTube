@@ -450,10 +450,17 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 durationSeconds = probe.durationSeconds,
                 qualityLabel = qualityLabel(probe, mode),
                 formatId = _ui.value.selectedFormatId,
-                expectedHeight = if (mode == DownloadMode.MP3) 0
-                    else selected?.height?.takeIf { it > 0 } ?: probe.maxHeight,
+                expectedHeight = if (mode == DownloadMode.MP3) 0 else
+                    (selected?.height?.takeIf { it > 0 } ?: probe.maxHeight).let { height ->
+                        when (mode) {
+                            DownloadMode.P1080 -> kotlin.math.min(height, 1080)
+                            DownloadMode.P720 -> kotlin.math.min(height, 720)
+                            else -> height
+                        }
+                    },
                 expectedFps = if (mode == DownloadMode.MP3) 0
-                    else selected?.fps?.takeIf { it > 0 } ?: probe.maxFps
+                    else selected?.fps?.takeIf { it > 0 } ?: probe.maxFps,
+                formatIsVideo = selected?.isVideo ?: true
             )
             DownloadService.start(context, request)
             refreshStorageInfo()

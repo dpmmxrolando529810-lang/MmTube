@@ -271,12 +271,6 @@ class DownloadService : Service() {
         }
     }
 
-    override fun onDestroy() {
-        observer?.cancel()
-        releaseWakeLock()
-        super.onDestroy()
-    }
-
     private fun releaseWakeLock() {
         runCatching {
             if (wakeLock?.isHeld == true) wakeLock?.release()
@@ -316,7 +310,8 @@ class DownloadService : Service() {
             qualityLabel = quality,
             resume = getBooleanExtra(EXTRA_RESUME, false),
             expectedHeight = getIntExtra(EXTRA_EXPECTED_HEIGHT, 0),
-            expectedFps = getIntExtra(EXTRA_EXPECTED_FPS, 0)
+            expectedFps = getIntExtra(EXTRA_EXPECTED_FPS, 0),
+            formatIsVideo = getBooleanExtra(EXTRA_FORMAT_IS_VIDEO, true)
         )
     }
 
@@ -337,6 +332,7 @@ class DownloadService : Service() {
         private const val EXTRA_RESUME = "resume"
         private const val EXTRA_EXPECTED_HEIGHT = "expected_height"
         private const val EXTRA_EXPECTED_FPS = "expected_fps"
+        private const val EXTRA_FORMAT_IS_VIDEO = "format_is_video"
 
         fun start(context: Context, request: DownloadRequest) {
             val intent = Intent(context, DownloadService::class.java).apply {
@@ -351,6 +347,7 @@ class DownloadService : Service() {
                 putExtra(EXTRA_RESUME, request.resume)
                 putExtra(EXTRA_EXPECTED_HEIGHT, request.expectedHeight)
                 putExtra(EXTRA_EXPECTED_FPS, request.expectedFps)
+                putExtra(EXTRA_FORMAT_IS_VIDEO, request.formatIsVideo)
             }
             ContextCompat.startForegroundService(context, intent)
         }

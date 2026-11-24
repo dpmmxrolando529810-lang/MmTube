@@ -12,7 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 
-class MediaRepository(context: Context, private val engine: EngineManager) {
+class MediaRepository(private val context: Context, private val engine: EngineManager) {
 
     private val fastProbe = FastProbe(context)
     @Volatile private var fastProbeDisabled = false

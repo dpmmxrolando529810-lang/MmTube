@@ -47,6 +47,7 @@ data class DownloadRequest(
     /** What the preview promised, used to verify the stored file. */
     val expectedHeight: Int = 0,
     val expectedFps: Int = 0,
+    val formatIsVideo: Boolean = true,
     /** Stable identity for reorderable queue UI. */
     val queueId: String = java.util.UUID.randomUUID().toString()
 )
@@ -511,7 +512,9 @@ class DownloadController(
     private fun requestFormat(request: DownloadRequest): Pair<String, String> {
         val selected = request.formatId?.takeIf { it.isNotBlank() }
         if (selected != null && request.mode != DownloadMode.MP3) {
-            return selected + "/best" to ""
+            // A picked video format usually has no audio — keep the best audio track.
+            return if (request.formatIsVideo) "$selected+bestaudio/$selected/best" to ""
+            else selected to ""
         }
         if (request.mode == DownloadMode.MP3) {
             return "bestaudio/best" to "tbr:desc"
