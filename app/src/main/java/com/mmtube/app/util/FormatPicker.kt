@@ -19,7 +19,9 @@ object FormatPicker {
         val hdr: Boolean,
         val alternates: List<String> = emptyList(),
         /** A direct progressive file already contains audio: no +bestaudio needed. */
-        val complete: Boolean = false
+        val complete: Boolean = false,
+        /** No clean rendition exists; the chosen one may still carry a watermark. */
+        val watermarkOnly: Boolean = false
     )
 
     fun score(format: MediaFormatOption, hdrSupported: Boolean): Double {
@@ -49,6 +51,7 @@ object FormatPicker {
         val tenBitBonus = if (!format.hdr && format.bitDepth >= 10 &&
             com.mmtube.app.util.FormatSupport.isPlayable(format.vcodec)
         ) 1.06 else 1.0
+        val watermarkBonus = if (format.watermarked) 0.25 else 1.0
         val sourceBonus = if (format.note.orEmpty().let {
                 it.contains("original", true) || it.contains("source", true)
             }
@@ -58,7 +61,7 @@ object FormatPicker {
         val closeness = 1.0 / (1.0 + kotlin.math.abs(perPixel - 0.16) / 0.16)
         val bppFactor = (0.85 + 0.15 * closeness) * if (perPixel > 0.5) 0.82 else 1.0
         return (bitrate + perPixel * 90.0) * fpsBonus * hdrBonus *
-            codecBonus * tenBitBonus * sourceBonus * bppFactor *
+            codecBonus * tenBitBonus * watermarkBonus * sourceBonus * bppFactor *
             (1.0 + min(format.height, 4320) / 9000.0)
     }
 
@@ -66,7 +69,8 @@ object FormatPicker {
         result: ProbeResult,
         mode: DownloadMode,
         hdrSupported: Boolean = false,
-        preferMultichannel: Boolean = false
+        preferMultichannel: Boolean = false,
+        noWatermark: Boolean = true
     ): Choice? {
         if (mode == DownloadMode.MP3) return null
         val cap = when (mode) {
@@ -74,9 +78,12 @@ object FormatPicker {
             DownloadMode.P720 -> 720
             else -> Int.MAX_VALUE
         }
-        val videos = result.formats
+        val allVideos = result.formats
             .filter { it.isVideo && it.height in 1..cap }
-            .sortedByDescending { score(it, hdrSupported) }
+        val cleanVideos = allVideos.filterNot { it.watermarked }
+        val watermarkOnly = noWatermark && cleanVideos.isEmpty() && allVideos.isNotEmpty()
+        val pool = if (noWatermark && cleanVideos.isNotEmpty()) cleanVideos else allVideos
+        val videos = pool.sortedByDescending { score(it, hdrSupported) }
         val primary = videos.firstOrNull() ?: return null
         val audios = result.formats.filter { !it.isVideo }.let { list ->
             if (preferMultichannel) {
@@ -93,7 +100,7 @@ object FormatPicker {
         // A direct progressive https file avoids two downloads + an mux. Only
         // take it when it is close to the best adaptive pair in real quality.
         val combinedBitrate = primary.tbr + (audio?.tbr ?: 0)
-        val progressive = result.formats
+        val progressive = pool
             .filter { format ->
                 format.isProgressive && format.height in 1..cap &&
                     format.protocol?.startsWith("http") == true &&
@@ -110,12 +117,13 @@ object FormatPicker {
                 fps = progressive.fps,
                 hdr = progressive.hdr,
                 alternates = videos.take(2).map { "${it.id}+bestaudio" },
-                complete = true
+                complete = true,
+                watermarkOnly = watermarkOnly
             )
         }
 
         val format = if (audio != null) "${primary.id}+${audio.id}" else "${primary.id}+bestaudio"
         val alternates = videos.drop(1).take(2).map { "${it.id}+bestaudio" }
-        return Choice(format, primary.height, primary.fps, primary.hdr, alternates, false)
+        return Choice(format, primary.height, primary.fps, primary.hdr, alternates, false, watermarkOnly)
     }
 }

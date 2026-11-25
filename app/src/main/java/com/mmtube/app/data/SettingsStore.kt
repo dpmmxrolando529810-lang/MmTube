@@ -74,6 +74,7 @@ class SettingsStore(private val context: Context) {
         val PROXY_URL = stringPreferencesKey("proxy_url")
         val SOURCE_ADDRESS = stringPreferencesKey("source_address")
         val SINGLE_PROCESS_BATCH = booleanPreferencesKey("single_process_batch")
+        val NO_WATERMARK = booleanPreferencesKey("no_watermark")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -155,7 +156,8 @@ class SettingsStore(private val context: Context) {
             hlsUseMpegts = this[Keys.HLS_MPEGTS] ?: false,
             proxyUrl = this[Keys.PROXY_URL] ?: "",
             sourceAddress = this[Keys.SOURCE_ADDRESS] ?: "",
-            singleProcessBatch = this[Keys.SINGLE_PROCESS_BATCH] ?: false
+            singleProcessBatch = this[Keys.SINGLE_PROCESS_BATCH] ?: false,
+            noWatermark = this[Keys.NO_WATERMARK] ?: true
         )
     }
 
@@ -265,6 +267,10 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setProxyUrl(value: String) {
         context.settingsDataStore.edit { it[Keys.PROXY_URL] = value.trim() }
+    }
+
+    suspend fun setNoWatermark(enabled: Boolean) {
+        context.settingsDataStore.edit { it[Keys.NO_WATERMARK] = enabled }
     }
 
     suspend fun setSingleProcessBatch(enabled: Boolean) {

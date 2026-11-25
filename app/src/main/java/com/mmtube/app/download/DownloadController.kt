@@ -927,10 +927,19 @@ class DownloadController(
             DownloadMode.P720 -> "[height<=720]"
             else -> ""
         }
-        val format = if (limit.isEmpty()) {
-            "bestvideo+bestaudio/best"
+        // Facebook and TikTok expose watermarked renditions. The UI picker
+        // already skips them; apply the same filter to the fallback selector.
+        val clean = if (request.platform == Platform.FACEBOOK ||
+            request.platform == Platform.TIKTOK
+        ) {
+            "[format_note!?*=watermark][format_id!?*=wmk]"
         } else {
-            "bestvideo$limit+bestaudio/best$limit/best"
+            ""
+        }
+        val format = if (limit.isEmpty()) {
+            "bestvideo$clean+bestaudio/best$clean/best"
+        } else {
+            "bestvideo$limit$clean+bestaudio/best$limit$clean/best"
         }
         // Same source, different priorities: YouTube has both resolution and
         // frame-rate variants, TikTok is usually bitrate-bound.

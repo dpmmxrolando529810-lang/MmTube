@@ -343,6 +343,13 @@ fun SettingsScreen(
             )
             SettingsSwitchRow(
                 icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_no_watermark),
+                description = context.getString(R.string.settings_no_watermark_desc),
+                checked = ui.settings.noWatermark,
+                onChange = vm::setNoWatermark
+            )
+            SettingsSwitchRow(
+                icon = Icons.Rounded.Description,
                 label = context.getString(R.string.settings_single_process_batch),
                 description = context.getString(R.string.settings_single_process_batch_desc),
                 checked = ui.settings.singleProcessBatch,

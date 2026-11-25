@@ -446,7 +446,8 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 probe,
                 mode,
                 com.mmtube.app.util.DisplaySupport.canRenderHdr(context),
-                _ui.value.settings.preferMultichannel
+                _ui.value.settings.preferMultichannel,
+                _ui.value.settings.noWatermark
             )
             val remembered = sourceKey?.let { com.mmtube.app.util.FormatMemory.get(context, it) }
             val formatId = when {
@@ -458,6 +459,9 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
             }
             val usedSmart = formatId != null && _ui.value.selectedFormatId == null &&
                 remembered == null && smart != null
+            if (usedSmart && smart?.watermarkOnly == true) {
+                event(UiEvent.Message(context.getString(R.string.watermark_only)))
+            }
             if (formatId != null && _ui.value.selectedFormatId != null && sourceKey != null) {
                 com.mmtube.app.util.FormatMemory.put(context, sourceKey, formatId)
             }
@@ -1779,6 +1783,10 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setProxyUrl(value: String) {
         viewModelScope.launch { container.settings.setProxyUrl(value) }
+    }
+
+    fun setNoWatermark(enabled: Boolean) {
+        viewModelScope.launch { container.settings.setNoWatermark(enabled) }
     }
 
     fun setSingleProcessBatch(enabled: Boolean) {

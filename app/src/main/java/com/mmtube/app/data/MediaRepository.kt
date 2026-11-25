@@ -304,7 +304,11 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
                 isProgressive = video && !format.acodec.isNullOrBlank() &&
                     format.acodec != "none",
                 channels = channels,
-                bitDepth = depth
+                bitDepth = depth,
+                watermarked = note.orEmpty().contains("watermark", true) ||
+                    id.contains("wmk", true) ||
+                    id.equals("download", true) &&
+                        note.orEmpty().contains("watermark", true)
             )
         }.distinctBy { it.id }.let { all ->
             val videos = all.filter { it.isVideo }.sortedWith(

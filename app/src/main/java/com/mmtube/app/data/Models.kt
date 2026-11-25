@@ -180,6 +180,8 @@ data class MediaFormatOption(
     val protocol: String? = null,
     val ext: String? = null,
     val isProgressive: Boolean = false,
+    /** Facebook/TikTok "watermarked" or "-wmk" renditions. */
+    val watermarked: Boolean = false,
     val channels: Int = 0,
     val bitDepth: Int = 0
 )
@@ -372,5 +374,6 @@ data class SettingsSnapshot(
     val hlsUseMpegts: Boolean = false,
     val proxyUrl: String = "",
     val sourceAddress: String = "",
-    val singleProcessBatch: Boolean = false
+    val singleProcessBatch: Boolean = false,
+    val noWatermark: Boolean = true
 )

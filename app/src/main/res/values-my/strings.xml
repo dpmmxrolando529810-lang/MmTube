@@ -632,4 +632,8 @@ Firebase project: %4$s</string>
     <string name="batch_progress_title">Batch ဒေါင်းလုဒ်</string>
     <string name="settings_single_process_batch">တစ် process တည်း batch (စမ်းသုံး)</string>
     <string name="settings_single_process_batch_desc">link အားလုံးကို yt-dlp တစ်ခုတည်းနဲ့ ဒေါင်းမယ်; ဖိုင်အလိုက် progress မျှသုံးမယ်</string>
+    <string name="settings_no_watermark">Watermark မပါတာ ဦးစားပေး</string>
+    <string name="settings_no_watermark_desc">Facebook/TikTok မှာ watermark မပါတာ ရှိရင် ပါတာကို ကျော်ပေးမယ်</string>
+    <string name="format_watermarked">watermark ပါ</string>
+    <string name="watermark_only">ဒီဗီဒီယိုမှာ watermark ပါတဲ့ format တွေပဲ ရှိပါတယ်</string>
 </resources>

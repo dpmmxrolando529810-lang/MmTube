@@ -632,4 +632,8 @@ Firebase project: %4$s</string>
     <string name="batch_progress_title">Batch download</string>
     <string name="settings_single_process_batch">One-process batch (experimental)</string>
     <string name="settings_single_process_batch_desc">Download all links with a single yt-dlp process; per-file progress is shared</string>
+    <string name="settings_no_watermark">Prefer watermark-free video</string>
+    <string name="settings_no_watermark_desc">Skip Facebook/TikTok watermarked renditions when a clean one exists</string>
+    <string name="format_watermarked">watermarked</string>
+    <string name="watermark_only">Only watermarked renditions are available for this video</string>
 </resources>
