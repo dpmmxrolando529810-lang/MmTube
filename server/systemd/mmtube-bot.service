@@ -1,7 +1,7 @@
 [Unit]
 Description=MMTube Telegram Bot
-After=network-online.target
-Wants=network-online.target
+After=network-online.target mmtube-bot-api.service
+Wants=network-online.target mmtube-bot-api.service
 
 [Service]
 Type=simple

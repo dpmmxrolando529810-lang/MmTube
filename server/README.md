@@ -31,7 +31,14 @@ Link ပို့လိုက်ရင် bot က **platform ကို သိရ
 - TikTok API profile ပြောင်းချင်ရင် `MMTube_TIKTOK_PROFILE=1` (alt host) သို့ `2` (mobile app) ထည့်ပါ။
 - yt-dlp version ကို `YTDLP_BIN` နဲ့ သတ်မှတ်နိုင်ပါတယ် (app က 2026.11.23 ပါ)။
 
-**Upload အကြောင်း — ရိုးသားချက်**: Telegram Bot API က တစ်ဖိုင်ကို **~48 MB** အထိပဲ တိုက်ရိုက်ပို့ခွင့်ပေးတယ်။ Upload speed ကို bot က မထိန်းနိုင်ဘူး — Telegram server က ဆုံးဖြတ်တယ်။ ကျွန်တော်တို့ လုပ်နိုင်တာက **re-encode မလုပ်ဘဲ stream copy**, **supports_streaming**, နဲ့ ဖိုင်ကြီးရင် ** website link (၂၄ နာရီ)** ပို့တာပဲ ဖြစ်ပါတယ်။ "Real 100% maximum upload speed" ဆိုတာ API မှာ မရှိပါဘူး။
+**Local Bot API server (`--local`)** ကို `deploy.sh` က install + systemd ထားပေးပါတယ်။ Install လုပ်တုန်းက **Telegram API ID** နဲ့ **API hash** (my.telegram.org → API development tools) ကို မေးပါလိမ့်မယ် — bot token လိုပဲ `/etc/mmtube/mmtube.env` (mode 0600) ထဲမှာ သိမ်းပါတယ်။ Deploy က ပထမဆုံး cloud Bot API ကနေ `logOut` လည်း လုပ်ပေးပါတယ်။
+
+- Upload: **50 MB → 2000 MB (2 GB)** · Download: unlimited
+- `file://` local path နဲ့ ပို့လို့ HTTP hop သက်သာတယ် → upload အတွက် အကောင်းဆုံး
+- ၂ GB ထက်ကြီးရင် **website link (၂၄ နာရီ)** ပဲ ပို့ပါတယ်
+- `TELEGRAM_API_BASE=http://127.0.0.1:8081` ကို bot က အလိုအလျောက် သုံးပါတယ်
+
+**Upload အကြောင်း — ရိုးသားချက်**: Upload speed ကို bot က မထိန်းနိုင်ဘူး — server uplink + Telegram က ဆုံးဖြတ်တယ်။ လုပ်နိုင်တာက **re-encode မလုပ်ဘဲ stream copy**, **`file://` local upload**, **supports_streaming**, နဲ့ ၂ GB ထက်ကြီးရင် website link ပို့တာပဲ ဖြစ်ပါတယ်။ "Real 100% maximum upload speed" ဆိုတဲ့ setting မရှိပါဘူး။
 
 ---
 

@@ -18,6 +18,8 @@ YTDLP_RAW = os.environ.get("YTDLP_BIN", "yt-dlp")
 COOKIES_FILE = os.environ.get("MMTube_COOKIES_FILE", "")
 NO_WATERMARK = os.environ.get("MMTube_NO_WATERMARK", "1") != "0"
 TIKTOK_PROFILE = int(os.environ.get("MMTube_TIKTOK_PROFILE", "0") or 0)
+FRAGMENTS = max(1, int(os.environ.get("YTDLP_FRAGMENTS", "24") or 24))
+CHUNK_MB = max(1, int(os.environ.get("YTDLP_CHUNK_MB", "4") or 4))
 
 
 def _ytdlp_cmd() -> list[str]:
@@ -247,8 +249,10 @@ def download_once(probe_info: ProbeResult, mode: str, job_id: str) -> Path:
         "--no-update",
         "--no-part",
         "--newline",
-        "--concurrent-fragments", "24",
-        "-N", "24",
+        "--concurrent-fragments", str(FRAGMENTS),
+        "-N", str(FRAGMENTS),
+        "--http-chunk-size", f"{CHUNK_MB}M",
+        "--buffer-size", "256K",
         "--socket-timeout", "25",
         "--fragment-retries", "30",
         "--retries", "10",

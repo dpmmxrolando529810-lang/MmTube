@@ -1,0 +1,20 @@
+[Unit]
+Description=MMTube Local Telegram Bot API Server (--local, 2 GB upload)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mmtube
+Group=mmtube
+EnvironmentFile=/etc/mmtube/mmtube.env
+ExecStart=/usr/local/bin/telegram-bot-api --local --http-ip-address=127.0.0.1 --http-port=8081 --dir=/var/lib/mmtube/telegram-bot-api --temp-dir=/var/lib/mmtube/telegram-bot-api-tmp
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/mmtube
+
+[Install]
+WantedBy=multi-user.target

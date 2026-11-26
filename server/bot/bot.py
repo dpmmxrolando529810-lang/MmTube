@@ -33,7 +33,14 @@ logging.basicConfig(
 logger = logging.getLogger("mmtube-bot")
 
 TOKEN = os.environ.get("BOT_TOKEN")
-MAX_BYTES = int(os.environ.get("TELEGRAM_MAX_BYTES", str(48 * 1024 * 1024)))  # 48 MB
+LOCAL_API = os.environ.get("TELEGRAM_LOCAL_API", "0") == "1"
+_CLOUD_MAX = 48 * 1024 * 1024
+_LOCAL_MAX = 2000 * 1024 * 1024  # telegram-bot-api --local cap
+_default_max = _LOCAL_MAX if LOCAL_API else _CLOUD_MAX
+MAX_BYTES = min(
+    int(os.environ.get("TELEGRAM_MAX_BYTES", str(_default_max))),
+    _LOCAL_MAX if LOCAL_API else _CLOUD_MAX,
+)
 JOB_SEMAPHORE = asyncio.Semaphore(int(os.environ.get("MAX_CONCURRENT_JOBS", "2")))
 USER_COOLDOWN_SECONDS = int(os.environ.get("USER_COOLDOWN_SECONDS", "30"))
 _MAX_PER_HOUR = int(os.environ.get("MAX_DOWNLOADS_PER_HOUR", "10"))
@@ -330,11 +337,12 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     if size <= MAX_BYTES:
         await query.edit_message_text("✅ ရပြီး — ဖိုင်ပို့နေတယ်…")
         try:
-            with path.open("rb") as handle:
+            media = f"file://{path.resolve()}" if LOCAL_API else path.open("rb")
+            try:
                 if mode == "mp3":
                     await context.bot.send_audio(
                         user_id,
-                        handle,
+                        media,
                         title=info.title[:60],
                         performer=info.uploader or None,
                         caption=f"🎵 {info.title}",
@@ -344,12 +352,15 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
                 else:
                     await context.bot.send_video(
                         user_id,
-                        handle,
+                        media,
                         caption=f"📺 {info.title} — {info.max_height}p",
                         supports_streaming=True,
                         write_timeout=600,
                         read_timeout=600,
                     )
+            finally:
+                if not LOCAL_API:
+                    media.close()
             path.unlink(missing_ok=True)
             await query.edit_message_text("✅ ပြီးပြီ")
             return
@@ -362,7 +373,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     full_link = (base + link) if base else link
     await query.edit_message_text(
         f"✅ ရပြီး ({_fmt_bytes(size)})\n\n"
-        f"48 MB ထက်ကြီးလို့ ဖိုင်ပို့မရ — ဒီ link ကနေ ဒေါင်းပါ (၂၄ နာရီ ကြာ ရနိုင်):\n"
+        f"{_fmt_bytes(MAX_BYTES)} ထက်ကြီးလို့ ဖိုင်ပို့မရ — ဒီ link ကနေ ဒေါင်းပါ (၂၄ နာရီ ကြာ ရနိုင်):\n"
         f"{_esc(full_link)}",
         parse_mode=ParseMode.HTML,
     )
@@ -373,7 +384,18 @@ def main() -> None:
         raise SystemExit("BOT_TOKEN environment variable is required")
     downloader.make_job_dir()
     _sweep()
-    app = Application.builder().token(TOKEN).concurrent_updates(False).build()
+    builder = Application.builder().token(TOKEN).concurrent_updates(False)
+    builder.media_write_timeout(600)
+    if LOCAL_API:
+        base = os.environ.get("TELEGRAM_API_BASE", "http://127.0.0.1:8081").rstrip("/")
+        builder.base_url(base + "/bot")
+        builder.base_file_url(base + "/file/bot")
+        builder.local_mode(True)
+        get_updates = getattr(builder, "get_updates_base_url", None)
+        if callable(get_updates):
+            get_updates(base + "/bot")
+        logger.info("Using LOCAL Bot API server at %s (upload cap %s)", base, _fmt_bytes(MAX_BYTES))
+    app = builder.build()
     app.add_handler(CommandHandler(["start", "help"], cmd_start))
     app.add_handler(CommandHandler("recap", cmd_recap))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
