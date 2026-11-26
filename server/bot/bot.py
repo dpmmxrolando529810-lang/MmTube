@@ -386,7 +386,8 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     )
 
 
-def main() -> None:
+def build_application():
+    """Shared builder used by the systemd service and the Actions worker."""
     if not TOKEN:
         raise SystemExit("BOT_TOKEN environment variable is required")
     downloader.make_job_dir()
@@ -407,6 +408,11 @@ def main() -> None:
     app.add_handler(CommandHandler("recap", cmd_recap))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     app.add_handler(CallbackQueryHandler(handle_callback))
+    return app
+
+
+def main() -> None:
+    app = build_application()
     logger.info("MMTube bot starting (long polling)…")
     app.run_polling(allowed_updates=["message", "callback_query"])
 

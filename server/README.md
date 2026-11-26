@@ -69,6 +69,26 @@ Bot က **long polling** သုံးတာမို့ public IP / webhook မ�
 
 ---
 
+## ♻️ 24/7 အနီးစပ်ဆုံး — GitHub Actions (ကတ်မလို · ဖုန်းမလို · ၁၀၀% free)
+
+Public repository ဆို GitHub Actions standard runner က **unlimited free** ပါ။ တစ် job က ၆ နာရီပဲ နေနိုင်လို့ bot ကို **၅ နာရီ ၄၅ မိနစ်** အလုပ်လုပ်ပြီး နောက်တစ် run ကို ကိုယ်တိုင် dispatch လုပ်စေတယ်။
+
+**Setup**
+1. Repo က **Public** ဖြစ်ရမယ် (ငါတို့ repo က public ပါပြီ)။
+2. GitHub → **Settings → Secrets and variables → Actions → New repository secret** → Name `BOT_TOKEN`, value က BotFather token။
+3. **Actions** tab → **MMTube Telegram Bot (free 24/7)** → **Run workflow** နှိပ်ပါ။
+4. ပထမ run ပြီးရင် နောက် run ကို အလိုအလျောက် ဆက်ခေါ်ပါတယ်။ `getUpdates` offset ကို **Actions cache** ထဲ သိမ်းတာမို့ update ပျောက်မှာ မဟုတ်ပါဘူး။
+
+**ကန့်သတ်ချက် (ရိုးသားချက်)**
+- တကယ့် 24/7 မဟုတ်ဘူး — run တစ်ခုပြီး နောက်တစ်ခု စတင်တဲ့ **၁–၃ မိနစ် gap** ရှိတယ်။
+- **Cloud Bot API** ပဲဖြစ်လို့ upload cap **50 MB** ပဲရပါတယ် (2 GB local API မရဘူး)။
+- Public website link မရှိလို့ 50 MB ထက်ကြီးရင် "မပို့နိုင်ဘူး" လို့ ပြပါတယ်။
+- GitHub Actions scheduled workflows တွေ ၆၀ ရက် activity မရှိရင် ရပ်တတ်ပေမယ့် **workflow_dispatch** ကတော့ အဆင်ပြေပါတယ်။
+
+> **တကယ့် seamless 24/7 + 2 GB upload** လိုချင်ရင်တော့ Oracle VM (card verify) လိုပါတယ် — အပေါ်က Actions နည်းက အခမဲ့ဆုံး အနီးစပ်ဆုံးပါ။
+
+---
+
 ## အဆင့် ၁ — Oracle Cloud အကောင့် (အခမဲ့)
 
 1. [cloud.oracle.com](https://www.oracle.com/cloud/free/) → **Start for free**

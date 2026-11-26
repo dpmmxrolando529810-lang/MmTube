@@ -1,0 +1,77 @@
+name: MMTube Telegram Bot (free 24/7)
+
+# Public repositories get unlimited free standard runner minutes.
+# One job is capped at 6 h, so the worker runs ~5 h 45 m and dispatches itself.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "server/actions/run_bot.py"
+      - "server/bot/**"
+      - "server/common/**"
+      - ".github/workflows/mmtube-bot.yml"
+
+concurrency:
+  group: mmtube-bot-actions
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check BOT_TOKEN secret
+        id: check
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          if [ -z "$BOT_TOKEN" ]; then
+            echo "::error::Add BOT_TOKEN in Settings -> Secrets -> Actions"
+            exit 1
+          fi
+
+      - name: Set up Python
+        if: steps.check.outcome == 'success'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Restore update offset
+        if: steps.check.outcome == 'success'
+        uses: actions/cache@v4
+        with:
+          path: server/.state
+          key: mmtube-bot-offset-${{ github.run_id }}
+          restore-keys: |
+            mmtube-bot-offset-
+
+      - name: Install dependencies
+        if: steps.check.outcome == 'success'
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r server/requirements.txt
+
+      - name: Run bot chunk
+        if: steps.check.outcome == 'success'
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          MMTube_JOB_DIR: ${{ runner.temp }}/mmtube/jobs
+          MMTube_PUBLIC_DIR: ${{ runner.temp }}/mmtube/files
+          MMTube_STATE_DIR: ${{ github.workspace }}/server/.state
+          MMTube_WORK_SECONDS: "20700"
+          TELEGRAM_LOCAL_API: "0"
+        run: python server/actions/run_bot.py
+
+      - name: Dispatch next chunk
+        if: always() && steps.check.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh workflow run mmtube-bot.yml --ref "${{ github.ref_name }}" || true
