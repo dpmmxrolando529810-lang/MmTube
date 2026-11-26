@@ -75,15 +75,20 @@ Public repository ဆို GitHub Actions standard runner က **unlimited free*
 
 **Setup**
 1. Repo က **Public** ဖြစ်ရမယ် (ငါတို့ repo က public ပါပြီ)။
-2. GitHub → **Settings → Secrets and variables → Actions → New repository secret** → Name `BOT_TOKEN`, value က BotFather token။
+2. GitHub → **Settings → Secrets and variables → Actions → New repository secret** ထဲမှာ ၃ ခု ထည့်ပါ —
+   - `BOT_TOKEN` = BotFather token
+   - `TELEGRAM_API_ID` = my.telegram.org က api_id
+   - `TELEGRAM_API_HASH` = my.telegram.org က api_hash
 3. **Actions** tab → **MMTube Telegram Bot (free 24/7)** → **Run workflow** နှိပ်ပါ။
-4. ပထမ run ပြီးရင် နောက် run ကို အလိုအလျောက် ဆက်ခေါ်ပါတယ်။ `getUpdates` offset ကို **Actions cache** ထဲ သိမ်းတာမို့ update ပျောက်မှာ မဟုတ်ပါဘူး။
+4. Workflow က runner ပေါ်မှာ **local Bot API server (`--local`)** ကို စတင်ပြီး upload cap **2 GB** ရပါတယ်။ ပထမ run ပြီးရင် နောက် run ကို အလိုအလျောက် ဆက်ခေါ်ပါတယ်။ `getUpdates` offset ကို **Actions cache** ထဲ သိမ်းတာမို့ update ပျောက်မှာ မဟုတ်ပါဘူး။
+
+> `TELEGRAM_API_ID/HASH` မထည့်ရင် cloud mode ကိုပဲ ပြန်ကျပါတယ် (50 MB) — 2 GB လိုချင်ရင် ဒီ ၂ ခု မဖြစ်မနေ လိုပါတယ်။
 
 **ကန့်သတ်ချက် (ရိုးသားချက်)**
-- တကယ့် 24/7 မဟုတ်ဘူး — run တစ်ခုပြီး နောက်တစ်ခု စတင်တဲ့ **၁–၃ မိနစ် gap** ရှိတယ်။
-- **Cloud Bot API** ပဲဖြစ်လို့ upload cap **50 MB** ပဲရပါတယ် (2 GB local API မရဘူး)။
-- Public website link မရှိလို့ 50 MB ထက်ကြီးရင် "မပို့နိုင်ဘူး" လို့ ပြပါတယ်။
+- တကယ့် 24/7 မဟုတ်ဘူး — run တစ်ခုပြီး နောက်တစ်ခု စတင်တဲ့ **၁–၃ မိနစ် gap** ရှိတယ် (local server download + boot အတွက် နည်းနည်း ပိုကုန်နိုင်)။
+- Upload cap **2 GB** ရပါတယ် — ၂ GB ထက်ကြီးရင် public website link မရှိလို့ "မပို့နိုင်ဘူး" လို့ ပြပါတယ်။
 - GitHub Actions scheduled workflows တွေ ၆၀ ရက် activity မရှိရင် ရပ်တတ်ပေမယ့် **workflow_dispatch** ကတော့ အဆင်ပြေပါတယ်။
+- Local server binary ကို runner တိုင်းမှာ ပြန်ထုတ်ရတာမို့ run တစ်ခုချင်းစီ အစမှာ ၃၀–၆၀ စက္ကန့် ထပ်ကုန်တယ်။
 
 > **တကယ့် seamless 24/7 + 2 GB upload** လိုချင်ရင်တော့ Oracle VM (card verify) လိုပါတယ် — အပေါ်က Actions နည်းက အခမဲ့ဆုံး အနီးစပ်ဆုံးပါ။
 

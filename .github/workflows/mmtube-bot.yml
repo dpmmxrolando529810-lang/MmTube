@@ -2,6 +2,8 @@ name: MMTube Telegram Bot (free 24/7)
 
 # Public repositories get unlimited free standard runner minutes.
 # One job is capped at 6 h, so the worker runs ~5 h 45 m and dispatches itself.
+# With TELEGRAM_API_ID/HASH secrets it also starts a local Bot API server in
+# the runner, lifting the upload cap from 50 MB to 2 GB.
 on:
   workflow_dispatch:
   push:
@@ -27,24 +29,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Check BOT_TOKEN secret
-        id: check
+      - name: Configure upload mode
+        id: mode
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          TG_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TG_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
         run: |
           if [ -z "$BOT_TOKEN" ]; then
             echo "::error::Add BOT_TOKEN in Settings -> Secrets -> Actions"
             exit 1
           fi
+          if [ -n "$TG_API_ID" ] && [ -n "$TG_API_HASH" ]; then
+            echo "local=1" >> "$GITHUB_OUTPUT"
+            echo "TELEGRAM_LOCAL_API=1" >> "$GITHUB_ENV"
+            echo "TELEGRAM_API_BASE=http://127.0.0.1:8081" >> "$GITHUB_ENV"
+            echo "Mode: local Bot API (2 GB upload)"
+          else
+            echo "local=0" >> "$GITHUB_OUTPUT"
+            echo "::warning::TELEGRAM_API_ID/HASH missing — cloud mode, 50 MB upload only"
+          fi
 
       - name: Set up Python
-        if: steps.check.outcome == 'success'
+        if: steps.mode.outcome == 'success'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Restore update offset
-        if: steps.check.outcome == 'success'
+        if: steps.mode.outcome == 'success'
         uses: actions/cache@v4
         with:
           path: server/.state
@@ -53,24 +66,49 @@ jobs:
             mmtube-bot-offset-
 
       - name: Install dependencies
-        if: steps.check.outcome == 'success'
+        if: steps.mode.outcome == 'success'
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r server/requirements.txt
 
+      - name: Start local Bot API server
+        if: steps.mode.outcome == 'success' && steps.mode.outputs.local == '1'
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          TG_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TG_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+        run: |
+          curl -fsSL -o /tmp/telegram-bot-api \
+            "https://github.com/coyotle/telegram-bot-api-bin/releases/latest/download/telegram-bot-api"
+          chmod +x /tmp/telegram-bot-api
+          curl -fsS "https://api.telegram.org/bot${BOT_TOKEN}/logOut" || true
+          mkdir -p "$RUNNER_TEMP/tg-api"
+          TELEGRAM_API_ID="$TG_API_ID" TELEGRAM_API_HASH="$TG_API_HASH" \
+            /tmp/telegram-bot-api --local \
+            --http-ip-address=127.0.0.1 --http-port=8081 \
+            --dir="$RUNNER_TEMP/tg-api" --temp-dir="$RUNNER_TEMP/tg-api-tmp" \
+            > "$RUNNER_TEMP/tg-api.log" 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS "http://127.0.0.1:8081/bot${BOT_TOKEN}/getMe" >/dev/null; then
+              echo "Local Bot API server ready"; exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/tg-api.log"
+          exit 1
+
       - name: Run bot chunk
-        if: steps.check.outcome == 'success'
+        if: steps.mode.outcome == 'success'
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
           MMTube_JOB_DIR: ${{ runner.temp }}/mmtube/jobs
           MMTube_PUBLIC_DIR: ${{ runner.temp }}/mmtube/files
           MMTube_STATE_DIR: ${{ github.workspace }}/server/.state
           MMTube_WORK_SECONDS: "20700"
-          TELEGRAM_LOCAL_API: "0"
         run: python server/actions/run_bot.py
 
       - name: Dispatch next chunk
-        if: always() && steps.check.outcome == 'success'
+        if: always() && steps.mode.outcome == 'success'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
