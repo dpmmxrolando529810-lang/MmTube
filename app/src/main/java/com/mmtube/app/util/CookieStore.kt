@@ -41,4 +41,20 @@ object CookieStore {
     fun clear(context: Context) {
         runCatching { file(context).delete() }
     }
+
+    /** Saves a pasted Netscape cookie string into app-private storage. */
+    fun saveText(context: Context, text: String): Boolean {
+        val value = text.trim()
+        val valid = value.lineSequence().any { line ->
+            line.startsWith("# Netscape HTTP Cookie File", true) ||
+                (line.isNotBlank() && !line.startsWith("#") && line.count { c -> c == '\t' } >= 6)
+        }
+        if (!valid) return false
+        val target = file(context)
+        val temp = File(target.parentFile, "cookies.txt.new")
+        temp.writeText(value, Charsets.UTF_8)
+        if (target.exists() && !target.delete()) return false
+        return temp.renameTo(target)
+    }
+
 }

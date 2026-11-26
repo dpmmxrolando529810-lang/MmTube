@@ -348,6 +348,56 @@ fun SettingsScreen(
                 checked = ui.settings.noWatermark,
                 onChange = vm::setNoWatermark
             )
+            SettingsValueRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_watermark_policy),
+                value = when (ui.settings.watermarkPolicy) {
+                    "balanced" -> context.getString(R.string.watermark_balanced)
+                    "quality" -> context.getString(R.string.watermark_quality)
+                    else -> context.getString(R.string.watermark_strict)
+                }
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+                listOf("strict", "balanced", "quality").forEach { policy ->
+                    androidx.compose.material3.TextButton(
+                        onClick = { vm.setWatermarkPolicy(policy) },
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                            contentColor = if (ui.settings.watermarkPolicy == policy) MmtubePalette.Aqua
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) {
+                        Text(
+                            context.getString(
+                                when (policy) {
+                                    "balanced" -> R.string.watermark_balanced
+                                    "quality" -> R.string.watermark_quality
+                                    else -> R.string.watermark_strict
+                                }
+                            )
+                        )
+                    }
+                }
+            }
+            SettingsValueRow(
+                icon = Icons.Rounded.Description,
+                label = context.getString(R.string.settings_tiktok_api),
+                value = when (ui.settings.tiktokApiProfile) {
+                    1 -> context.getString(R.string.tiktok_api_alt_host)
+                    2 -> context.getString(R.string.tiktok_api_mobile)
+                    else -> context.getString(R.string.tiktok_api_default)
+                }
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.padding(horizontal = 16.dp)) {
+                listOf(0, 1, 2).forEach { profile ->
+                    androidx.compose.material3.TextButton(
+                        onClick = { vm.setTiktokApiProfile(profile) },
+                        colors = androidx.compose.material3.ButtonDefaults.textButtonColors(
+                            contentColor = if (ui.settings.tiktokApiProfile == profile) MmtubePalette.Aqua
+                            else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    ) { Text(profile.toString()) }
+                }
+            }
             SettingsSwitchRow(
                 icon = Icons.Rounded.Description,
                 label = context.getString(R.string.settings_single_process_batch),
@@ -485,6 +535,22 @@ fun SettingsScreen(
                 color = if (cookiesSet) MmtubePalette.Success else MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = 16.dp)
             )
+            var cookieDraft by remember { mutableStateOf("") }
+            OutlinedTextField(
+                value = cookieDraft,
+                onValueChange = { cookieDraft = it },
+                singleLine = true,
+                label = { Text(context.getString(R.string.settings_cookies_paste)) },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            )
+            androidx.compose.material3.TextButton(
+                onClick = {
+                    vm.saveCookiesText(cookieDraft)
+                    if (cookieDraft.isNotBlank()) cookiesSet = true
+                }
+            ) {
+                Text(context.getString(R.string.action_save), color = MmtubePalette.Aqua)
+            }
             val pickFolder = rememberLauncherForActivityResult(
                 androidx.activity.result.contract.ActivityResultContracts.OpenDocumentTree()
             ) { uri ->

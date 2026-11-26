@@ -636,4 +636,14 @@ Firebase project: %4$s</string>
     <string name="settings_no_watermark_desc">Skip Facebook/TikTok watermarked renditions when a clean one exists</string>
     <string name="format_watermarked">watermarked</string>
     <string name="watermark_only">Only watermarked renditions are available for this video</string>
+    <string name="settings_watermark_policy">Watermark policy</string>
+    <string name="watermark_strict">Strict (no watermark)</string>
+    <string name="watermark_balanced">Balanced (-30% allowed)</string>
+    <string name="watermark_quality">Quality first</string>
+    <string name="settings_tiktok_api">TikTok API profile</string>
+    <string name="tiktok_api_default">Default</string>
+    <string name="tiktok_api_alt_host">Alt host</string>
+    <string name="tiktok_api_mobile">Mobile app</string>
+    <string name="settings_cookies_paste">Paste cookies.txt content</string>
+    <string name="tiktok_slideshow">This TikTok post looks like photo slideshow — video download may not work</string>
 </resources>

@@ -447,7 +447,8 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 mode,
                 com.mmtube.app.util.DisplaySupport.canRenderHdr(context),
                 _ui.value.settings.preferMultichannel,
-                _ui.value.settings.noWatermark
+                _ui.value.settings.noWatermark,
+                _ui.value.settings.watermarkPolicy
             )
             val remembered = sourceKey?.let { com.mmtube.app.util.FormatMemory.get(context, it) }
             val formatId = when {
@@ -461,6 +462,9 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
                 remembered == null && smart != null
             if (usedSmart && smart?.watermarkOnly == true) {
                 event(UiEvent.Message(context.getString(R.string.watermark_only)))
+            }
+            if (probe.platform == Platform.TIKTOK && probe.audioOnly) {
+                event(UiEvent.Message(context.getString(R.string.tiktok_slideshow)))
             }
             if (formatId != null && _ui.value.selectedFormatId != null && sourceKey != null) {
                 com.mmtube.app.util.FormatMemory.put(context, sourceKey, formatId)
@@ -1783,6 +1787,25 @@ class MainViewModel(private val container: AppContainer) : ViewModel() {
 
     fun setProxyUrl(value: String) {
         viewModelScope.launch { container.settings.setProxyUrl(value) }
+    }
+
+    fun setWatermarkPolicy(policy: String) {
+        viewModelScope.launch { container.settings.setWatermarkPolicy(policy) }
+    }
+
+    fun setTiktokApiProfile(profile: Int) {
+        viewModelScope.launch { container.settings.setTiktokApiProfile(profile) }
+    }
+
+    fun saveCookiesText(text: String) {
+        val ok = com.mmtube.app.util.CookieStore.saveText(context, text)
+        event(
+            UiEvent.Message(
+                context.getString(
+                    if (ok) R.string.cookies_imported else R.string.cookies_invalid
+                )
+            )
+        )
     }
 
     fun setNoWatermark(enabled: Boolean) {

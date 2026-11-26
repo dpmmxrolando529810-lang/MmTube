@@ -75,6 +75,8 @@ class SettingsStore(private val context: Context) {
         val SOURCE_ADDRESS = stringPreferencesKey("source_address")
         val SINGLE_PROCESS_BATCH = booleanPreferencesKey("single_process_batch")
         val NO_WATERMARK = booleanPreferencesKey("no_watermark")
+        val WATERMARK_POLICY = stringPreferencesKey("watermark_policy")
+        val TIKTOK_PROFILE = intPreferencesKey("tiktok_api_profile")
     }
 
     private val data: Flow<Preferences> = context.settingsDataStore.data
@@ -157,7 +159,11 @@ class SettingsStore(private val context: Context) {
             proxyUrl = this[Keys.PROXY_URL] ?: "",
             sourceAddress = this[Keys.SOURCE_ADDRESS] ?: "",
             singleProcessBatch = this[Keys.SINGLE_PROCESS_BATCH] ?: false,
-            noWatermark = this[Keys.NO_WATERMARK] ?: true
+            noWatermark = this[Keys.NO_WATERMARK] ?: true,
+            watermarkPolicy = this[Keys.WATERMARK_POLICY]?.takeIf {
+                it in listOf("strict", "balanced", "quality")
+            } ?: "strict",
+            tiktokApiProfile = this[Keys.TIKTOK_PROFILE]?.takeIf { it in 0..2 } ?: 0
         )
     }
 
@@ -267,6 +273,15 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setProxyUrl(value: String) {
         context.settingsDataStore.edit { it[Keys.PROXY_URL] = value.trim() }
+    }
+
+    suspend fun setWatermarkPolicy(policy: String) {
+        context.settingsDataStore.edit { it[Keys.WATERMARK_POLICY] = policy }
+    }
+
+    suspend fun setTiktokApiProfile(profile: Int) {
+        context.settingsDataStore.edit { it[Keys.TIKTOK_PROFILE] = profile }
+        com.mmtube.app.util.EngineOptions.rememberTiktokProfile(context, profile)
     }
 
     suspend fun setNoWatermark(enabled: Boolean) {

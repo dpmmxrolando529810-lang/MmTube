@@ -28,13 +28,14 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
             if (!engine.ensureReady()) {
                 throw MmtubeException(ErrorKind.ENGINE, "Engine not ready")
             }
+            val tiktokProfile = com.mmtube.app.util.EngineOptions.tiktokProfile(context)
             val json = try {
-                probeJson(url, cookiesPath, ageFallback = false)
+                probeJson(url, cookiesPath, ageFallback = false, tiktokProfile = tiktokProfile)
             } catch (error: Throwable) {
                 val age = error is MmtubeException && error.kind == ErrorKind.AGE ||
                     error.message?.contains("age", true) == true
                 if (age && cookiesPath != null) {
-                    probeJson(url, cookiesPath, ageFallback = true)
+                    probeJson(url, cookiesPath, ageFallback = true, tiktokProfile = tiktokProfile)
                 } else {
                     throw error
                 }
@@ -51,19 +52,27 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
     private suspend fun probeJson(
         url: String,
         cookiesPath: String?,
-        ageFallback: Boolean
+        ageFallback: Boolean,
+        tiktokProfile: Int = 0
     ): String {
         // Fast path: yt-dlp without the JavaScript runtime. Falls back to the
         // wrapper probe (QuickJS enabled) when the fast run fails or times out.
-        if (fastProbeDisabled) return probeWithLibrary(url, cookiesPath, ageFallback)
-        return when (val run = fastProbe.run(url, cookiesPath = cookiesPath, ageFallback = ageFallback)) {
+        if (fastProbeDisabled) {
+            return probeWithLibrary(url, cookiesPath, ageFallback, tiktokProfile)
+        }
+        return when (val run = fastProbe.run(
+            url,
+            cookiesPath = cookiesPath,
+            ageFallback = ageFallback,
+            tiktokProfile = tiktokProfile
+        )) {
             is FastProbe.Result.Ok -> run.json
             is FastProbe.Result.Lines -> run.json.firstOrNull() ?: "{}"
             FastProbe.Result.TimedOut -> {
                 fastProbeDisabled = true
-                probeWithLibrary(url, cookiesPath, ageFallback)
+                probeWithLibrary(url, cookiesPath, ageFallback, tiktokProfile)
             }
-            FastProbe.Result.Failed -> probeWithLibrary(url, cookiesPath, ageFallback)
+            FastProbe.Result.Failed -> probeWithLibrary(url, cookiesPath, ageFallback, tiktokProfile)
         }
     }
 
@@ -84,8 +93,13 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
             return@withContext output
         }
         val cookiesPath = CookieStore.path(context)
+        val tiktokProfile = com.mmtube.app.util.EngineOptions.tiktokProfile(context)
         val jsonLines = runCatching {
-            when (val run = fastProbe.runMany(pending, cookiesPath = cookiesPath)) {
+            when (val run = fastProbe.runMany(
+                pending,
+                cookiesPath = cookiesPath,
+                tiktokProfile = tiktokProfile
+            )) {
                 is FastProbe.Result.Ok -> listOf(run.json)
                 is FastProbe.Result.Lines -> run.json
                 else -> emptyList()
@@ -149,7 +163,8 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
     private suspend fun probeWithLibrary(
         url: String,
         cookiesPath: String?,
-        ageFallback: Boolean = false
+        ageFallback: Boolean = false,
+        tiktokProfile: Int = 0
     ): String {
         val request = YoutubeDLRequest(url).apply {
             addOption("--dump-json")
@@ -162,14 +177,12 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
             addOption("--retries", "2")
             addOption("--extractor-retries", "2")
             if (cookiesPath != null) addOption("--cookies", cookiesPath)
-            addOption(
-                "--extractor-args",
-                if (ageFallback) {
-                    "youtube:player_client=web_embedded,ios_producer,android"
-                } else {
-                    "youtube:player_client=android,ios,tv,web_safari,mweb;formats=duplicate"
-                }
-            )
+            val extractorArgs = if (ageFallback) {
+                "youtube:player_client=web_embedded,ios_producer,android"
+            } else {
+                com.mmtube.app.util.ExtractorArgs.forUrl(url, tiktokProfile)
+            }
+            if (extractorArgs != null) addOption("--extractor-args", extractorArgs)
         }
         val processId = "probe-${System.nanoTime()}"
         val response = try {
@@ -272,6 +285,8 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
                 ?: format.ext
             val channels = node?.path("channels")?.takeUnless { it.isMissingNode || it.isNull }
                 ?.asInt() ?: 0
+            val width = node?.path("width")?.takeUnless { it.isMissingNode || it.isNull }
+                ?.asInt() ?: format.width
             val codecTags = node?.path("codecs")?.takeUnless { it.isMissingNode || it.isNull }
                 ?.asText().orEmpty()
             val depth = when {
@@ -305,6 +320,7 @@ class MediaRepository(private val context: Context, private val engine: EngineMa
                     format.acodec != "none",
                 channels = channels,
                 bitDepth = depth,
+                width = width,
                 watermarked = note.orEmpty().contains("watermark", true) ||
                     id.contains("wmk", true) ||
                     id.equals("download", true) &&

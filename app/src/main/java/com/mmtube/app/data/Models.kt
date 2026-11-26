@@ -182,6 +182,7 @@ data class MediaFormatOption(
     val isProgressive: Boolean = false,
     /** Facebook/TikTok "watermarked" or "-wmk" renditions. */
     val watermarked: Boolean = false,
+    val width: Int = 0,
     val channels: Int = 0,
     val bitDepth: Int = 0
 )
@@ -375,5 +376,9 @@ data class SettingsSnapshot(
     val proxyUrl: String = "",
     val sourceAddress: String = "",
     val singleProcessBatch: Boolean = false,
-    val noWatermark: Boolean = true
+    val noWatermark: Boolean = true,
+    /** strict = never watermarked, balanced = allow if clean is much worse, quality = bitrate first */
+    val watermarkPolicy: String = "strict",
+    /** 0 = yt-dlp default, 1 = alt API host, 2 = mobile app profile */
+    val tiktokApiProfile: Int = 0
 )

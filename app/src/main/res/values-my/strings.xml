@@ -636,4 +636,14 @@ Firebase project: %4$s</string>
     <string name="settings_no_watermark_desc">Facebook/TikTok မှာ watermark မပါတာ ရှိရင် ပါတာကို ကျော်ပေးမယ်</string>
     <string name="format_watermarked">watermark ပါ</string>
     <string name="watermark_only">ဒီဗီဒီယိုမှာ watermark ပါတဲ့ format တွေပဲ ရှိပါတယ်</string>
+    <string name="settings_watermark_policy">Watermark မူဝါဒ</string>
+    <string name="watermark_strict">တင်းကျပ် (watermark မပါ)</string>
+    <string name="watermark_balanced">မျှတ (၃၀% အထိ ခံ)</string>
+    <string name="watermark_quality">အရည်အသွေး ဦးစား</string>
+    <string name="settings_tiktok_api">TikTok API profile</string>
+    <string name="tiktok_api_default">မူရင်း</string>
+    <string name="tiktok_api_alt_host">အခြား host</string>
+    <string name="tiktok_api_mobile">မိုဘိုင်း app</string>
+    <string name="settings_cookies_paste">cookies.txt အကြောင်းအရာ ကူးထည့်ပါ</string>
+    <string name="tiktok_slideshow">ဒီ TikTok post က ဓာတ်ပုံ slideshow ဖြစ်နေလို့ ဗီဒီယို ဒေါင်းမရနိုင်ပါ</string>
 </resources>

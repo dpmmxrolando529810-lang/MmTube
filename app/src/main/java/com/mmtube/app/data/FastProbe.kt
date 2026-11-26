@@ -35,9 +35,10 @@ class FastProbe(private val context: Context) {
         url: String,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
         cookiesPath: String? = null,
-        ageFallback: Boolean = false
+        ageFallback: Boolean = false,
+        tiktokProfile: Int = 0
     ): Result = withContext(Dispatchers.IO) {
-            val command = buildCommand(listOf(url), cookiesPath, ageFallback)
+            val command = buildCommand(listOf(url), cookiesPath, ageFallback, tiktokProfile)
             runInterruptible { execute(command, timeoutMs) }
         }
 
@@ -98,9 +99,10 @@ class FastProbe(private val context: Context) {
     suspend fun runMany(
         urls: List<String>,
         timeoutMs: Long = DEFAULT_TIMEOUT_MS,
-        cookiesPath: String? = null
+        cookiesPath: String? = null,
+        tiktokProfile: Int = 0
     ): Result = withContext(Dispatchers.IO) {
-        val command = buildCommand(urls, cookiesPath, ageFallback = false)
+        val command = buildCommand(urls, cookiesPath, ageFallback = false, tiktokProfile)
         runInterruptible { execute(command, timeoutMs.coerceAtMost(120_000L)) }
     }.let { result ->
         when (result) {
@@ -112,7 +114,8 @@ class FastProbe(private val context: Context) {
     private fun buildCommand(
         urls: List<String>,
         cookiesPath: String?,
-        ageFallback: Boolean
+        ageFallback: Boolean,
+        tiktokProfile: Int
     ): List<String> {
         val nativeDir = File(context.applicationInfo.nativeLibraryDir)
         val workDir = File(context.noBackupFilesDir, "youtubedl-android")
@@ -130,13 +133,20 @@ class FastProbe(private val context: Context) {
             "--socket-timeout", "15",
             "--retries", "2",
             "--extractor-retries", "2",
-            "--extractor-args",
-            if (ageFallback) {
-                "youtube:player_client=web_embedded,ios_producer,android"
-            } else {
-                "youtube:player_client=android,ios,tv,web_safari,mweb;formats=duplicate"
-            }
-        ) + cookieOptions + urls
+        ) + cookieOptions + extractorOptions(urls.first(), ageFallback, tiktokProfile) + urls
+    }
+
+    private fun extractorOptions(
+        url: String,
+        ageFallback: Boolean,
+        tiktokProfile: Int
+    ): List<String> {
+        val args = if (ageFallback) {
+            "youtube:player_client=web_embedded,ios_producer,android"
+        } else {
+            com.mmtube.app.util.ExtractorArgs.forUrl(url, tiktokProfile)
+        }
+        return args?.let { listOf("--extractor-args", it) }.orEmpty()
     }
 
     private fun environment(): Map<String, String> {

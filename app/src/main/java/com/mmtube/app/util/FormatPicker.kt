@@ -29,7 +29,11 @@ object FormatPicker {
         val bitrate = format.tbr.toDouble().takeIf { it > 0 }
             ?: format.sizeBytes.toDouble().div(120_000L).takeIf { it > 0 }
             ?: return -1.0
-        val pixels = format.height.toDouble() * format.height * 1.78
+        val pixels = if (format.width > 0) {
+            format.width.toDouble() * format.height
+        } else {
+            format.height.toDouble() * format.height * 1.78
+        }
         val perPixel = bitrate * 1000.0 / pixels
         val fpsBonus = when {
             format.fps >= 50 -> 1.18
@@ -52,6 +56,12 @@ object FormatPicker {
             com.mmtube.app.util.FormatSupport.isPlayable(format.vcodec)
         ) 1.06 else 1.0
         val watermarkBonus = if (format.watermarked) 0.25 else 1.0
+        val noRateLimitBonus = if (format.id.contains("no_ratelimit", true) ||
+            format.note.orEmpty().contains("no ratelimit", true)
+        ) 1.08 else 1.0
+        val hdBonus = if (format.id.contains("hd", true) ||
+            format.note.orEmpty().contains("HD", true)
+        ) 1.05 else 1.0
         val sourceBonus = if (format.note.orEmpty().let {
                 it.contains("original", true) || it.contains("source", true)
             }
@@ -61,7 +71,8 @@ object FormatPicker {
         val closeness = 1.0 / (1.0 + kotlin.math.abs(perPixel - 0.16) / 0.16)
         val bppFactor = (0.85 + 0.15 * closeness) * if (perPixel > 0.5) 0.82 else 1.0
         return (bitrate + perPixel * 90.0) * fpsBonus * hdrBonus *
-            codecBonus * tenBitBonus * watermarkBonus * sourceBonus * bppFactor *
+            codecBonus * tenBitBonus * watermarkBonus * noRateLimitBonus * hdBonus *
+            sourceBonus * bppFactor *
             (1.0 + min(format.height, 4320) / 9000.0)
     }
 
@@ -70,7 +81,8 @@ object FormatPicker {
         mode: DownloadMode,
         hdrSupported: Boolean = false,
         preferMultichannel: Boolean = false,
-        noWatermark: Boolean = true
+        noWatermark: Boolean = true,
+        watermarkPolicy: String = "strict"
     ): Choice? {
         if (mode == DownloadMode.MP3) return null
         val cap = when (mode) {
@@ -81,10 +93,21 @@ object FormatPicker {
         val allVideos = result.formats
             .filter { it.isVideo && it.height in 1..cap }
         val cleanVideos = allVideos.filterNot { it.watermarked }
-        val watermarkOnly = noWatermark && cleanVideos.isEmpty() && allVideos.isNotEmpty()
-        val pool = if (noWatermark && cleanVideos.isNotEmpty()) cleanVideos else allVideos
+        val watermarkedVideos = allVideos.filter { it.watermarked }
+        val bestClean = cleanVideos.maxByOrNull { score(it, hdrSupported) }
+        val bestWatermarked = watermarkedVideos.maxByOrNull { score(it, hdrSupported) }
+        val cleanIsMuchWorse = bestClean != null && bestWatermarked != null &&
+            bestClean.tbr > 0 && bestWatermarked.tbr > 0 &&
+            bestClean.tbr < bestWatermarked.tbr * 70 / 100
+        val pool = when {
+            !noWatermark || watermarkPolicy == "quality" -> allVideos
+            cleanVideos.isEmpty() -> allVideos
+            watermarkPolicy == "balanced" && cleanIsMuchWorse -> watermarkedVideos
+            else -> cleanVideos
+        }
         val videos = pool.sortedByDescending { score(it, hdrSupported) }
         val primary = videos.firstOrNull() ?: return null
+        val chosenWatermarked = primary.watermarked
         val audios = result.formats.filter { !it.isVideo }.let { list ->
             if (preferMultichannel) {
                 list.sortedWith(
@@ -118,12 +141,12 @@ object FormatPicker {
                 hdr = progressive.hdr,
                 alternates = videos.take(2).map { "${it.id}+bestaudio" },
                 complete = true,
-                watermarkOnly = watermarkOnly
+                watermarkOnly = chosenWatermarked
             )
         }
 
         val format = if (audio != null) "${primary.id}+${audio.id}" else "${primary.id}+bestaudio"
         val alternates = videos.drop(1).take(2).map { "${it.id}+bestaudio" }
-        return Choice(format, primary.height, primary.fps, primary.hdr, alternates, false, watermarkOnly)
+        return Choice(format, primary.height, primary.fps, primary.hdr, alternates, false, chosenWatermarked)
     }
 }

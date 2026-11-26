@@ -1002,10 +1002,10 @@ class DownloadController(
                 addOption("--parse-metadata", """title:^(?P<title>.*?)\s*\{[^\{\}]*\}\s*${'$'}""")
             }
             if (cookies != null) addOption("--cookies", cookies)
-            addOption(
-                "--extractor-args",
-                "youtube:player_client=android,ios,tv,web_safari,mweb;formats=duplicate"
-            )
+            com.mmtube.app.util.ExtractorArgs.forUrl(
+                request.url,
+                com.mmtube.app.util.EngineOptions.tiktokProfile(context)
+            )?.let { addOption("--extractor-args", it) }
             if (!turbo && config.supportsRanges) {
                 // Chunked requests help direct (non-segmented) servers that
                 // throttle one long connection.
