@@ -12,8 +12,12 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from urllib.parse import urlparse
 
 YTDLP_RAW = os.environ.get("YTDLP_BIN", "yt-dlp")
+COOKIES_FILE = os.environ.get("MMTube_COOKIES_FILE", "")
+NO_WATERMARK = os.environ.get("MMTube_NO_WATERMARK", "1") != "0"
+TIKTOK_PROFILE = int(os.environ.get("MMTube_TIKTOK_PROFILE", "0") or 0)
 
 
 def _ytdlp_cmd() -> list[str]:
@@ -60,6 +64,81 @@ def normalize_url(raw: str) -> str | None:
     return url
 
 
+def platform_of(url: str) -> str:
+    host = (urlparse(url).hostname or "").lower().removeprefix("www.")
+    if "tiktok" in host:
+        return "TIKTOK"
+    if "facebook" in host or host == "fb.watch":
+        return "FACEBOOK"
+    return "YOUTUBE"
+
+
+def _cookie_options() -> list[str]:
+    if COOKIES_FILE and os.path.isfile(COOKIES_FILE):
+        return ["--cookies", COOKIES_FILE]
+    return []
+
+
+def _extractor_args(url: str) -> list[str]:
+    platform = platform_of(url)
+    if platform == "YOUTUBE":
+        return ["--extractor-args",
+                "youtube:player_client=android,ios,tv,web_safari,mweb;formats=duplicate"]
+    if platform == "TIKTOK" and TIKTOK_PROFILE == 1:
+        return ["--extractor-args", "tiktok:api_hostname=api22-normal-c-alisg.tiktokv.com"]
+    if platform == "TIKTOK" and TIKTOK_PROFILE == 2:
+        return ["--extractor-args",
+                "tiktok:app_name=trill;app_version=34.1.2;manifest_app_version=2023401020;aid=1180"]
+    return []
+
+
+def _watermarked(fmt: dict) -> bool:
+    note = (fmt.get("format_note") or "")
+    fid = (fmt.get("format_id") or "")
+    return "watermark" in note.lower() or "wmk" in fid.lower()
+
+
+def _score(fmt: dict, duration: int) -> float:
+    """Same idea as the Android app: bitrate per real pixel + fps/codec bonuses."""
+    height = int(fmt.get("height") or 0)
+    if height <= 0:
+        return -1.0
+    width = int(fmt.get("width") or 0)
+    pixels = width * height if width > 0 else height * height * 1.78
+    rate = int(fmt.get("tbr") or fmt.get("vbr") or 0)
+    if rate <= 0:
+        size = fmt.get("filesize") or fmt.get("filesize_approx")
+        rate = int(size) * 8 // max(1, duration) // 1000 if size else 0
+    if rate <= 0:
+        return -1.0
+    per_pixel = rate * 1000.0 / pixels
+    fps_bonus = 1.18 if (fmt.get("fps") or 0) >= 50 else (1.06 if (fmt.get("fps") or 0) >= 30 else 1.0)
+    vcodec = (fmt.get("vcodec") or "").lower()
+    codec_bonus = 1.08 if vcodec.startswith("av01") else (1.05 if vcodec.startswith("vp9") else 0.99)
+    note = (fmt.get("format_note") or "")
+    ratelimit_bonus = 1.08 if "no_ratelimit" in note.lower() or "no ratelimit" in note.lower() else 1.0
+    hd_bonus = 1.05 if "hd" in (fmt.get("format_id") or "").lower() or "hd" in note.lower() else 1.0
+    wm_bonus = 0.25 if _watermarked(fmt) else 1.0
+    closeness = 1.0 / (1.0 + abs(per_pixel - 0.16) / 0.16)
+    bpp = (0.85 + 0.15 * closeness) * (0.82 if per_pixel > 0.5 else 1.0)
+    return (rate + per_pixel * 90.0) * fps_bonus * codec_bonus * ratelimit_bonus * hd_bonus * wm_bonus * bpp
+
+
+def choose_formats(formats: list[dict], duration: int, platform: str) -> tuple[str, str]:
+    """Return (video_format_id, audio_format_id). Empty video id means fallback."""
+    videos = [f for f in formats
+              if (f.get("vcodec") or "none") != "none" and (f.get("height") or 0) > 0]
+    audios = [f for f in formats
+              if (f.get("acodec") or "none") != "none" and (f.get("vcodec") or "none") == "none"]
+    clean = [f for f in videos if not _watermarked(f)]
+    pool = clean if NO_WATERMARK and clean else videos
+    best_video = max(pool, key=lambda f: _score(f, duration), default=None)
+    best_audio = max(audios, key=lambda f: (f.get("abr") or 0, f.get("tbr") or 0), default=None)
+    if best_video is None:
+        return "", ""
+    return str(best_video.get("format_id") or ""), str(best_audio.get("format_id") or "bestaudio") if best_audio else "bestaudio"
+
+
 @dataclass
 class ProbeResult:
     url: str
@@ -70,6 +149,10 @@ class ProbeResult:
     estimated_bytes: int
     audio_only: bool
     extractor: str
+    platform: str = "YOUTUBE"
+    format_id: str = ""
+    audio_format_id: str = "bestaudio"
+    watermark_only: bool = False
 
 
 def probe(url: str, timeout: int = 45) -> ProbeResult:
@@ -83,8 +166,7 @@ def probe(url: str, timeout: int = 45) -> ProbeResult:
         "--socket-timeout", "15",
         "--retries", "2",
         "--extractor-retries", "2",
-        url,
-    ]
+    ] + _cookie_options() + _extractor_args(url) + [url]
     proc = subprocess.run(
         cmd,
         capture_output=True,
@@ -118,12 +200,11 @@ def probe(url: str, timeout: int = 45) -> ProbeResult:
     audio_formats = [f for f in formats
                      if (f.get("acodec") or "none") != "none" and (f.get("vcodec") or "none") == "none"]
 
-    best_video = None
-    for f in video_formats:
-        key = (f.get("height") or 0, f.get("fps") or 0, f.get("tbr") or 0)
-        if best_video is None or key > (best_video.get("height") or 0, best_video.get("fps") or 0, best_video.get("tbr") or 0):
-            best_video = f
-    best_audio = max(audio_formats, key=lambda f: (f.get("abr") or 0, f.get("tbr") or 0), default=None)
+    platform = platform_of(url)
+    video_id, audio_id = choose_formats(formats, duration, platform)
+    best_video = next((f for f in formats if str(f.get("format_id") or "") == video_id), None)
+    best_audio = next((f for f in formats if str(f.get("format_id") or "") == audio_id), None)
+    watermark_only = bool(video_id and best_video and _watermarked(best_video))
 
     best_height = video_formats and max(f.get("height") or 0 for f in video_formats) or 0
     estimated = (size_of(best_video) if best_video else 0) + (size_of(best_audio) if best_audio else 0)
@@ -139,6 +220,10 @@ def probe(url: str, timeout: int = 45) -> ProbeResult:
         estimated_bytes=int(estimated),
         audio_only=best_height <= 0,
         extractor=(info.get("extractor_key") or info.get("extractor") or ""),
+        platform=platform,
+        format_id=video_id,
+        audio_format_id=audio_id,
+        watermark_only=watermark_only,
     )
 
 
@@ -165,15 +250,18 @@ def download_once(probe_info: ProbeResult, mode: str, job_id: str) -> Path:
         "--concurrent-fragments", "24",
         "-N", "24",
         "--socket-timeout", "25",
-        "--fragment-retries", "10",
+        "--fragment-retries", "30",
         "--retries", "10",
-        "-o", out_template,
-    ]
+    ] + _cookie_options() + _extractor_args(probe_info.url) + ["-o", out_template]
     if mode == "mp3":
-        cmd += ["-f", "bestaudio/best", "-x", "--audio-format", "mp3", "--audio-quality", "0"]
+        audio_id = probe_info.audio_format_id or "bestaudio"
+        cmd += ["-f", f"{audio_id}/bestaudio/best", "-x", "--audio-format", "mp3", "--audio-quality", "0"]
     else:
-        cmd += ["-f", "bestvideo+bestaudio/best", "-S", "res:desc,fps:desc,tbr:desc",
-                "--merge-output-format", "mp4"]
+        if probe_info.format_id:
+            fmt = f"{probe_info.format_id}+{probe_info.audio_format_id or 'bestaudio'}"
+        else:
+            fmt = "bestvideo+bestaudio/best"
+        cmd += ["-f", fmt, "-S", "res:desc,fps:desc,tbr:desc", "--merge-output-format", "mp4"]
     cmd.append(probe_info.url)
 
     logging.info("download start %s mode=%s", job_id, mode)

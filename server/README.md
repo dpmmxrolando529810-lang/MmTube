@@ -11,6 +11,28 @@ Oracle Cloud **Always Free** VM တစ်ခုတည်းမှာ — Telegra
 | HTTPS | DuckDNS (free) + Let's Encrypt (free) |
 | 24/7 | systemd — 24/7 restart |
 
+### 🎬 အသစ် — 1-Click Recap + Clip Tool
+
+`https://<domain>/recap` မှာ **Link တစ်ခုတည်းနဲ့ Movie Recap + 9:16 Clips** နှစ်ခုလုံး ဖန်တီးလို့ရပါပြီ။
+Telegram bot မှာလည်း link ပို့ပြီး ⚡ Both ကို နှိပ်ရုံပါပဲ (သို့မဟုတ် `/recap <link>`)။
+
+- 100% free · FFmpeg engine · paid API မလို
+- 2026 GitHub research နဲ့ နှိုင်းယှဉ်ချက်, setup, API, ကန့်သတ်ချက်အားလုံး → [server/RECAP.md](RECAP.md)
+
+---
+
+## 🤖 Telegram Bot — app နဲ့ တူညီတဲ့ "Real 100% Maximum" ရွေးချယ်မှု
+
+Link ပို့လိုက်ရင် bot က **platform ကို သိရှိပြီး** (YouTube / Facebook / TikTok) **⬇ Video သို့ 🎵 MP3** ရွေးခိုင်းပြီး ဒေါင်းပြီး ပြန်ပို့ပေးပါတယ်။
+
+- Format ရွေးချယ်မှုက Android app ထဲက **bitrate-per-pixel + fps + codec + HDR/10-bit + no-watermark** score နဲ့ အတူတူပါ။
+- Facebook/TikTok မှာ **watermark မပါတဲ့ rendition** ကို ဦးစားပေးပါတယ် (`MMTube_NO_WATERMARK=0` နဲ့ ပိတ်နိုင်)။
+- Cookies လိုရင် `/etc/mmtube/mmtube.env` ထဲမှာ `MMTube_COOKIES_FILE=/path/to/cookies.txt` ထည့်ပါ။
+- TikTok API profile ပြောင်းချင်ရင် `MMTube_TIKTOK_PROFILE=1` (alt host) သို့ `2` (mobile app) ထည့်ပါ။
+- yt-dlp version ကို `YTDLP_BIN` နဲ့ သတ်မှတ်နိုင်ပါတယ် (app က 2026.11.23 ပါ)။
+
+**Upload အကြောင်း — ရိုးသားချက်**: Telegram Bot API က တစ်ဖိုင်ကို **~48 MB** အထိပဲ တိုက်ရိုက်ပို့ခွင့်ပေးတယ်။ Upload speed ကို bot က မထိန်းနိုင်ဘူး — Telegram server က ဆုံးဖြတ်တယ်။ ကျွန်တော်တို့ လုပ်နိုင်တာက **re-encode မလုပ်ဘဲ stream copy**, **supports_streaming**, နဲ့ ဖိုင်ကြီးရင် ** website link (၂၄ နာရီ)** ပို့တာပဲ ဖြစ်ပါတယ်။ "Real 100% maximum upload speed" ဆိုတာ API မှာ မရှိပါဘူး။
+
 ---
 
 ## အဆင့် ၁ — Oracle Cloud အကောင့် (အခမဲ့)
