@@ -42,6 +42,33 @@ Link ပို့လိုက်ရင် bot က **platform ကို သိရ
 
 ---
 
+## 📱 လုံးဝ free — ဖုန်းပေါ်မှာပဲ Bot run နည်း (server မလို)
+
+ကတ်မရှိ၊ server မရှိ၊ domain မရှိရင် **ဖုန်းပေါ်မှာပဲ** run လို့ရပါတယ်။
+
+```bash
+# Termux (F-Droid) မှာ
+pkg update && pkg install -y python git ffmpeg aria2
+cd ~
+git clone https://github.com/dpmmxrolando529810-lang/MmTube.git
+cd MmTube/server
+printf 'BOT_TOKEN=သင့်တိုကင်း\n' > .env
+chmod 600 .env
+bash phone/run.sh
+```
+
+Bot က **long polling** သုံးတာမို့ public IP / webhook မလိုပါဘူး။
+
+**ကန့်သတ်ချက် (ရိုးသားချက်)**
+- ဖုန်း/process အိပ်သွားရင် bot ရပ်သွားမယ် — **24/7 မဟုတ်ပါဘူး**။
+- **Cloud Bot API** ပဲဖြစ်လို့ upload cap **50 MB** ပဲရပါတယ် (2 GB local API မရဘူး)။
+- 50 MB ထက်ကြီးရင် public website link မရှိသဖြင့် "မပို့နိုင်ဘူး" လို့ ပြပါတယ်။
+- ဖုန်းဘက်ထရီ/မမ်မိုရီ/အပူ သုံးစွဲမှု ရှိပါတယ်။
+
+> **လုံးဝ ၂၄/၇ + ကတ်မလို + ဘာမှမလို** ဆိုတဲ့ hosted server ကတော့ မရှိပါဘူး။ အပေါ်က ဖုန်းနည်းက အနီးစပ်ဆုံး အခမဲ့ လမ်းပါ။
+
+---
+
 ## အဆင့် ၁ — Oracle Cloud အကောင့် (အခမဲ့)
 
 1. [cloud.oracle.com](https://www.oracle.com/cloud/free/) → **Start for free**

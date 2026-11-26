@@ -367,10 +367,17 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         except Exception as exc:  # noqa: BLE001
             logger.warning("send failed (%s), falling back to link", exc)
 
-    # Fallback / large file: keep it on the site for 24 h.
-    link = downloader.PUBLIC_URL_PREFIX + "/" + path.name
+    # Fallback / large file: keep it on the site for 24 h when a public URL exists.
     base = os.environ.get("MMTube_PUBLIC_BASE", "").rstrip("/")
-    full_link = (base + link) if base else link
+    if not base:
+        await query.edit_message_text(
+            f"✅ ရပြီး ({_fmt_bytes(size)})။ ဒါပေမယ့် cloud bot က "
+            f"{_fmt_bytes(MAX_BYTES)} အထိပဲ တိုက်ရိုက်ပို့နိုင်ပါတယ်။\n"
+            "Public website link မသတ်မှတ်ထားလို့ ဒီဖိုင်ကို ဆက်ပို့လို့ မရပါဘူး။"
+        )
+        return
+    link = downloader.PUBLIC_URL_PREFIX + "/" + path.name
+    full_link = base + link
     await query.edit_message_text(
         f"✅ ရပြီး ({_fmt_bytes(size)})\n\n"
         f"{_fmt_bytes(MAX_BYTES)} ထက်ကြီးလို့ ဖိုင်ပို့မရ — ဒီ link ကနေ ဒေါင်းပါ (၂၄ နာရီ ကြာ ရနိုင်):\n"
